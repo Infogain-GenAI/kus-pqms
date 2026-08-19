@@ -1,0 +1,5 @@
+^(feat|fix|refactor|perf|test|docs|build|ci|chore|revert)(\([a-z0-9._-]+\))?!?: .{1,72}$
+# Expected: <type>(<optional-scope>): <subject>
+# Types:    feat fix refactor perf test docs build ci chore revert
+# Applies to commits outside the four component folders (root, _bmad, docs, ...)
+# Example:  chore(repo): track BMAD install
