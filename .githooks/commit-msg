@@ -5,7 +5,7 @@
 #
 # If a commit touches no component that defines rules -- e.g. only _bmad/,
 # .claude/, docs/ or a root file -- the repo-wide fallback in
-# .githooks/commit-msg.rules applies, so root commits are validated too.
+# .githooks/repo-commit-msg.rules applies, so root commits are validated too.
 MSG_FILE=$1
 CHANGED=$(git diff --cached --name-only | cut -d/ -f1 | sort -u)
 HEADER=$(head -n1 "$MSG_FILE")
@@ -53,8 +53,8 @@ for c in $CHANGED; do
 done
 
 # Repo-wide fallback: nothing staged belongs to a component with its own rules.
-if [ "$MATCHED" -eq 0 ] && [ -f .githooks/commit-msg.rules ]; then
-  check_rules .githooks/commit-msg.rules "repo" || STATUS=1
+if [ "$MATCHED" -eq 0 ] && [ -f .githooks/repo-commit-msg.rules ]; then
+  check_rules .githooks/repo-commit-msg.rules "repo" || STATUS=1
 fi
 
 exit $STATUS
