@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script src="_ds/kia-n-pqms-e334a01f-8f6a-40ca-aebc-3bc381058422/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="_ds/kia-n-pqms-e334a01f-8f6a-40ca-aebc-3bc381058422/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/kia-n-pqms-e334a01f-8f6a-40ca-aebc-3bc381058422/tokens/typography.css">
+  <script src="lucide-local.js"></script>
+</helmet>
+<div style="{{ rootStyle }}">
+  <button type="button" onClick="{{ onToggle }}" disabled="{{ isDisabled }}" style="{{ fieldStyle }}">
+    <span style="{{ valueStyle }}">{{ shownText }}</span>
+    <sc-if value="{{ hasValueEnabled }}" hint-placeholder-val="{{ false }}"><span onClick="{{ onClear }}" title="Clear" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;flex:none;color:#9AA5AE"><i data-lucide="x" style="width:13px;height:13px"></i></span></sc-if>
+    <i data-lucide="calendar" style="width:15px;height:15px;color:#9AA5AE;flex:none"></i>
+  </button>
+  <sc-if value="{{ open }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onClose }}" style="position:fixed;inset:0;z-index:60"></div>
+    <div style="{{ popStyle }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <button type="button" onClick="{{ prevMonth }}" style="width:28px;height:28px;border:1px solid #E7ECF1;border-radius:6px;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary)"><i data-lucide="chevron-left" style="width:15px;height:15px"></i></button>
+        <span style="font-size:13px;font-weight:700;color:var(--text-primary);letter-spacing:-0.01em">{{ monthLabel }}</span>
+        <button type="button" onClick="{{ nextMonth }}" style="width:28px;height:28px;border:1px solid #E7ECF1;border-radius:6px;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary)"><i data-lucide="chevron-right" style="width:15px;height:15px"></i></button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,32px);gap:2px;margin-bottom:4px">
+        <sc-for list="{{ weekDays }}" as="w" hint-placeholder-count="7">
+          <span style="height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;letter-spacing:0.04em;color:#9AA5AE">{{ w }}</span>
+        </sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,32px);gap:2px">
+        <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
+          <button type="button" onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #F0F2F5">
+        <button type="button" onClick="{{ pickToday }}" style="border:none;background:none;cursor:pointer;font-family:var(--font-body);font-size:12px;font-weight:600;color:var(--accent-600)">Today</button>
+        <button type="button" onClick="{{ onClear }}" style="border:none;background:none;cursor:pointer;font-family:var(--font-body);font-size:12px;font-weight:600;color:var(--text-secondary)">Clear</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:260,&quot;height&quot;:320},&quot;value&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;placeholder&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Select date&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;full&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;align&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;left&quot;,&quot;options&quot;:[&quot;left&quot;,&quot;right&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;disabled&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;format&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;dmon&quot;,&quot;options&quot;:[&quot;dmon&quot;,&quot;mdy&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;onPick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(date: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = { open:false, vy:null, vm:null };
+  _MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  componentDidMount(){ this._icons(); }
+  componentDidUpdate(){ this._icons(); }
+  _icons(){ try{ if(window.lucide&&window.lucide.createIcons) window.lucide.createIcons(); }catch(e){} }
+  _ymd(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+  _parse(v){ if(!v) return null; const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v)); if(!m) return null; return {y:+m[1],m:+m[2]-1,d:+m[3]}; }
+  _fmt(p){ if(this.props.format==='mdy') return String(p.m+1).padStart(2,'0')+'/'+String(p.d).padStart(2,'0')+'/'+p.y; return String(p.d).padStart(2,'0')+' '+this._MON[p.m]+' '+p.y; }
+  _view(){
+    if(this.state.vy!=null) return {y:this.state.vy, m:this.state.vm};
+    const p=this._parse(this.props.value); if(p) return {y:p.y, m:p.m};
+    const t=new Date(); return {y:t.getFullYear(), m:t.getMonth()};
+  }
+  toggle(){ if(this.props.disabled) return; if(this.state.open){ this.setState({open:false}); return; } const v=this._view(); this.setState({open:true, vy:v.y, vm:v.m}); }
+  close(){ this.setState({open:false}); }
+  shift(n){ const v=this._view(); let m=v.m+n, y=v.y; while(m<0){m+=12;y--;} while(m>11){m-=12;y++;} this.setState({vy:y, vm:m}); }
+  pick(y,m,d){ const ds=this._ymd(y,m,d); if(this.props.onPick) this.props.onPick(ds); this.setState({open:false}); }
+  clear(e){ if(e&&e.stopPropagation) e.stopPropagation(); if(this.props.onPick) this.props.onPick(''); this.setState({open:false}); }
+  today(){ const t=new Date(); this.pick(t.getFullYear(), t.getMonth(), t.getDate()); }
+  renderVals(){
+    const full = this.props.full!==false && this.props.full!==undefined ? true : (this.props.full===true);
+    const isFull = this.props.full===true || this.props.full==='true';
+    const p = this._parse(this.props.value);
+    const hasValue = !!p;
+    const shownText = hasValue ? this._fmt(p) : (this.props.placeholder || 'Select date');
+    const v = this._view();
+    const monthLabel = ['January','February','March','April','May','June','July','August','September','October','November','December'][v.m] + ' ' + v.y;
+    const first = new Date(v.y, v.m, 1).getDay();
+    const dim = new Date(v.y, v.m+1, 0).getDate();
+    const t = new Date(); const ty=t.getFullYear(), tm=t.getMonth(), td=t.getDate();
+    const cells = [];
+    for (let i=0;i<first;i++) cells.push({ label:'', onClick:(e)=>{}, style:'height:32px;visibility:hidden' });
+    for (let d=1;d<=dim;d++){
+      const sel = p && p.y===v.y && p.m===v.m && p.d===d;
+      const isToday = ty===v.y && tm===v.m && td===d;
+      let style = 'height:32px;border-radius:6px;border:1px solid transparent;background:none;cursor:pointer;font-family:var(--font-body);font-size:12.5px;display:inline-flex;align-items:center;justify-content:center;transition:background .12s;';
+      if (sel) style += 'background:var(--accent-500);color:#fff;font-weight:700;';
+      else { style += 'color:var(--text-primary);'; if (isToday) style += 'border-color:var(--accent-300);font-weight:700;'; }
+      cells.push({ label:String(d), onClick:((yy,mm,dd)=>()=>this.pick(yy,mm,dd))(v.y,v.m,d), style });
+    }
+    const align = (this.props.align==='right');
+    const isDisabled = !!this.props.disabled;
+    const popStyle = 'position:absolute;z-index:61;top:calc(100% + 6px);'+(align?'right:0;':'left:0;')+'background:#fff;border:1px solid #E7ECF1;border-radius:10px;box-shadow:0 8px 28px rgba(5,20,31,.14);padding:14px;';
+    const fieldStyle = isDisabled
+      ? 'display:flex;align-items:center;gap:8px;width:'+(isFull?'100%':'auto')+';height:42px;padding:0 11px;border:1px solid #E7ECF1;border-radius:8px;background:#F7F8F9;cursor:not-allowed;font-family:var(--font-body);box-sizing:border-box;'
+      : 'display:flex;align-items:center;gap:8px;width:'+(isFull?'100%':'auto')+';height:42px;padding:0 11px;border:1px solid '+(this.state.open?'var(--accent-500)':'#E7ECF1')+';border-radius:8px;background:#fff;cursor:pointer;font-family:var(--font-body);box-sizing:border-box;'+(this.state.open?'box-shadow:0 0 0 3px rgba(42,111,219,.14);':'');
+    const valueStyle = 'flex:1;min-width:0;text-align:left;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'+(hasValue?(isDisabled?'color:#6B7681;':'color:var(--text-primary);'):'color:#9AA5AE;');
+    return {
+      rootStyle:'position:relative;'+(isFull?'width:100%;':'display:inline-block;'),
+      fieldStyle, valueStyle, shownText, hasValue, hasValueEnabled: hasValue && !isDisabled, isDisabled,
+      open:this.state.open && !isDisabled, popStyle, monthLabel,
+      weekDays:['Su','Mo','Tu','We','Th','Fr','Sa'], cells,
+      onToggle:()=>this.toggle(), onClose:()=>this.close(),
+      prevMonth:()=>this.shift(-1), nextMonth:()=>this.shift(1),
+      pickToday:()=>this.today(), onClear:(e)=>this.clear(e)
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+/* ============================================================
+   Kia N-PQMS — Webfonts
+   Kia Signature Fix: brand display typeface (titles, headings).
+   Inter: secondary UI typeface — loaded via Google Fonts in
+   typography.css note; declared here as the body stack fallback.
+   ============================================================ */
+
+@font-face {
+  font-family: "Kia Signature Fix";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../assets/fonts/KiaSignatureFix-Light.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Kia Signature Fix";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/KiaSignatureFix-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Kia Signature Fix";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/KiaSignatureFix-Bold.ttf") format("truetype");
+}
+
+/* Inter — UI / body typeface */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");

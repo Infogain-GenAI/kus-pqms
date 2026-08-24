@@ -1,0 +1,6 @@
+/* Always-visible focus ring for the interactive control (the dismiss button).
+   DESIGN.md requires it; the DS source omitted it. Colors/sizes stay inline. */
+.focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}

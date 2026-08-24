@@ -1,0 +1,49 @@
+/* ============================================================
+   Kia N-PQMS — Spacing, Layout & Sizing Tokens
+   4px base grid.
+   ============================================================ */
+
+:root {
+  /* Spacing scale (4px base) */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* Containers */
+  --container-sm:  640px;
+  --container-md:  960px;
+  --container-lg:  1280px;
+  --container-xl:  1600px;
+  --container-full: 100%;
+
+  /* Layout chrome */
+  --sidenav-width:        260px;
+  --sidenav-collapsed:    64px;
+  --header-height:        60px;
+  --row-height-compact:   40px;
+  --row-height-default:   48px;
+
+  /* Control heights */
+  --control-sm: 28px;
+  --control-md: 36px;
+  --control-lg: 44px;   /* min touch target */
+
+  /* Icon sizing tokens */
+  --icon-xs: 12px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-xl: 32px;
+
+  /* Icon stroke (Lucide) */
+  --icon-stroke: 1.75;
+}

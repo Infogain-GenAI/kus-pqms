@@ -1,0 +1,23 @@
+/* Interactive states that inline styles can't express. Colors/sizes stay inline
+   (faithful to the DS source); this adds the always-visible focus ring DESIGN.md
+   requires (the DS source omitted it) + the loading spinner keyframe. */
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  display: inline-block;
+  animation: kia-spin 0.7s linear infinite;
+}
+
+@keyframes kia-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

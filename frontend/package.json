@@ -1,0 +1,33 @@
+{
+  "name": "kus-pqms-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "N-PQMS Issue & Signal Management (ISM) — React UI. Mirrors the current UX design 1:1 (no new features). Design system vendored from _bmad-output/planning-artifacts/ux/design-source/design-system.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && npm run lint:adherence && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint:adherence": "eslint --config eslint.adherence.config.mjs --max-warnings 638 src",
+    "tokens:gen": "node scripts/gen-tokens.mjs",
+    "tokens:check": "node scripts/check-tokens.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.451.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/parser": "^8.67.0",
+    "@vitejs/plugin-react": "^4.3.3",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "playwright": "^1.62.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

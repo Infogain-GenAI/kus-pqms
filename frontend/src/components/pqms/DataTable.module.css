@@ -1,0 +1,16 @@
+/* Always-visible focus rings (DS source omitted them). The sortable column
+   headers are made focusable in the TSX; the row/header checkbox is a visually
+   hidden <input> overlaying a styled box, so the ring is drawn on the box when
+   the input is focus-visible. */
+.focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.checkbox:focus-visible {
+  outline: none;
+}
+
+.checkbox:focus-visible + .box {
+  box-shadow: var(--shadow-focus);
+}

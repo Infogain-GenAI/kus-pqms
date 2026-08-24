@@ -1,0 +1,2029 @@
+N-PQMS Phase 1 — Business
+Requirements Document (BRD)
+TSB Publication Management · Issue Management · QIR Module · Admin Module
+Document ID: KPQMS-BRD-P1-v1.1
+Project: KUS PQMS Re-Platform Implementation — Phase 1
+Client: Hyundai AutoEver America LLC (HAEA) / KIA US (KUS)
+Provider: Tenarai Inc. (formerly Infogain Corporation)
+HAEA PM: Yoo Joon Sung (JSYoo@HAEAus.com)
+Provider PM: Rita Verma (rita.verma@tenarai.com)
+BRD Author: Joon Sung Yoo, HAEA Project Manager
+Version: 1.1 DRAFT
+Date: June 2026
+Status: Draft — pending Discovery & Planning validation (Milestone 2)
+Reference: SOW V0.9 DRAFT (2026-05-18) · Exhibit B · Exhibit C · Exhibit D · Exhibit E
+Revision History:
+Version Date Author 	Change Summary
+1.0 	May
+2026
+Joon
+Sung Yoo
+Initial draft
+1.1 	June
+2026
+Joon
+Sung Yoo
+Added §7.2 Issue Source Channels (Warranty, Weibull, Comeback, Techline,
+FPQR); updated ISM-FR-002, ISM-FR-010, ISM-FR-011; renumbered prior §7.2–
+§7.9 → §7.3–§7.10; updated §5.2 ISM screen inventory and §20.3 M3
+acceptance criteria
+Table of Contents
+Executive Summary
+Business Objectives
+Stakeholders & Counterpart Teams
+Phase 1 Scope Boundary
+Screen Inventory
+Functional Requirements — TSB Publication Management (PUM)
+Functional Requirements — Issue Management (ISM) — §7.2 Issue Source Channels (Warranty ·
+Weibull · Comeback · Techline · FPQR)
+Functional Requirements — QIR Module (QIM)
+Functional Requirements — Admin Module (ADM)
+Authentication & Authorization
+Workflow Management (Camunda BPM)
+Notifications & Alerts
+Reporting & Dashboard (Prototype)
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+11.
+12.
+13.
+
+-- 1 of 36 --
+
+Integration Requirements — Phase 1
+Security Requirements
+Non-Functional Requirements (NFR)
+Data Migration — Phase 1 Scope
+Assumptions & Dependencies
+Out of Scope — Phase 1
+Phase 1 Milestone Schedule & Acceptance Criteria
+1. Executive Summary
+Phase 1 of the N-PQMS Re-Platform delivers the TSB Publication Management (PUM), Issue
+Management (ISM), and QIR Module (QIM) — the three modules that account for 98.7% of all
+current KPQMS usage (27,938 usage hits, Jan–Nov 2025). These modules go live on December 18,
+2026, replacing the legacy TOBESOFT XPLATFORM / Oracle WebLogic stack.
+Item 	Detail
+Phase 1 Go-Live 	December 18, 2026
+Phase 1 Budget 	$824,245 (M1–M6 of the $1,240,000 total)
+Screens Delivered 	54 screens (Tier 1: 20 + Tier 2: 10 + Tier 3: 24)
+Usage Coverage 	99.2% of all KPQMS screen usage
+Core Integrations 	INT-01 through INT-06
+Workflow Engine 	Camunda BPM (TSB approval + QIR assignment chains)
+Authentication 	Azure AD SSO / JWT / RBAC / MFA
+Analytics 	INT-06 outbound push to CDO (PQMS as data producer)
+NFR Anchor Screen 	PUM0020 Publication Entry — ≤2s response at 10 concurrent users
+14.
+15.
+16.
+17.
+18.
+19.
+20.
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 2 of 36
+
+-- 2 of 36 --
+
+2. Business Objectives
+2.1 Primary Objectives — Phase 1
+# Objective 	Success Measure
+B1 Replace XPLATFORM/XFDL-based TSB workflow with modern Vue.js SPA
+on AWS EKS
+All 6 PUM screens functional at
+go-live
+B2 Modernize QIR/Issue lifecycle management with AI-assisted severity
+scoring (prototype)
+All 14 ISM + 10 QIM screens
+functional; severity score visible
+on QIR
+B3 Retire all direct JDBC connections for Phase 1 systems; replace with
+REST adapter layer
+INT-01–06 all functional; zero
+active JDBC connections in
+production
+B4 Implement enterprise-grade auth — Azure AD SSO, RBAC, MFA —
+replacing LDAP/JNDI
+SSO login functional; all 8 RBAC
+roles enforced; MFA active
+B5 Activate Camunda BPM engine for TSB approval and QIR assignment
+workflows
+BPM workflows functional;
+legacy T_APRO_* tables retired
+for Phase 1 scope
+B6 Enable CDO analytics pipeline (INT-06 outbound) from go-live day 	INT-06 confirmed by CDO sign-
+off at M7 (Phase 2 Dev)
+B7 Surface EWS Early Warning flags ( EWS_FG ) in QIR/Issue screens 	POST /api/ews/signals
+endpoint live; EWS_FG visible in
+ISM/QIM screens
+B8 Establish baseline reporting: 12 standard reports + 6 ad-hoc report
+structure
+Report structure deployed on
+non-prod at M3; confirmed at
+UAT
+B9 Deliver full system administration capability — user management,
+master data, workflow config, system settings — in Phase 1, removing
+any gap dependency on a later phase for basic operations
+All 33 ADM screens functional
+at Phase 1 go-live
+2.2 Business Context
+The legacy KPQMS TSB publication process is fragmented across XPLATFORM screens, manual email
+chains, and the decommissioned Spotfire/EWS system. KUS PQ engineers manage ~16,970 TSB-related
+screen interactions monthly under a framework that cannot integrate with Azure AD, Camunda BPM, or
+SAS Visual Analytics.
+Phase 1 resolves this by:
+Consolidating the TSB lifecycle (draft → review → approval → posting → time tracking) into a single
+Camunda-orchestrated workflow
+Bringing QIR creation and management onto the same cloud-native platform with shared VIN/dealer
+data from INT-01 (AS400) and INT-03 (Siebel)
+Enabling the KUS PQ team's SAS VA dashboards via INT-06 outbound data from go-live
+Delivering the full Admin Module (ADM) at go-live so user management, master data, workflow
+templates, and system configuration are self-service from day one — no dependency on a later phase
+for administrative operations
+•
+•
+•
+•
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 3 of 36
+
+-- 3 of 36 --
+
+3. Stakeholders & Counterpart Teams
+3.1 Core Team
+Name 	Organization 	Role
+Kim Yoonsoo 	HAEA 	Project Sponsor / Primary Approver (M1–M6)
+Yoo Joon Sung 	HAEA 	Project Manager
+Ahn Hyo Jung (Jenny) 	HAEA 	Sr. Manager After Sales · Escalation L2
+Rita Verma 	Tenarai 	Provider Program Manager
+[TBD at M1] 	Tenarai 	Technical Lead
+[TBD at M1] 	Tenarai 	Integration Lead
+3.2 Phase 1 Counterpart Teams (HAEA Obligations)
+CP # 	Team 	System 	Availability Access
+Deadline
+CP-1 	GQIS HQ Korea
+Integration
+INT-02 GQIS (Groups
+A + B)
+80–120h total; 12h timezone
+window; 2-week parallel write
+Jul 3, 2026 (API
+in DEV)
+CP-2 	Vital Insights /
+CSI
+INT-12 IQS/VDS (HTTP
+POST decision)
+Decision + 20–40h if HTTP
+agreed
+Jul 3, 2026
+(written
+decision)
+CP-3 	HISNA / AS400
+Admin
+INT-01 Group C (13
+endpoints)
+16–24h total 	Jun 1, 2026
+(ACC-07)
+CP-4 	Active
+Directory / IT
+Admin
+Group G Auth
+(HKE.LOCAL)
+8–16h total 	Jun 1, 2026
+(ACC-08)
+CP-7 	WPC SQL Server
+DBA
+Group F WPC
+FixedOps (2
+endpoints)
+8–12h total 	Jun 1, 2026
+(ACC-09)
+CP-8 	SMTP / Mail
+Relay Admin
+Group H Mail
+Notification
+4–8h total 	Jun 1, 2026
+(ACC-10)
+CP-9 	Network / Infra
+Admin
+All groups (Adapter
+Service)
+24–40h total 	Jun 10, 2026 (N-
+GWMS)
+PQMS
+Business
+SMEs
+KUS PQ Team 	All functional
+modules
+8h/week during BRD
+workshops
+May–Jun 2026
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 4 of 36
+
+-- 4 of 36 --
+
+4. Phase 1 Scope Boundary
+4.1 What Phase 1 Delivers
+Module 	Code 	Tier 	Screens 	Usage
+Publication Management (TSB) 	PUM 	1 — Critical 	6 	60.7%
+Issue Management / QIR 	ISM 	1 — Critical 	14 	24.4%
+QIR Module 	QIM 	2 — Important 	10 	13.6%
+Admin Module 	ADM 	3 — Low 	24 	0.5%
+Phase 1 Total 	54 	99.2%
+Core integrations: INT-01 · INT-02 · INT-03 · INT-04 · INT-05 · INT-06
+Workflow engine: Camunda BPM (TSB approval + QIR assignment + escalation)
+Auth: Azure AD SSO · JWT · RBAC (8 roles) · MFA
+EWS: POST /api/ews/signals writeback endpoint · EWS_FG flag in ISM/QIM screens
+Reporting: 12 standard reports + 6 ad-hoc structure · prototype KPI dashboard
+Data migration: Phase 1 dry-run only (INT-11 full migration is Phase 2)
+4.2 What Phase 2 Delivers (for reference)
+INT-07–12 (PQPS, TechLink, Camunda external API, AWS SES/SNS, legacy migration, IQS/VDS), full AI/ML 24
+models, NLP/RAG intelligent search, historical data migration (INT-11), enhanced analytics, ADM ML Model
+Management screens (ADM0210–ADM0250) and IQS/VDS screens (ADM0260–ADM0290) — go-live March
+12, 2027.
+4.3 Decommissioned Systems (Not Replaced in Phase 1 or Phase 2)
+System 	Reason
+GBI Oracle Data Warehouse ( jdbc/GBIBiz ) 	Decommissioned at enterprise level
+Spotfire / EWS Oracle ( jdbc/SPOTBiz ) 	Decommissioned — EWS replaced by SAS/QC on CDO
+S+ Statistical Analytics 	Decommissioned — replaced by SAS/STAT
+SPT Spotfire Analytics screens (17) 	Do not migrate — users redirected to SAS VA
+PUP / ISP / QIP legacy preview screens (17) 	Do not migrate — absorbed into unified TSB/QIR workflows
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 5 of 36
+
+-- 5 of 36 --
+
+5. Screen Inventory
+5.1 Tier 1 — PUM Publication Management (6 screens)
+Screen
+ID Screen Name 	Description 	Usage Rank
+PUM0020 Publication Entry 	Create, edit, submit TSB publication with
+metadata and attachments
+#1 — 30% of all
+system hits
+PUM0010 Publication List 	Search, filter, and list TSB publications by status,
+model, date
+Top 10
+PUM0030 Publication Detail 	Full-view read of a TSB publication with version
+history and comments
+Top 10
+PUM0040 Publication
+Approval
+Multi-stage approval action screen (Camunda
+task form)
+Top 10
+PUM0050 TSB Posting 	Manage posting status and automate publishing
+to downstream channels
+Top 10
+PUM0060 Publication Time
+Tracking
+Track time spent on TSB authoring, review, and
+approval stages
+—
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 6 of 36
+
+-- 6 of 36 --
+
+5.2 Tier 1 — ISM Issue Management (14 screens)
+Screen
+ID Screen Name 	Description
+ISM0010 Issue List 	List and filter active issues by severity, model, system, status, and source
+channel (Warranty / Weibull / Comeback / Techline / FPQR / EWS / GQIS)
+ISM0020 Issue Entry 	Identify and log new quality issues; captures mandatory Issue Source field
+(Warranty / Weibull / Comeback / Techline / FPQR / EWS / GQIS / Manual) with
+channel-specific structured fields per §7.2
+ISM0030 Issue Scoring 	Score issue severity (manual prototype; AI-assist in Phase 2)
+ISM0040 Issue Detail 	Full-view issue record with VIN data, dealer info, and communication log
+ISM0050 QIR Creation 	Initiate a Quality Issue Report from a scored issue
+ISM0060 QIR Assignment 	Assign QIR to QE/TE/DE/CE role; trigger Camunda task
+ISM0070 Issue Disposition 	Record final disposition (TSB / SA / SC / No Action)
+ISM0080 Issue Tracking 	Track issue state transitions and milestone dates
+ISM0090 Parts Request 	Initiate and track part requests tied to an issue
+ISM0100 Communication
+Log
+Capture and view communication threads per issue
+ISM0110 Escalation
+Management
+Escalate issue to QIR or Top Issue status
+ISM0120 Cross-Org
+Visibility
+Share issue data across organizational units
+ISM0130 EWS Flag View 	Surface EWS_FG alert flags from SAS/QC via writeback endpoint
+ISM0140 Issue Admin /
+Batch
+Manage batch jobs, system admin settings for ISM module
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 7 of 36
+
+-- 7 of 36 --
+
+5.3 Tier 2 — QIM QIR Module (10 screens)
+Screen
+ID Screen Name 	Description
+QIM0010 	QIR List 	List and search all QIR records by status, model, system, assignee
+QIM0020 	QIR Detail 	Full QIR record view with linked ISM issue, FPQR, warranty claims
+QIM0030 	QIR Approval Workflow 	Multi-level QIR approval action screen (Camunda task form)
+QIM0040 	FPQR Submission 	Submit Field Product Quality Reports linked to a QIR
+QIM0050 	FPQR Management 	Manage and track FPQR lifecycle
+QIM0060 	VIN Search 	Search vehicle records by VIN across INT-01 (AS400) and INT-03
+(Siebel)
+QIM0070 	Warranty Data Analysis 	Analyze warranty claims data linked to QIR records
+QIM0080 	QIR Effectiveness
+Analysis
+Evaluate effectiveness of QIR corrective actions
+QIM0090 	Campaign Reporting 	Analyze campaign-related quality data
+QIM0100 	Issue Analytics
+Dashboard
+Visual dashboard for issue trends, KPIs, model line / system-level
+breakdowns
+5.4 Tier 3 — ADM Admin Module (33 screens)
+User & Access Management (5 screens)
+Screen
+ID Screen Name 	Description
+ADM0010 User List & Search 	List, search, and filter all N-PQMS users by role, status, org unit
+ADM0020 User Entry & Edit 	Create and edit user profiles: name, email, org, role assignment, access
+expiry
+ADM0030 Role Assignment 	Assign and revoke RBAC roles per user; bulk assignment via XLSX import
+ADM0040 Access Audit Log 	Read-only log of all user access changes — grantee, grantor, role,
+timestamp
+ADM0050 External User
+Access
+Manage external (non-KUS) user accounts with expiry date and role
+restrictions
+System Configuration (5 screens)
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 8 of 36
+
+-- 8 of 36 --
+
+Screen
+ID Screen Name 	Description
+ADM0060 System Parameters 	Global config: pagination defaults, file size limits, token TTL, date
+formats
+ADM0070 Notification Template
+Config
+Create and edit email/push notification templates per trigger event
+ADM0080 Integration Status
+Monitor
+Real-time status of all 6 Phase 1 INT workstreams; error counts, last-
+sync timestamps
+ADM0090 Environment Config 	Environment-level settings: Redis TTL, batch schedules, log retention
+ADM0100 Tenant Configuration 	Multi-tenant company code settings
+Workflow Template Management (4 screens)
+Screen
+ID Screen Name 	Description
+ADM0110 TSB Workflow Template
+Editor
+Create and edit Camunda BPMN templates for TSB approval
+(standard, expedited, emergency)
+ADM0120 QIR Workflow Template
+Editor
+Create and edit QIR assignment and approval workflow templates
+ADM0130 SLA Configuration 	Set SLA deadlines per workflow stage and escalation rules
+ADM0140 Escalation Rules Config 	Define escalation chains: who is notified when, thresholds, override
+rules
+Master Data Management (6 screens)
+Screen
+ID Screen Name 	Description
+ADM0150 Model / Model Year Master 	Manage vehicle model and model year records (INT-01 sync +
+manual override)
+ADM0160 Plant Master 	Manage production plant codes and associated regions
+ADM0170 Parts Master Sync 	Trigger and monitor INT-04 SAP BW parts master sync; view last-
+sync status
+ADM0180 Op Code Master 	Manage labor op codes sourced from INT-01; manual additions
+ADM0190 Dealer Master Sync 	Trigger and monitor INT-03 Siebel dealer master sync
+ADM0200 Symptom / Cause / Correction
+Codes
+Manage standardized S/C/C code library used across ISM/QIM/
+FPQR
+Batch & System Health Management (4 screens)
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 9 of 36
+
+-- 9 of 36 --
+
+Screen
+ID Screen Name 	Description
+ADM0300 Batch Job Monitor 	Monitor all scheduled batch jobs: status, last-run, next-run, error log
+ADM0310 Migration Status
+Dashboard
+Phase 1: dry-run tracking; Phase 2: full INT-11 migration progress
+ADM0320 Data Quality Report 	View data quality results from INT-06 EDW push and migration dry-run
+ADM0330 System Health
+Dashboard
+AWS CloudWatch summary: EKS pod health, RDS CPU/connections,
+Redis hit rate
+ADM Total: 24 screens (5 + 5 + 4 + 6 + 4)
+ADM0210–ADM0290 (ML Model Management and IQS/VDS Management, 9 screens) are delivered in
+Phase 2 when AI/ML models and INT-12 are available. They are not in Phase 1 scope.
+6. Functional Requirements — TSB Publication Management
+(PUM)
+6.1 TSB Draft Creation & Collaboration
+ID 	Requirement 	Priority
+PUM-
+FR-001
+Users shall create a new TSB draft by entering: title, TSB type, affected model(s),
+affected model year(s), related symptoms, parts/op codes, and attaching supporting
+files
+P1
+PUM-
+FR-002
+External teams (outside KUS PQ) shall be able to submit draft TSBs through a controlled
+submission interface with role-based access restrictions
+P1
+PUM-
+FR-003
+Multiple reviewers shall be able to add comments, annotate, accept, or reject a draft
+TSB within the same screen session
+P1
+PUM-
+FR-004
+Draft TSBs shall support version history — each save/submit action creates a versioned
+snapshot with author and timestamp
+P1
+PUM-
+FR-005
+Draft TSBs shall auto-save at configurable intervals (default: every 5 minutes) 	P2
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 10 of 36
+
+-- 10 of 36 --
+
+6.2 Publication Entry & Metadata (PUM0020 — NFR Anchor)
+ID 	Requirement 	Priority
+PUM-
+FR-010
+PUM0020 shall allow entry of all publication metadata: TSB number, revision, model,
+model year, system, symptom, cause, correction, parts, op codes, labor time
+P1
+PUM-
+FR-011
+PUM0020 shall support file attachments: PDF, DOCX, XLSX, images — max file size and
+allowed types configurable by admin
+P1
+PUM-
+FR-012
+PUM0020 shall integrate with INT-01 (AS400/HISNA) to auto-populate VIN master,
+model, plant, op code data in dropdowns
+P1
+PUM-
+FR-013
+PUM0020 shall integrate with INT-04 (SAP BW/4HANA) to auto-populate parts master
+data
+P1
+PUM-
+FR-014
+PUM0020 page load shall meet the SPEC-PERF-001 NFR target: ≤2 seconds at 10
+concurrent users (DEV), ≤1.5 seconds at 50 concurrent users (Staging)
+P1
+PUM-
+FR-015
+Publication number shall be auto-generated per configurable numbering scheme;
+manual override permitted for Admin role
+P1
+6.3 TSB Approval Workflow
+ID 	Requirement 	Priority
+PUM-
+FR-020
+TSB shall follow a configurable multi-stage approval chain managed by Camunda BPM:
+Draft → Technical Review → Manager Approval → Director Approval → Published
+P1
+PUM-
+FR-021
+Each approval stage shall generate an automated notification (email via Group H) to the
+next approver with a direct link to PUM0040
+P1
+PUM-
+FR-022
+Approvers shall be able to approve, reject with comments, or return to author at any
+stage
+P1
+PUM-
+FR-023
+Rejected TSBs shall revert to Draft status with the rejection reason visible in the version
+history
+P1
+PUM-
+FR-024
+Approval deadline per stage shall be configurable; overdue tasks shall trigger escalation
+notification to the stage supervisor
+P2
+PUM-
+FR-025
+Parallel approval paths shall be supported for stages requiring sign-off from multiple
+roles simultaneously
+P2
+PUM-
+FR-026
+TSB approval workflow templates shall be configurable by Admin role without code
+changes
+P2
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 11 of 36
+
+-- 11 of 36 --
+
+6.4 Publication Listing & Search
+ID 	Requirement 	Priority
+PUM-
+FR-030
+PUM0010 shall support search and filter by: TSB number, title, status, model, model
+year, system, date range, author
+P1
+PUM-
+FR-031
+Search results shall be paginated (default 20 per page; configurable) with sort by date,
+model, status
+P1
+PUM-
+FR-032
+Publication status shall be displayed as a color-coded badge: Draft, In Review,
+Approved, Published, Archived
+P1
+PUM-
+FR-033
+Users shall be able to export search results to XLSX 	P2
+6.5 TSB Posting & Publishing Management
+ID 	Requirement 	Priority
+PUM-
+FR-040
+PUM0050 shall track publishing status: pending, posted, confirmed, archived 	P1
+PUM-
+FR-041
+Publishing status updates shall integrate with INT-08 (TechLink) for DTC/TSB cross-
+reference — Note: INT-08 is Phase 2; Phase 1 shall use manual status entry with INT-08
+stub
+P2
+PUM-
+FR-042
+Posting confirmation shall be logged with timestamp, posted-by user, and confirmation
+reference
+P1
+6.6 Time Tracking
+ID 	Requirement 	Priority
+PUM-
+FR-050
+PUM0060 shall record time spent per user per TSB stage: authoring, review, approval,
+posting
+P1
+PUM-
+FR-051
+Time entries shall roll up to KPI reports: average time-to-publish per TSB type, per
+model
+P1
+PUM-
+FR-052
+Time tracking data shall feed into the INT-06 outbound EDW pipeline for SAS VA
+analytics
+P2
+6.7 Audit Log
+ID 	Requirement 	Priority
+PUM-
+FR-060
+All TSB actions (create, edit, submit, approve, reject, post, archive) shall be logged
+with: user ID, role, timestamp, action, previous and new value
+P1
+PUM-
+FR-061
+Audit log shall be read-only; accessible to Admin and PQM roles only 	P1
+PUM-
+FR-062
+Audit log shall support export to PDF and XLSX for NHTSA compliance reporting 	P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 12 of 36
+
+-- 12 of 36 --
+
+6.8 Master Data Management (PUM Admin)
+ID 	Requirement 	Priority
+PUM-
+FR-070
+Admin shall manage model, model year, plant, and op code master data — primarily
+sourced from INT-01 with manual override capability
+P1
+PUM-
+FR-071
+Admin shall manage parts master data — sourced from INT-04 (SAP BW) with manual
+override
+P1
+PUM-
+FR-072
+Admin shall configure: TSB number format, approval chain templates, attachment
+limits, notification recipients
+P1
+6.9 Access Control
+ID 	Requirement 	Priority
+PUM-
+FR-080
+Access to PUM screens shall be restricted by RBAC role: TSB authors (TE/DE), reviewers
+(QE/CE), approvers (ASM/DM/PQM), admins (Admin)
+P1
+PUM-
+FR-081
+Non-KUS employees shall be grantable TSB submission access by Admin with a defined
+access expiry date
+P1
+PUM-
+FR-082
+All access grants and revocations shall be logged in the audit trail 	P1
+7. Functional Requirements — Issue Management (ISM)
+7.1 Issue Identification & Listing
+ID 	Requirement 	Priority
+ISM-
+FR-001
+ISM0010 shall list all active quality issues with filter by: severity score, model, system,
+status, assigned role, date range
+P1
+ISM-
+FR-002
+Issues shall be surfaced from five primary source channels: Warranty (INT-03 warranty
+claim threshold), Weibull (statistical reliability analysis), Comeback (repeat repair
+pattern from INT-03), Techline (dealer technical support inquiry), and FPQR (Field
+Product Quality Report via QIM0040). EWS flag ( EWS_FG ) signals from SAS/QC and GQIS
+inbound (INT-02 Group A) remain as additional signal sources. Each channel has a defined
+Phase 1 manual entry mode and a Phase 2 automation path — see §7.2.
+P1
+ISM-
+FR-003
+Issue list shall display: issue ID, title, model, severity score, status, owner, days open 	P1
+ISM-
+FR-004
+Issue list shall support bulk-select actions: assign, change status, export 	P2
+7.2 Issue Source Channels
+Five primary channels trigger quality issue creation in N-PQMS. Each channel has a defined Phase 1
+manual entry mode and a Phase 2 automation path.
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 13 of 36
+
+-- 13 of 36 --
+
+Channel Trigger 	Phase 1 Mode 	Phase 2 Automation
+Warranty Warranty claim volume exceeds
+threshold for model/system
+Manual entry by QE/TE
+based on INT-03 claims data
+INT-03 auto-threshold
+monitoring → auto-draft issue
+Weibull 	Reliability analysis identifies
+elevated failure rate for a
+population
+Manual structured entry by
+QE (β, η, failure rate fields)
+Automated Weibull
+computation from INT-03/
+INT-04 data
+Comeback Repeat repair on same VIN/
+symptom within rolling time
+window
+Manual entry by QE
+triggered by INT-03 repair
+order review
+INT-03 repeat repair auto-
+detect → auto-draft issue
+Techline 	Dealer technical support inquiry
+identifies a recurring quality
+pattern
+Manual entry by QE/TE from
+Techline inquiry reports
+INT-08 (TechLink) automated
+signal → issue draft
+FPQR 	Field Product Quality Report from
+field engineer flags a recurring
+issue
+Manual promotion via
+QIM0040 → ISM link by QE
+INT-07 (PQPS) automated
+FPQR ingest at volume
+threshold
+ID 	Requirement 	Priority
+ISM-FR-
+CH-001
+Warranty Source: ISM0020 shall include a Warranty source entry form capturing:
+warranty claim count, threshold crossed, model, model year, system, date range of
+claims, and a link to the INT-03 warranty data view. Phase 1: manual entry by QE/TE
+after reviewing INT-03 data. Phase 2: INT-03 auto-threshold alert triggers draft issue
+creation.
+P1
+ISM-FR-
+CH-002
+Weibull Source: ISM0020 shall include structured Weibull analysis input fields: Shape
+Parameter β, Scale Parameter η (characteristic life), failure rate at current mileage/time,
+sample population size, confidence interval. Phase 1: manual entry by QE. Phase 2:
+automated Weibull computation from INT-03/INT-04 data feeds the structured fields.
+P1
+ISM-FR-
+CH-003
+Comeback Source: ISM0020 shall include a Comeback source entry form capturing:
+VIN range with repeat repairs, symptom code, number of return visits, time window
+(days), dealer region. Phase 1: manual entry by QE triggered by INT-03 repair order
+review. Phase 2: INT-03 repeat repair auto-detect → auto-draft issue.
+P1
+ISM-FR-
+CH-004
+Techline Source: ISM0020 shall include a Techline source entry form capturing: inquiry
+reference ID, inquiry date, symptom description, affected model/system, number of
+dealers reporting the same issue. Phase 1: manual entry by QE/TE from Techline inquiry
+reports. Phase 2: INT-08 (TechLink) automated signal integration.
+P1
+ISM-FR-
+CH-005
+FPQR Source: When an FPQR submitted via QIM0040 is flagged by QE as a recurring
+field quality issue, the system shall allow the QE to promote it to an ISM issue with
+source channel = FPQR and the originating FPQR ID auto-linked. Phase 1: manual
+promotion via QIM0040 → ISM link. Phase 2: INT-07 (PQPS) automated ingest triggers
+issue draft when FPQR volume threshold is crossed.
+P1
+ISM-FR-
+CH-006
+The Issue Source field shall be mandatory on ISM0020. Valid values: Warranty / Weibull /
+Comeback / Techline / FPQR / EWS / GQIS / Manual. ISM0010 shall provide Issue Source
+as a filter field. Once set and saved, the source field is immutable except by ASM/PQM
+role with a justification note logged in the audit trail.
+P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 14 of 36
+
+-- 14 of 36 --
+
+7.3 Issue Entry & Scoring
+ID 	Requirement 	Priority
+ISM-
+FR-010
+ISM0020 shall capture: issue title, description, model, model year, system, subsystem,
+symptom, affected VIN range, reported date, and Issue Source (mandatory dropdown:
+Warranty / Weibull / Comeback / Techline / FPQR / EWS / GQIS / Manual). Selecting a
+source shall reveal the channel-specific structured fields defined in §7.2.
+P1
+ISM-
+FR-011
+ISM0030 shall display a severity score (0–100) calculated by the prototype scoring
+algorithm using: field frequency, repair cost, warranty claims count (from INT-03 Siebel).
+For Weibull-source issues, the scoring algorithm shall additionally ingest the structured
+Weibull parameters (β, η, failure rate) as severity inputs. Phase 2: AI-assisted scoring
+extended to all source channels.
+P1
+ISM-
+FR-012
+Severity score shall be visible to QE/TE/DE roles; editable (with justification) by ASM/PQM
+roles
+P1
+ISM-
+FR-013
+VIN-level data for an issue shall be auto-populated from INT-01 (AS400/HISNA): model,
+plant, production date, options
+P1
+ISM-
+FR-014
+Dealer data for an issue shall be auto-populated from INT-03 (Siebel/DMS): dealer code,
+region, repair order count
+P1
+7.4 EWS Flag Integration
+ID 	Requirement 	Priority
+ISM-
+FR-020
+N-PQMS shall expose POST /api/ews/signals to receive EWS alert signal flags from
+SAS/QC (Group D equivalent endpoint — internal)
+P1
+ISM-
+FR-021
+On receiving a valid signal, N-PQMS shall set EWS_FG = true on the matching issue/QIR
+record
+P1
+ISM-
+FR-022
+EWS_FG flag shall be displayed as a visual indicator on ISM0010 (issue list), ISM0020
+(issue detail), ISM0130 (EWS Flag View), and all QIM screens
+P1
+ISM-
+FR-023
+POST /api/ews/signals shall validate: authentication token (JWT), signal payload
+schema, VIN/model match; invalid payloads shall return HTTP 400 with error code
+P1
+ISM-
+FR-024
+EWS signal receipt shall be logged in the audit trail with: signal ID, timestamp, model,
+VIN range, EWS_FG value set
+P1
+7.5 Issue Disposition
+ID 	Requirement 	Priority
+ISM-
+FR-030
+ISM0070 shall record final disposition per issue: TSB (Technical Service Bulletin), SA
+(Service Action), SC (Safety Campaign), No Action, Monitoring
+P1
+ISM-
+FR-031
+Selecting TSB disposition shall auto-create a PUM draft linked to the issue ID 	P1
+ISM-
+FR-032
+Disposition shall require ASM or PQM role approval before it is recorded as final 	P1
+ISM-
+FR-033
+GQIS outbound sync (INT-02 Group B) shall transmit disposition status updates to GQIS
+Korea HQ
+P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 15 of 36
+
+-- 15 of 36 --
+
+7.6 Issue Tracking & Lifecycle
+ID 	Requirement 	Priority
+ISM-
+FR-040
+ISM0080 shall display the full lifecycle timeline of an issue: open → scored → QIR
+created → disposed → closed
+P1
+ISM-
+FR-041
+State transitions shall be enforced by Camunda BPM — only valid transitions allowed
+per role
+P1
+ISM-
+FR-042
+Days-open counter shall be visible on issue list and detail screens 	P1
+ISM-
+FR-043
+Issues closed without disposition (>90 days old) shall trigger a reminder notification to
+the assigned QE
+P2
+7.7 Parts Request
+ID 	Requirement 	Priority
+ISM-
+FR-050
+ISM0090 shall allow TE/DE to submit a parts request linked to an issue, specifying: part
+number (from INT-04 SAP BW), quantity, urgency
+P1
+ISM-
+FR-051
+Parts request status shall be trackable: submitted → approved → ordered → received 	P1
+7.8 Communication Log
+ID 	Requirement 	Priority
+ISM-
+FR-060
+ISM0100 shall maintain a threaded communication log per issue: internal comments,
+email correspondence, and cross-org messages
+P1
+ISM-
+FR-061
+Communication entries shall be role-stamped and timestamped; deletion is not
+permitted (soft-hide only by Admin)
+P1
+ISM-
+FR-062
+Outbound emails sent from N-PQMS related to an issue shall be automatically captured
+in the communication log
+P2
+7.9 Escalation
+ID 	Requirement 	Priority
+ISM-
+FR-070
+ISM0110 shall allow escalation of an issue to: QIR status (creates QIM record), Top Issue
+status (flags for executive reporting)
+P1
+ISM-
+FR-071
+Escalation to QIR shall trigger a Camunda BPM task assigned to the ASM role 	P1
+ISM-
+FR-072
+Escalation to Top Issue shall trigger notification to PQM and Director roles 	P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 16 of 36
+
+-- 16 of 36 --
+
+7.10 Cross-Org Visibility
+ID 	Requirement 	Priority
+ISM-
+FR-080
+ISM0120 shall allow issues flagged for cross-org sharing to be visible to non-KUS
+organizational units with read-only access
+P1
+ISM-
+FR-081
+Cross-org sharing shall be grantable per issue by ASM/PQM roles; default is KUS-only
+visibility
+P1
+8. Functional Requirements — QIR Module (QIM)
+8.1 QIR Lifecycle
+ID 	Requirement 	Priority
+QIM-
+FR-001
+QIM0010 shall list all QIR records with filter by: status, model, system, severity,
+assignee, date created, FPQR-linked flag
+P1
+QIM-
+FR-002
+QIM0020 shall display the full QIR record: issue origin, severity score, linked ISM issue,
+linked FPQRs, warranty claims (INT-03), VIN data (INT-01), communication log,
+disposition history
+P1
+QIM-
+FR-003
+QIR creation shall be triggered by: escalation from ISM, direct creation by QE/TE role,
+inbound GQIS signal (INT-02 Group A)
+P1
+QIM-
+FR-004
+QIR status lifecycle: Draft → Under Review → Approved → Closed / Escalated 	P1
+QIM-
+FR-005
+QIR tracking dashboard (QIM0100) shall display: open QIRs by model, average resolution
+time, severity distribution, model-line breakdown
+P1
+8.2 QIR Approval Workflow
+ID 	Requirement 	Priority
+QIM-
+FR-010
+QIM0030 shall present Camunda BPM task forms for multi-level QIR approval: QE →
+ASM → PQM
+P1
+QIM-
+FR-011
+Approval actions: approve, reject with comments, request additional information 	P1
+QIM-
+FR-012
+QIR approval decisions shall sync to GQIS Korea HQ via INT-02 Group B within 30
+minutes of decision
+P1
+QIM-
+FR-013
+QIR rejection shall return status to Draft with rejection reason visible in version history P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 17 of 36
+
+-- 17 of 36 --
+
+8.3 FPQR Submission & Management
+ID 	Requirement 	Priority
+QIM-
+FR-020
+QIM0040 shall allow field engineers to submit an FPQR linked to an existing QIR or as
+standalone
+P1
+QIM-
+FR-021
+FPQR fields: report date, dealer, VIN, mileage, symptom code, cause code, correction
+code, parts used, labor time, customer description
+P1
+QIM-
+FR-022
+QIM0050 shall manage FPQR lifecycle: submitted → reviewed → closed; reviewer is QE/
+TE role
+P1
+QIM-
+FR-023
+FPQR data shall feed into the warranty data analysis view (QIM0070) for trend analysis P1
+8.4 VIN Search
+ID 	Requirement 	Priority
+QIM-
+FR-030
+QIM0060 shall enable search by VIN across INT-01 (AS400/HISNA) and INT-03 (Siebel/
+DMS)
+P1
+QIM-
+FR-031
+VIN search results shall display: model, model year, plant, production date, warranty
+start date, open QIRs, repair history
+P1
+QIM-
+FR-032
+VIN search shall return results within 3 seconds for single VIN lookup 	P1
+8.5 Analytics & Reporting (QIM)
+ID 	Requirement 	Priority
+QIM-
+FR-040
+QIM0070 shall display warranty claims data (from INT-03 Siebel) aggregated by: model,
+system, date range — line charts, bar charts
+P1
+QIM-
+FR-041
+QIM0080 shall compute QIR effectiveness: % of closed QIRs with verified corrective
+action; average days to close
+P1
+QIM-
+FR-042
+QIM0090 shall display campaign reporting analytics: campaign issues by model,
+campaign closure rate
+P1
+QIM-
+FR-043
+QIM0100 issue analytics dashboard shall include: issue volume trend, severity heatmap
+by model/system, open vs. closed ratio, EWS flag frequency
+P1
+QIM-
+FR-044
+All QIM analytics data shall be included in the INT-06 outbound push to CDO 	P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 18 of 36
+
+-- 18 of 36 --
+
+9. Functional Requirements — Admin Module (ADM)
+9.1 User & Access Management
+ID 	Requirement 	Priority
+ADM-
+FR-001
+ADM0010 shall list all users with filter by: role, status (active/inactive/expired), org unit,
+last login date
+P1
+ADM-
+FR-002
+ADM0020 shall allow Admin to create, edit, activate, deactivate, and delete user
+accounts; all changes logged in audit trail
+P1
+ADM-
+FR-003
+ADM0030 shall allow Admin to assign and revoke RBAC roles per user; bulk assignment
+via XLSX import with validation
+P1
+ADM-
+FR-004
+External user accounts (ADM0050) shall enforce an access expiry date; the system shall
+auto-deactivate accounts 24 hours after expiry with a notification to Admin
+P1
+ADM-
+FR-005
+ADM0040 access audit log shall be read-only, immutable, exportable to PDF/XLSX;
+accessible to Admin and PQM roles only
+P1
+ADM-
+FR-006
+Admin shall be able to force-expire a user's JWT session (effective within 1 token refresh
+cycle, maximum 30 minutes)
+P1
+ADM-
+FR-007
+ADM0010 shall surface users with roles expiring within 14 days as a highlighted alert to
+Admin
+P2
+9.2 System Configuration
+ID 	Requirement 	Priority
+ADM-
+FR-010
+ADM0060 shall allow Admin to configure global system parameters without code
+changes or redeployment
+P1
+ADM-
+FR-011
+All configuration changes via ADM0060–ADM0100 shall be logged in the audit trail with:
+parameter name, old value, new value, user, timestamp
+P1
+ADM-
+FR-012
+ADM0070 notification templates shall support: subject, body (with template variables:
+{{user_name}} , {{issue_id}} , {{model}} ), recipient rules, trigger event
+P1
+ADM-
+FR-013
+ADM0080 integration status monitor shall refresh every 60 seconds; errors shall be
+highlighted with error count, last-error message, and timestamp
+P1
+ADM-
+FR-014
+ADM0090 batch schedule configuration shall allow Admin to change cron expressions
+for INT-06 EDW push without restart
+P2
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 19 of 36
+
+-- 19 of 36 --
+
+9.3 Workflow Template Management
+ID 	Requirement 	Priority
+ADM-
+FR-020
+ADM0110 shall allow Admin to create, edit, activate, and deactivate Camunda BPMN
+workflow templates for TSB approval via a structured form or visual template editor
+P1
+ADM-
+FR-021
+ADM0120 shall allow Admin to configure QIR assignment rules: model-to-QE affinity
+matrix, default assignee fallback
+P1
+ADM-
+FR-022
+ADM0130 shall allow Admin to set SLA deadlines (hours) per workflow stage per
+template type; changes take effect on newly created workflow instances only
+P1
+ADM-
+FR-023
+ADM0140 escalation rules shall define: condition (SLA exceeded, rejection count),
+escalation target (role or user), notification content
+P1
+ADM-
+FR-024
+Workflow template activation/deactivation shall not affect in-flight workflow instances 	P1
+9.4 Master Data Management
+ID 	Requirement 	Priority
+ADM-
+FR-030
+ADM0150–ADM0190 master data screens shall display: source system (INT-01 / INT-03 /
+INT-04), last sync timestamp, record count, sync status
+P1
+ADM-
+FR-031
+Admin shall be able to trigger a manual on-demand sync for INT-01, INT-03, INT-04
+master data from ADM screens
+P1
+ADM-
+FR-032
+Manual overrides to master data shall be flagged with "Manual — Not from Source"
+label and included in audit trail
+P1
+ADM-
+FR-033
+ADM0200 symptom/cause/correction code library shall be the single master used
+across ISM, QIM, and FPQR data entry
+P1
+ADM-
+FR-034
+All master data changes shall trigger cache invalidation for the affected Redis keys
+(INT-01, INT-03, INT-04 caches)
+P1
+9.5 Batch & System Health
+ID 	Requirement 	Priority
+ADM-
+FR-040
+ADM0300 batch job monitor shall display all scheduled jobs with: next-run time, last-
+run status (success/failure), duration, records processed
+P1
+ADM-
+FR-041
+ADM0310 shall track Phase 1 dry-run migration progress (INT-11 sample); Phase 2
+extends to full migration tracking
+P1
+ADM-
+FR-042
+ADM0330 system health dashboard shall surface AWS CloudWatch metrics: EKS pod
+count/health, RDS connection pool utilization, Redis memory usage
+P1
+ADM-
+FR-043
+Any batch job failure in ADM0300 shall trigger an Admin notification via SMTP relay
+(Group H at Phase 1; upgraded to INT-10 AWS SES in Phase 2)
+P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 20 of 36
+
+-- 20 of 36 --
+
+10. Authentication & Authorization
+10.1 Single Sign-On (SSO)
+ID 	Requirement 	Priority
+AUTH-
+FR-001
+N-PQMS shall integrate with HAEA SSO via Azure Active Directory using OAuth 2.0 /
+OpenID Connect
+P1
+AUTH-
+FR-002
+All user sessions shall be managed via JWT tokens issued by Azure AD; token refresh
+interval configurable (default: 30 minutes)
+P1
+AUTH-
+FR-003
+Session expiry shall redirect to HAEA SSO login page; unsaved work shall prompt the
+user before redirect
+P1
+AUTH-
+FR-004
+KDealer Plus authentication flow (external dealer users) shall be supported via Azure
+AD B2C federation — configuration confirmed by HAEA IT (CP-4) before Architecture
+Design Week 1
+P1
+10.2 Multi-Factor Authentication (MFA)
+ID 	Requirement 	Priority
+AUTH-
+FR-010
+MFA shall be enforced for all users via HAEA's Azure AD MFA policy; N-PQMS shall not
+bypass or override HAEA MFA settings
+P1
+AUTH-
+FR-011
+MFA method selection (authenticator app, SMS, hardware key) is managed by HAEA IT;
+N-PQMS receives a valid MFA-passed JWT
+P1
+10.3 Role-Based Access Control (RBAC)
+Role 	Code Description 	Phase 1 Access
+Quality Engineer 	QE 	Creates issues, scores, submits QIR 	ISM + QIM full; PUM read
+Test Engineer 	TE 	Creates issues, submits FPQR 	ISM + QIM full; PUM read
+Design Engineer 	DE 	Reviews issues, reviews QIR 	ISM + QIM full; PUM read
+Customer Experience CE 	Reviews issues, views QIR 	ISM + QIM read; PUM read
+After-Sales Manager 	ASM 	Approves QIR, approves disposition 	ISM + QIM full; PUM
+approval
+Deputy Manager 	DM 	Reviews and approves TSB 	PUM approval; ISM + QIM
+read
+Product Quality
+Manager
+PQM 	Final approval all modules 	All Phase 1 screens full
+Admin 	Admin System administration, user management,
+master data
+All screens + admin
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 21 of 36
+
+-- 21 of 36 --
+
+ID 	Requirement 	Priority
+AUTH-
+FR-020
+All N-PQMS screens and API endpoints shall enforce RBAC based on the JWT role claim
+from Azure AD
+P1
+AUTH-
+FR-021
+Unauthorized access attempts shall return HTTP 403 with a user-visible error message;
+all attempts shall be logged
+P1
+AUTH-
+FR-022
+Non-KUS external users shall be grantable access with a specific role and an expiry
+date; access shall auto-revoke on expiry
+P1
+AUTH-
+FR-023
+Role assignments shall be managed via ADM0030 (Role Assignment screen) — fully
+functional at Phase 1 go-live; initial user population may be loaded via bulk XLSX import
+for go-live cutover
+P1
+AUTH-
+FR-024
+All changes to user roles and access shall be logged in the audit trail 	P1
+10.4 Terms & Conditions
+ID 	Requirement 	Priority
+AUTH-
+FR-030
+Users shall be required to accept Terms and Conditions on first login and whenever a
+revised version is published
+P1
+AUTH-
+FR-031
+T&C acceptance shall be logged with: user ID, version accepted, timestamp 	P1
+11. Workflow Management (Camunda BPM)
+11.1 Camunda BPM Engine — Phase 1 Scope
+Phase 1 deploys the Camunda BPM engine for two core workflows. The full bidirectional INT-09 Camunda
+external API integration is Phase 2; Phase 1 uses embedded Camunda with internal task management.
+ID 	Requirement 	Priority
+WF-
+FR-001
+N-PQMS shall deploy Camunda BPM (or equivalent, finalized during design phase) as the
+workflow engine for Phase 1 TSB and QIR workflows
+P1
+WF-
+FR-002
+Camunda BPMN 2.0 process definitions shall be stored in GitLab and deployed via CI/CD
+pipeline
+P1
+WF-
+FR-003
+Workflow state shall be persisted in the N-PQMS PostgreSQL database; workflow history
+shall be queryable by Admin and PQM roles
+P1
+WF-
+FR-004
+All workflow transitions shall be logged in the N-PQMS audit trail 	P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 22 of 36
+
+-- 22 of 36 --
+
+11.2 TSB Approval Workflow (BPMN)
+[Draft Created]
+→ Technical Review (TE/DE)
+↓ Reject → [Return to Draft]
+↓ Approve
+→ Manager Approval (ASM)
+↓ Reject → [Return to Draft]
+↓ Approve
+→ Director Approval (DM/PQM)
+↓ Reject → [Return to Draft]
+↓ Approve
+→ [Published]
+→ Posting (PUM0050)
+→ Archived
+ID 	Requirement 	Priority
+WF-
+FR-010
+TSB approval workflow shall follow the BPMN chain above; each stage assignee
+determined by RBAC role mapping
+P1
+WF-
+FR-011
+TSB workflow shall support configurable templates: standard, expedited (skip Director
+for minor revisions), and emergency (single-stage, PQM only)
+P2
+WF-
+FR-012
+Each workflow stage shall enforce a configurable SLA deadline; overdue tasks shall
+escalate to the role supervisor
+P2
+11.3 QIR Assignment & Escalation Workflow (BPMN)
+[Issue Escalated / QIR Created]
+→ QIR Assignment (QE role auto-assigned by model/system rule)
+→ Under Review (QE → TE → DE review)
+→ QIR Approval (ASM)
+↓ Reject → [Return to QE]
+↓ Approve
+→ PQM Final Approval
+↓ Reject → [Return to ASM]
+↓ Approve
+→ [QIR Closed / Disposition Recorded]
+→ GQIS outbound sync (INT-02 Group B)
+ID 	Requirement 	Priority
+WF-
+FR-020
+QIR assignment shall be triggered automatically when an issue is escalated to QIR
+status in ISM
+P1
+WF-
+FR-021
+QE assignee shall be determined by a configurable rule: model/system affinity matrix
+maintained by Admin
+P1
+WF-
+FR-022
+QIR approval workflow shall mirror TSB approval: configurable multi-stage with
+rejection-return and escalation
+P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 23 of 36
+
+-- 23 of 36 --
+
+11.4 Workflow Templates & Configuration
+ID 	Requirement 	Priority
+WF-
+FR-030
+Workflow templates shall be configurable by Admin role via a UI (no code change
+required)
+P2
+WF-
+FR-031
+Role-to-stage mapping shall be configurable per workflow template 	P2
+12. Notifications & Alerts
+ID 	Requirement 	Priority
+NOTIF-
+FR-001
+N-PQMS shall send email notifications via SMTP relay (Group H — POST /api/mail/
+send ) for: task assignment, approval request, rejection, escalation, overdue SLA
+P1
+NOTIF-
+FR-002
+Notification templates shall be configurable by Admin: subject, body, recipients, trigger
+event
+P1
+NOTIF-
+FR-003
+All sent notifications shall be logged with: recipient, subject, trigger event, timestamp,
+delivery status
+P1
+NOTIF-
+FR-004
+Notification failures (SMTP error) shall be retried up to 3 times with exponential
+backoff; persistent failures shall alert the Admin
+P1
+NOTIF-
+FR-005
+In-app notification center shall display unread task assignments and approvals for the
+logged-in user
+P2
+NOTIF-
+FR-006
+EWS alert receipt ( POST /api/ews/signals ) shall trigger a notification to the assigned
+QE for all issues with EWS_FG newly set to true
+P1
+Note: Full AWS SNS push notification (INT-10) is Phase 2. Phase 1 uses SMTP relay (Group H) for all email
+notifications.
+13. Reporting & Dashboard (Prototype)
+13.1 Standard Reports (12 Reports — Phase 1)
+Reports are displayed directly in the N-PQMS UI (database-driven; not SAS VA). SAS VA dashboards
+consume the same data via INT-06 EDW outbound.
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 24 of 36
+
+-- 24 of 36 --
+
+# 	Report Name 	Module 	Key Metrics
+R-01 TSB Publication Status Summary PUM 	TSBs by status, model, date range
+R-02 TSB Approval Cycle Time 	PUM 	Avg. days per stage, bottleneck identification
+R-03 TSB Time-to-Publish 	PUM 	By TSB type, model, author
+R-04 Open Issue Summary 	ISM 	Issues by severity, model, system, age
+R-05 Issue Disposition Summary 	ISM 	TSB / SA / SC / No Action counts by model
+R-06 EWS Flag Report 	ISM 	Issues with EWS_FG = true by model, system, date
+R-07 QIR Open/Closed Trend 	QIM 	Monthly QIR volume, open vs. closed
+R-08 QIR Approval Cycle Time 	QIM 	Avg. days per stage
+R-09 FPQR Volume by Dealer 	QIM 	FPQR count by dealer, model, date range
+R-10 Warranty Claims by Model 	QIM 	Claim count, cost trend (from INT-03 Siebel)
+R-11 Top Issues Dashboard 	ISM + QIM Top 10 open issues by severity score
+R-12 User Activity Log 	All 	Actions per user, role, date range
+13.2 Ad-hoc Reporting Structure (6 Types)
+# 	Ad-hoc Type 	Description
+A-01 Parameter-based QIR
+Query
+User selects model, system, date range, severity range; system returns
+matching QIR records
+A-02 VIN-level Drill-down 	Enter VIN → all linked issues, QIRs, FPQRs, repair orders displayed
+A-03 Custom TSB Filter
+Export
+User selects filters → exports to XLSX
+A-04 Cross-model
+Comparison
+Side-by-side issue volume for up to 4 selected models
+A-05 Date-Range Snapshot 	All open items as of a specified historical date
+A-06 Role-Activity Audit 	Actions performed by a specific user or role over a date range
+13.3 Prototype KPI Dashboard
+ID 	Requirement 	Priority
+RPT-
+FR-001
+Prototype dashboard shall display: total open issues, total open QIRs, TSBs published
+YTD, avg. severity score (portfolio), EWS flag count
+P1
+RPT-
+FR-002
+Dashboard KPIs shall be filterable by model and date range 	P1
+RPT-
+FR-003
+Dashboard shall be accessible to ASM, DM, PQM, and Admin roles 	P1
+RPT-
+FR-004
+Dashboard data shall refresh every 15 minutes (configurable by Admin) 	P2
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 25 of 36
+
+-- 25 of 36 --
+
+14. Integration Requirements — Phase 1
+14.1 Integration Overview
+INT 	System 	Direction 	Protocol 	Phase
+INT-01 AS400 / HISNA 	← Inbound 	REST adapter (Group C — 13 endpoints) 	P1
+INT-02 GQIS Korea HQ 	↔ Bi-directional REST (Group A inbound 5 + Group B outbound 4) 	P1
+INT-03 Siebel / DMS 	← Inbound 	REST adapter 	P1
+INT-04 SAP BW / 4HANA ← Inbound 	ODP/OData REST 	P1
+INT-05 SAP ERP 	← Inbound 	BAPI/RFC fallback REST 	P1
+INT-06 CDO (Redshift) 	→ Outbound 	Batch push (Parquet/S3 or Redshift load) 	P1
+14.2 INT-01 — AS400 / HISNA (Group C, 13 endpoints)
+ID 	Requirement 	Priority
+INT01-
+FR-001
+N-PQMS shall consume INT-01 to retrieve: VIN master records, model codes, plant
+codes, dealer codes, parts data, op codes from the HISNA AS/400 KMAFPRD library
+P1
+INT01-
+FR-002
+VIN lookups shall return results within 3 seconds for single VIN 	P1
+INT01-
+FR-003
+INT-01 data shall be cached in Redis (AWS ElastiCache) with configurable TTL (default:
+4 hours for master data) to reduce AS400 load
+P1
+INT01-
+FR-004
+Credentials: HISNA AS/400 JDBC service account provided by CP-3 (ACC-07) by Jun 1,
+2026
+P1
+INT01-
+FR-005
+INT-01 adapter shall implement circuit breaker; on AS400 unavailability, return cached
+data with stale-data indicator
+P2
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 26 of 36
+
+-- 26 of 36 --
+
+14.3 INT-02 — GQIS Korea HQ (Groups A + B, 9 endpoints)
+ID 	Requirement 	Priority
+INT02-
+FR-001
+Group A (Inbound — 5 endpoints): N-PQMS shall receive QIR data from GQIS via the
+IF_* staging tables ( IF_GQISQIRH , IF_GQISQIRF , IF_GQISQISO , IF_GQISCMNT )
+P1
+INT02-
+FR-002
+Inbound QIR sync shall run on a configurable schedule (default: every 30 minutes);
+new/updated GQIS records shall create or update matching N-PQMS QIR records
+P1
+INT02-
+FR-003
+Group B (Outbound — 4 endpoints): N-PQMS shall transmit QIR status updates,
+disposition decisions, and approval records back to GQIS within 30 minutes of the
+triggering event
+P1
+INT02-
+FR-004
+Bi-directional sync shall implement conflict resolution: GQIS is authoritative for QIR
+origin data; N-PQMS is authoritative for disposition and approval status
+P1
+INT02-
+FR-005
+GQIS REST API must be available in the HAEA DEV environment by Jul 3, 2026 (ASSM-
+S5); if not, Group A/B acceptance scenarios are marked blocked
+P1
+INT02-
+FR-006
+A 2-week parallel write period with GQIS HQ Korea (CP-1) is required before go-live to
+validate bidirectional sync accuracy
+P1
+14.4 INT-03 — Siebel / DMS (Inbound)
+ID 	Requirement 	Priority
+INT03-
+FR-001
+N-PQMS shall consume INT-03 to retrieve: dealer master data (dealer code, name,
+region, contact), repair orders, warranty claims, K-Support cases
+P1
+INT03-
+FR-002
+Warranty claims data from INT-03 shall feed: QIR severity scoring (ISM-FR-011), warranty
+analysis charts (QIM-FR-040), and INT-06 EDW outbound
+P1
+INT03-
+FR-003
+INT-03 shall also serve WPC FixedOps data (Group F, 2 endpoints:
+GET /api/wpc/repair-orders , GET /api/wpc/parts/{partNo} ) — per ASSM-07, WPC
+data is absorbed into INT-03 Siebel; standalone SQL Server adapter is not built unless
+ASSM-07 is found false
+P1
+INT03-
+FR-004
+INT-03 connectivity is gated on N-GWMS AWS environment readiness (ASSM-01, Jun 10,
+2026); fallback is AS400 warranty data (INT-01) for interim DEV testing
+P1
+14.5 INT-04 — SAP BW / 4HANA (Inbound)
+ID 	Requirement 	Priority
+INT04-
+FR-001
+N-PQMS shall consume INT-04 to retrieve: parts master data (part number, description,
+price, supersession) and warranty cost data via ODP/OData interface
+P1
+INT04-
+FR-002
+Parts data from INT-04 shall populate: PUM0020 parts field auto-complete, QIM0040
+FPQR parts used field, parts request tracking (ISM-FR-050)
+P1
+INT04-
+FR-003
+INT-04 data shall be cached in Redis with configurable TTL (default: 8 hours for parts
+master)
+P2
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 27 of 36
+
+-- 27 of 36 --
+
+14.6 INT-05 — SAP ERP (Fallback, Inbound)
+ID 	Requirement 	Priority
+INT05-
+FR-001
+INT-05 shall serve as fallback for parts/material data when INT-04 SAP BW is
+unavailable, via BAPI/RFC REST interface
+P2
+INT05-
+FR-002
+N-PQMS shall automatically switch to INT-05 fallback when INT-04 returns error or
+timeout > 10 seconds
+P2
+14.7 INT-06 — CDO Outbound
+ID 	Requirement 	Priority
+INT06-
+FR-001
+N-PQMS shall implement an outbound batch job that pushes analytical data from AWS
+RDS PostgreSQL to CDO (Redshift or Parquet on S3) per the schema defined by the CDO
+team (ASSM-04, due Jul 14, 2026)
+P1
+INT06-
+FR-002
+Tables included in Phase 1 INT-06 push: T_QIR , T_CLM_HDR (warranty claims),
+T_VIN_MASTER , T_DEALER , T_TSB , T_ISSUE , T_EWS_SIGNAL , T_FPQR ,
+T_USER_ACTIVITY
+P1
+INT06-
+FR-003
+INT-06 batch shall run on a schedule configurable by Admin (default: nightly at 2:00 AM
+local); incremental delta push based on updated_at timestamp
+P1
+INT06-
+FR-004
+INT-06 push shall be confirmed by CDO team sign-off before Phase 2 Dev milestone
+(M7); Phase 1 Go-Live (M5) requires DEV-level INT-06 functional test only
+P1
+INT06-
+FR-005
+INT-06 failure shall alert Admin via email; retry 3 times before alerting; data loss is not
+acceptable — failed batches shall be queued for re-run
+P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 28 of 36
+
+-- 28 of 36 --
+
+15. Security Requirements
+ID 	Requirement 	Priority
+SEC-
+FR-001
+All N-PQMS interfaces shall use HTTPS (TLS 1.2 minimum); HTTP connections shall be
+redirected to HTTPS
+P1
+SEC-
+FR-002
+All secrets (DB credentials, API keys, JWT signing keys) shall be stored in AWS Secrets
+Manager — plaintext .properties files are prohibited
+P1
+SEC-
+FR-003
+SAST scan (SonarQube + OWASP dependency check) shall be run in the CI/CD pipeline
+on every merge to main branch; zero Critical findings permitted at M3 release
+P1
+SEC-
+FR-004
+Code shall follow OWASP Top 10 secure coding guidelines; input validation enforced at
+all API boundaries
+P1
+SEC-
+FR-005
+User passwords are managed by Azure AD — N-PQMS shall not store or process
+passwords
+P1
+SEC-
+FR-006
+All changes to user data and access privileges shall be logged in an immutable audit
+trail (append-only)
+P1
+SEC-
+FR-007
+PII data (VIN tied to owner, dealer employee info) shall be handled per HAEA/KMA PII
+policy; PII fields shall be masked in logs
+P1
+SEC-
+FR-008
+N-PQMS shall comply with HAEA/KMA data retention policy; records older than the
+retention threshold shall be archivable by Admin (not auto-deleted)
+P1
+SEC-
+FR-009
+Penetration testing shall be performed by HAEA after Phase 1 deployment; Provider
+shall deliver a PEN Test Readiness Report at Phase 1 SIT (M4)
+P1
+SEC-
+FR-010
+AppScan / DAST testing shall be conducted by HAEA security team; Provider shall
+resolve Critical and High severity findings before go-live
+P1
+SEC-
+FR-011
+Multi-tenant architecture shall be implemented (company code-based tenancy) to
+support future system extensions
+P2
+SEC-
+FR-012
+Single-schema policy with tenant discriminator column shall be used for multi-tenant
+data isolation
+P2
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 29 of 36
+
+-- 29 of 36 --
+
+16. Non-Functional Requirements (NFR)
+16.1 Performance — SPEC-PERF-001
+ID 	Screen / Endpoint 	Metric 	DEV Target 	Staging Target
+NFR-
+P-001
+PUM0020 Publication
+Entry (NFR anchor)
+Page load (hot
+cache)
+≤ 2.0s @ 10
+concurrent users
+≤ 1.5s @ 50
+concurrent users
+NFR-
+P-002
+All Tier 1 screens (PUM + ISM,
+20 screens)
+Page load 	≤ 2.0s @ 10 users 	≤ 2.0s @ 50 users
+NFR-
+P-003
+All Tier 2 screens (QIM, 10
+screens)
+Page load 	≤ 3.0s @ 10 users 	≤ 3.0s @ 50 users
+NFR-
+P-004
+VIN single lookup (INT-01) 	API response 	≤ 3.0s 	≤ 3.0s
+NFR-
+P-005
+QIR list (first page, 20
+records)
+API response 	≤ 2.0s 	≤ 2.0s
+NFR-
+P-006
+System-wide concurrent
+users (Phase 1 go-live)
+Sustained load 10 users (DEV) 	50 users without >1%
+error rate
+16.2 Availability & Reliability
+ID 	Requirement 	Target
+NFR-
+A-001
+Production system availability (Phase 1 post-
+go-live, Hypercare period)
+≥ 99.5% (excluding scheduled maintenance)
+NFR-
+A-002
+Scheduled maintenance window 	Weekday nights 11 PM–2 AM PT; weekend all-day
+with 48h advance notice
+NFR-
+A-003
+RTO (Recovery Time Objective) — P1 incident 	4 business hours
+NFR-
+A-004
+RPO (Recovery Point Objective) 	1 hour (AWS RDS automated backup)
+16.3 Scalability
+ID 	Requirement
+NFR-S-001 EKS deployment shall support horizontal pod autoscaling (HPA) based on CPU/memory thresholds
+NFR-S-002 Database connection pooling shall be configured to prevent connection exhaustion under load
+NFR-S-003 Architecture shall support scaling to 200 concurrent users in Phase 2 without architectural changes
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 30 of 36
+
+-- 30 of 36 --
+
+16.4 Code Quality
+ID 	Requirement 	Gate
+NFR-Q-001 	Unit test coverage 	≥ 75% line coverage at M3 (Phase 1 Dev)
+NFR-Q-002 	SonarQube quality gate 	Zero Critical blockers; High issues < 10
+NFR-Q-003 	SAST scan 	Zero Critical or High severity unresolved at M3
+NFR-Q-004 	API documentation 	OpenAPI 3.0 YAML for all Phase 1 endpoints by M3
+16.5 Browser & Device Support
+ID 	Requirement
+NFR-
+B-001
+Chrome (latest 2 major versions), Edge (latest 2), Safari (latest 2) on desktop
+NFR-
+B-002
+Responsive layout for tablet viewports (768px minimum width) — tested in BrowserStack (HAEA
+license)
+NFR-
+B-003
+Vue.js SPA shall load within 5 seconds on first visit (cold cache, standard enterprise network)
+17. Data Migration — Phase 1 Scope
+Phase 1 includes a dry-run of the INT-11 historical data migration. The full production migration (all TSB,
+QIR, FPQR records, ~300 GB+) is executed in Phase 2.
+ID 	Requirement 	Priority
+DM-
+FR-001
+Provider shall deliver a Data Migration Dry-Run Report at M3 (Phase 1 Dev): sample
+migration of 5–10% of TSB and QIR records from legacy Oracle to PostgreSQL with
+reconciliation report
+P1
+DM-
+FR-002
+Legacy KPQMS Oracle schema DDL (ACC-04) and production data extract for sizing shall
+be provided by HAEA by May 25, 2026
+P1
+DM-
+FR-003
+Data migration approach shall use ETL scripts (Python/SQL) with: source → staging →
+target validation, row count reconciliation, and attachment binary transfer via S3
+P1
+DM-
+FR-004
+User-visible historical TSB and QIR records (read-only view) shall be accessible in N-
+PQMS at Phase 2 go-live via INT-11 full migration
+P2
+DM-
+FR-005
+Data quality rules shall be agreed with HAEA during M2 BRD workshops; records failing
+quality rules shall be flagged in the dry-run report, not silently dropped
+P1
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 31 of 36
+
+-- 31 of 36 --
+
+18. Assumptions & Dependencies
+18.1 Phase 1 Critical Assumptions
+ID 	Assumption 	Deadline 	Risk if False
+ASSM-01 N-GWMS AWS environment available to Provider Jun 10,
+2026
+M3 (Nov 6) at risk; Change
+Request
+ASSM-03 EWS alerting owned by KUS PQ/SAS team (Option
+A); PQMS scope = POST /api/ews/signals only
+Jul 21,
+2026
+Change Request if PQMS-native
+EWS microservice directed
+ASSM-07 WPC FixedOps data absorbed into INT-03 Siebel;
+no standalone SQL Server adapter
+Jul 14,
+2026
+Change Request if standalone
+adapter required
+ASSM-S3 Legacy KPQMS source code, JDBC credentials,
+WebLogic config, FSP maps (1,023 maps)
+provided
+May 18,
+2026
+Discovery phase delayed day-
+for-day
+ASSM-S5 GQIS Korea HQ REST API available in HAEA DEV
+environment
+Jul 3, 2026 Group A/B blocked; acceptance
+scenarios deferred
+18.2 Phase 1 HAEA Access Obligations
+ACC # Item 	Deadline
+ACC-01 Legacy KPQMS source code (WAR/EAR) 	May 18, 2026
+ACC-02 WebLogic configuration exports 	May 18, 2026
+ACC-03 FSP XML map exports (1,023 maps) 	May 18, 2026
+ACC-04 KPQMS Oracle schema DDL 	May 25, 2026
+ACC-05 GQIS IF_* staging table DDL 	May 25, 2026
+ACC-06 Batch job code (EwsViewBatch, WarrantySearchBatch, CampaignAlertBatch) 	May 25, 2026
+ACC-07 HISNA AS/400 JDBC credentials (CP-3) 	Jun 1, 2026
+ACC-08 Active Directory bind credentials (CP-4) 	Jun 1, 2026
+ACC-09 WPC SQL Server connection string (CP-7) 	Jun 1, 2026
+ACC-10 SMTP relay configuration (CP-8) 	Jun 1, 2026
+ACC-11 AWS N-GWMS environment access (VPC, IAM, EKS) 	Jun 10, 2026
+ACC-12 PQMS usage reports (screen hits, sessions) 	May 25, 2026
+ACC-13 GQIS REST API documentation (CP-1) 	Jun 1, 2026
+ACC-14 Tibero DB access (read-only, GQIS staging) 	Jun 1, 2026
+ACC-15 Legacy PQMS production access (read-only) 	May 18, 2026
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 32 of 36
+
+-- 32 of 36 --
+
+18.3 Environment Provisioning (HAEA Obligations)
+Environment Required By 	Contents
+DEV 	Jul 14, 2026 	EKS single-node, RDS PostgreSQL (dev), Redis, S3, VPC → HISNA AS/400
+CI/CD Pipeline Jun 30, 2026 GitLab, Jenkins, Argo CD, ECR, S3 artifact bucket
+Staging 	Oct 14, 2026 EKS prod-like, RDS prod-equivalent, full INT routing
+Production 	Dec 1, 2026 	Multi-AZ EKS, RDS with backup, WAF, CloudWatch
+19. Out of Scope — Phase 1
+19.1 Deferred to Phase 2
+INT-07 PQPS/FPQR inbound · INT-08 TechLink · INT-09 Camunda bi-directional external API · INT-10
+AWS SES/SNS · INT-11 full historical migration · INT-12 IQS/VDS
+ADM0210–ADM0250 (ML Model Management — 5 screens) · ADM0260–ADM0290 (IQS/VDS Data
+Management — 4 screens)
+Full AI/ML module (24 ML models)
+NLP / RAG intelligent search (full implementation)
+Enhanced analytics: anomaly detection, trend mining, duplicate issue detection
+AI severity auto-classification
+19.2 Permanently Out of Scope
+# 	Item 	Reason
+OS-01 GBI Oracle DW adapter ( jdbc/GBIBiz ) 	GBI decommissioned
+OS-02 Spotfire/EWS Oracle adapter ( jdbc/SPOTBiz ) 	Spotfire decommissioned
+OS-03 EwsViewBatch Java batch or PQMS-native EWS microservice 	SAS/QC (KUS PQ team) handles EWS
+OS-04 Power BI embedded development 	SAS VA/Viya selected
+OS-05 SAS procurement / provisioning / licensing 	HAEA/KUS PQ responsibility
+OS-06 SAS VA dashboard / report authoring 	KUS PQ team responsibility
+OS-07 SAS/QC EWS job design and implementation 	KUS PQ team responsibility
+OS-09 CDO schema design or infrastructure 	CDO responsibility
+OS-12 Penetration testing 	Performed by HAEA
+OS-13 DevSecOps / CI/CD pipeline provisioning 	Provisioned by HAEA
+— 	SAP ABAP / module changes 	Always out of scope
+— 	Hardware, networking, physical infrastructure 	Always out of scope
+•
+•
+•
+•
+•
+•
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 33 of 36
+
+-- 33 of 36 --
+
+20. Phase 1 Milestone Schedule & Acceptance Criteria
+20.2 M2 — Discovery & Planning (Jul 3, 2026) — BRD Gate
+This BRD document is the primary artifact for M2-A1. Full acceptance criteria per Exhibit E §M2.
+Must-pass for M2:
+☐ All 12 INT workstream interfaces defined
+☐ 27 active API endpoints confirmed (Groups A, B, C, F, G, H)
+☐ Tier 1 screens (PUM + ISM = 20 screens) mapped to To-Be modules in BRD
+☐ 34 Tier 4 screens documented as eliminated with user redirect path
+☐ ASSM-01, ASSM-03, ASSM-05, ASSM-07 validation results documented
+☐ UI/UX prototype covers PUM0020 and ≥5 additional Tier 1 screens
+☐ Phase 1 delivery schedule confirmed (M3 Nov 6 baseline or revised with justification)
+20.3 M3 — Phase 1 Dev & QA (Nov 6, 2026)
+Scope: Tier 1 + Tier 2 + Tier 3 screens (PUM, ISM, QIM, ADM = 54 screens), INT-01–06, Camunda BPM,
+Azure AD SSO, EWS writeback, prototype dashboard, reporting structure.
+Must-pass criteria:
+☐ All 54 screens (PUM × 6, ISM × 14, QIM × 10, ADM × 24) functional and accessible on DEV
+☐ ADM screens: ADM0010–ADM0100 (User Mgmt, System Config) fully functional; ADM0110–
+ADM0200 (Workflow Templates, Master Data) fully functional; ADM0300–ADM0330 (Batch/Health) fully
+functional
+☐ Admin user able to create/edit user, assign roles, and trigger master data sync end-to-end via ADM
+screens
+☐ PUM0020 Publication Entry — full create/edit/submit/approve/publish lifecycle functional
+☐ TSB approval workflow (Camunda BPM) functional end-to-end on DEV
+☐ QIR create/assign/resolve workflow (Camunda BPM) functional end-to-end on DEV
+☐ Azure AD SSO login and session management functional
+☐ RBAC enforced for all 8 roles (QE, TE, DE, CE, ASM, DM, PQM, Admin)
+☐ INT-01 (AS400/HISNA) — VIN lookup returns valid data
+☐ INT-02 (GQIS) — bidirectional QIR sync (Groups A + B) functional
+☐ INT-03 (Siebel/DMS) — dealer lookup and warranty claims ingest functional (or stubbed with ASSM-
+S5 blocker documented)
+☐ POST /api/ews/signals endpoint functional; EWS_FG flag surfaces on ISM/QIM screens
+☐ ISM0020 Issue Source field mandatory and functional for all 5 primary channels: Warranty, Weibull,
+Comeback, Techline, FPQR — each channel-specific structured fields captured correctly
+☐ ISM0010 Issue Source filter functional across all valid source values
+☐ Weibull structured fields (β, η, failure rate, sample size) captured in ISM0020 and fed as inputs to
+ISM0030 severity scoring prototype
+☐ FPQR → ISM promotion workflow functional (QIM0040 FPQR linked to ISM issue with source = FPQR)
+☐ 12 standard reports structured and accessible; 6 ad-hoc report types functional
+☐ PUM0020 ≤ 2.0s response @ 10 concurrent users (DEV)
+☐ ≥ 75% unit test line coverage across Phase 1 modules
+☐ Zero Critical SAST findings; SonarQube zero Critical blockers
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 34 of 36
+
+-- 34 of 36 --
+
+☐ Zero open P1/P2 severity defects at submission
+☐ Data migration dry-run report delivered (5–10% sample, reconciliation report)
+M3 Required Artifacts (from Exhibit E):
+# 	Artifact
+M3-A1 	Deployed application — DEV environment (HTTPS URL)
+M3-A2 	Source code — Phase 1 modules (GitLab)
+M3-A3 	Low-Level Design (LLD) — Phase 1
+M3-A4 	Database Schema — Phase 1 (SQL DDL + ERD)
+M3-A5 	Unit Test Results (JUnit HTML report)
+M3-A6 	Integration Test Results — INT-01 through INT-06
+M3-A7 	Code Coverage Report (JaCoCo)
+M3-A8 	API Documentation — Phase 1 endpoints (OpenAPI 3.0 YAML)
+M3-A9 	SonarQube Report
+M3-A10 	SAST Scan Report
+M3-A11 	Phase 1 UAT Plan
+M3-A12 	Known Issues Register
+M3-A13 	Data Migration Dry-Run Report
+20.4 M4 — Phase 1 SIT (Nov 20, 2026)
+Must-pass criteria:
+☐ SIT pass rate ≥ 95% of Phase 1 test cases
+☐ Zero open Critical severity defects
+☐ All INT-01 through INT-06 exercised in end-to-end integration tests
+☐ All 27 active API endpoints covered by SIT test cases (Groups A, B, C, F, G, H)
+☐ BRD requirement traceability: ≥ 95% of Phase 1 functional requirements covered
+☐ PEN Test Readiness Report delivered to HAEA security team
+20.5 M5 — Phase 1 UAT & Go-Live (Dec 18, 2026)
+Must-pass criteria:
+☐ UAT sign-off received from Kim Yoonsoo (HAEA PM) in writing
+☐ UAT pass rate ≥ 98% of Phase 1 UAT test cases
+☐ Zero open Critical/High severity UAT defects at sign-off
+☐ HAEA end-user training completed for QE/TE/DE/CE roles
+☐ Production environment provisioned by HAEA (deadline Dec 1, 2026)
+☐ Production deployment executed per Runbook — no unplanned rollback
+☐ Post-deployment smoke test: all Tier 1 screens accessible, SSO login functional, PUM0020 workflow
+functional
+☐ Legacy KPQMS cutover executed with HAEA sign-off
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 35 of 36
+
+-- 35 of 36 --
+
+☐ Go-Live Readiness Checklist signed by Provider PM (Rita Verma) and HAEA PM (Kim Yoonsoo)
+☐ CloudWatch monitoring confirmed operational on Production
+20.6 M6 — Phase 1 Hypercare (Jan 15, 2027)
+Hypercare SLAs (60 days post-go-live):
+Severity 	Response 	Resolution
+P1 — System down / data loss 	1 business hour 	4 business hours
+P2 — Tier 1 screen non-functional 	4 business hours 	1 business day
+P3 — Tier 2 screen issue 	1 business day 	3 business days
+P4 — Minor / enhancement 	2 business days 	Change Order
+Must-pass criteria:
+☐ All P1 and P2 defects raised during Phase 1 Hypercare resolved or formally risk-accepted in writing
+by HAEA
+☐ Hypercare Defect Log delivered
+☐ Phase 1 knowledge transfer sessions completed (dates TBD at M5)
+Document Version: 1.0 DRAFT | Date: May 2026 | Author: Joon Sung Yoo (HAEA PM)
+Reference: SOW V0.9 DRAFT (2026-05-18) · HAEA-KUS_PQMS_Re-Platform_Implementation
+V0.9_DRAFT__20260518.docx
+This BRD is deliverable M2-A1 (Exhibit E §M2). Detailed requirements will be validated and finalized during
+BRD workshops (May–Jun 2026) as part of Milestone 2 (Discovery & Planning Sign-off, Jul 3, 2026).
+•
+•
+•
+•
+•
+N-PQMS Phase 1 BRD · KPQMS-BRD-P1-v1.1 · Confidential 	Page 36 of 36
+
+-- 36 of 36 --
+

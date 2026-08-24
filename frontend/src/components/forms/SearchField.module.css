@@ -1,0 +1,6 @@
+/* Focus ring for the clear button (the field itself rings via inline focus state). */
+.clear:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}

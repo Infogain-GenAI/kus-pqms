@@ -1,0 +1,4 @@
+/* Keyboard focus ring (DS omits it). Ring follows the pill track radius. */
+.input:focus-visible + .track {
+  box-shadow: var(--shadow-focus);
+}

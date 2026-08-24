@@ -1,0 +1,94 @@
+/* ============================================================
+   Kia N-PQMS — Color Tokens
+   Base palette + semantic aliases. All UI color references
+   should use the semantic aliases, never raw base values.
+   ============================================================ */
+
+:root {
+  /* ---- Brand ---- */
+  --kia-midnight: #05141F;        /* Primary brand — nav, header, branding */
+  --kia-midnight-90: #142733;
+  --kia-midnight-80: #25404F;
+  --kia-midnight-70: #3A586B;
+
+  /* ---- Neutrals (cool-gray ramp anchored to Midnight) ---- */
+  --neutral-0:   #FFFFFF;         /* Polar White */
+  --neutral-25:  #FAFBFC;         /* App background */
+  --neutral-50:  #F4F6F8;         /* Subtle surface / hover gray */
+  --neutral-100: #ECEFF2;         /* Background gray */
+  --neutral-200: #DCE1E6;         /* Border gray */
+  --neutral-300: #C3CBD2;         /* Strong border / divider */
+  --neutral-400: #9AA5AE;         /* Disabled gray / placeholder */
+  --neutral-500: #6B7681;         /* Muted text / icons */
+  --neutral-600: #4A555F;         /* Secondary text */
+  --neutral-700: #2E3942;         /* Body strong */
+  --neutral-800: #1A1A1A;         /* Deep Black — primary text */
+  --neutral-900: #05141F;         /* Midnight (text on light, max contrast) */
+
+  /* ---- Accent (interactive blue, derived for enterprise UI) ---- */
+  --accent-50:  #EAF2FB;
+  --accent-100: #CFE0F6;
+  --accent-300: #6FA4E6;
+  --accent-500: #2A6FDB;          /* Primary interactive / links / focus */
+  --accent-600: #1F58B5;          /* Hover */
+  --accent-700: #18468F;          /* Pressed */
+
+  /* ---- Status hues (base) ---- */
+  --status-draft:    #6B7681;     /* Gray   — Draft */
+  --status-open:     #2A6FDB;     /* Blue   — Open */
+  --status-review:   #7C5CDB;     /* Purple — In Review */
+  --status-pending:  #E2820B;     /* Orange — Pending Approval */
+  --status-disposed: #0E9384;     /* Teal   — Disposed */
+  --status-closed:   #344049;     /* Dark Gray — Closed */
+  --status-monitor:  #D9A60B;     /* Yellow — Monitoring */
+  --status-escalated:#D92D20;     /* Red    — Escalated (see readme caveat) */
+
+  /* ---- Feedback ---- */
+  --success-50:  #E7F6EF;
+  --success-500: #1F8A5B;
+  --success-600: #166B47;
+  --warning-50:  #FDF3E2;
+  --warning-500: #E2820B;
+  --warning-600: #B5660A;
+  --danger-50:   #FCEBEA;
+  --danger-500:  #D92D20;
+  --danger-600:  #B01E14;
+  --info-50:     #EAF2FB;
+  --info-500:    #2A6FDB;
+
+  /* ============================================================
+     Semantic aliases — reference these in components
+     ============================================================ */
+
+  /* Surfaces */
+  --bg-app:        var(--neutral-25);
+  --surface-card:  var(--neutral-0);
+  --surface-sunken:var(--neutral-50);
+  --surface-raised:var(--neutral-0);
+  --surface-inverse: var(--kia-midnight);
+
+  /* Text */
+  --text-primary:   var(--neutral-800);
+  --text-secondary: var(--neutral-600);
+  --text-muted:     var(--neutral-500);
+  --text-disabled:  var(--neutral-400);
+  --text-inverse:   var(--neutral-0);
+  --text-link:      var(--accent-500);
+
+  /* Borders & dividers */
+  --border-subtle:  var(--neutral-200);
+  --border-default: var(--neutral-300);
+  --border-strong:  var(--neutral-400);
+  --divider:        var(--neutral-200);
+
+  /* Interactive */
+  --interactive:        var(--accent-500);
+  --interactive-hover:  var(--accent-600);
+  --interactive-press:  var(--accent-700);
+  --focus-ring:         var(--accent-500);
+
+  /* State backgrounds */
+  --hover-overlay:   var(--neutral-50);
+  --selected-bg:     var(--accent-50);
+  --disabled-bg:     var(--neutral-100);
+}

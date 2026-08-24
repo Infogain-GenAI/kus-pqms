@@ -1,0 +1,5 @@
+/* Keyboard focus ring (DS omits it). Ring follows the circular box radius. */
+.input:focus-visible + .box {
+  box-shadow: var(--shadow-focus);
+  border-color: var(--accent-500);
+}

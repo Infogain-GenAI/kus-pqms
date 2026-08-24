@@ -1,0 +1,6 @@
+/* Keyboard focus ring (DS source omits it; DESIGN.md requires always-visible focus).
+   The real <input> is visually hidden over the styled box; ring the box on focus. */
+.input:focus-visible + .box {
+  box-shadow: var(--shadow-focus);
+  border-color: var(--accent-500);
+}

@@ -1,0 +1,59 @@
+/* ============================================================
+   Kia N-PQMS — Typography Tokens
+   Display/Headings: Kia Signature Fix
+   Body/UI/Tables/Forms: Inter
+   ============================================================ */
+
+:root {
+  /* Families */
+  --font-display: "Kia Signature Fix", "Inter", system-ui, sans-serif;
+  --font-body:    "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* Weights */
+  --fw-light:   300;  /* @kind font */
+  --fw-regular: 400;  /* @kind font */
+  --fw-medium:  500;  /* @kind font */
+  --fw-semibold:600;  /* @kind font */
+  --fw-bold:    700;  /* @kind font */
+
+  /* ---- Type scale (size / line-height / tracking) ----
+     Display & H1 use the display face; H2 down use Inter for
+     density and legibility in enterprise data views.          */
+
+  --fs-display: 44px;  --lh-display: 52px;  --ls-display: -0.02em;
+  --fs-h1:      32px;  --lh-h1:      40px;  --ls-h1:      -0.02em;
+  --fs-h2:      26px;  --lh-h2:      34px;  --ls-h2:      -0.01em;
+  --fs-h3:      20px;  --lh-h3:      28px;  --ls-h3:      -0.01em;
+  --fs-h4:      17px;  --lh-h4:      24px;  --ls-h4:       0;  /* @kind font */
+
+  --fs-body-lg: 16px;  --lh-body-lg: 24px;  --ls-body-lg:  0;  /* @kind font */
+  --fs-body-md: 14px;  --lh-body-md: 20px;  --ls-body-md:  0;  /* @kind font */
+  --fs-body-sm: 13px;  --lh-body-sm: 18px;  --ls-body-sm:  0;  /* @kind font */
+
+  --fs-caption: 12px;  --lh-caption: 16px;  --ls-caption:  0.01em;
+  --fs-label:   12px;  --lh-label:   16px;  --ls-label:    0.04em;  /* uppercase labels */
+}
+
+/* Convenience text classes (optional — tokens are the contract) */
+.t-display { font-family: var(--font-display); font-weight: var(--fw-bold);
+  font-size: var(--fs-display); line-height: var(--lh-display); letter-spacing: var(--ls-display); }
+.t-h1 { font-family: var(--font-display); font-weight: var(--fw-bold);
+  font-size: var(--fs-h1); line-height: var(--lh-h1); letter-spacing: var(--ls-h1); }
+.t-h2 { font-family: var(--font-body); font-weight: var(--fw-semibold);
+  font-size: var(--fs-h2); line-height: var(--lh-h2); letter-spacing: var(--ls-h2); }
+.t-h3 { font-family: var(--font-body); font-weight: var(--fw-semibold);
+  font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--ls-h3); }
+.t-h4 { font-family: var(--font-body); font-weight: var(--fw-semibold);
+  font-size: var(--fs-h4); line-height: var(--lh-h4); letter-spacing: var(--ls-h4); }
+.t-body-lg { font-family: var(--font-body); font-weight: var(--fw-regular);
+  font-size: var(--fs-body-lg); line-height: var(--lh-body-lg); }
+.t-body-md { font-family: var(--font-body); font-weight: var(--fw-regular);
+  font-size: var(--fs-body-md); line-height: var(--lh-body-md); }
+.t-body-sm { font-family: var(--font-body); font-weight: var(--fw-regular);
+  font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
+.t-caption { font-family: var(--font-body); font-weight: var(--fw-regular);
+  font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+.t-label { font-family: var(--font-body); font-weight: var(--fw-semibold);
+  font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: var(--ls-label);
+  text-transform: uppercase; }

@@ -1,0 +1,265 @@
+{
+ "mine": [
+  "HV-260101",
+  "PT-260014",
+  "ST-260002",
+  "IN-260016",
+  "IN-260008",
+  "EE-260001",
+  "BD-260012"
+ ],
+ "issues": [
+  {
+   "id": "HV-260101",
+   "title": "Charge port door fails to unlatch on driver request",
+   "modelCode": "SV",
+   "system": "Electrical",
+   "component": "Charge port actuator",
+   "status": "Open",
+   "date": "07/09/2026"
+  },
+  {
+   "id": "BD-260011",
+   "title": "Sunroof drain clog causing headliner stain",
+   "modelCode": "KH",
+   "system": "Body",
+   "component": "Sunroof drain",
+   "status": "Open",
+   "date": "06/18/2026"
+  },
+  {
+   "id": "EE-260013",
+   "title": "HV battery thermal early-warning trip",
+   "modelCode": "SV",
+   "system": "HV Battery",
+   "component": "Cell module",
+   "status": "QIR",
+   "date": "07/09/2026"
+  },
+  {
+   "id": "SU-260007",
+   "title": "Front strut creak on low-speed articulation",
+   "modelCode": "LQ",
+   "system": "Suspension",
+   "component": "Front strut",
+   "status": "Investigating",
+   "date": "06/18/2026"
+  },
+  {
+   "id": "PT-260014",
+   "title": "Engine performance degradation",
+   "modelCode": "VG",
+   "system": "Powertrain",
+   "component": "2.5T engine",
+   "status": "Investigating",
+   "date": "07/09/2026"
+  },
+  {
+   "id": "ST-260002",
+   "title": "Steering column recall scope",
+   "modelCode": "3 Models",
+   "system": "Steering",
+   "component": "Column",
+   "status": "Top Issue",
+   "date": "06/17/2026"
+  },
+  {
+   "id": "CL-260003",
+   "title": "EWS alert — coolant hose cracking, EV pack",
+   "modelCode": "2 Models",
+   "system": "Cooling",
+   "component": "HV pack hose",
+   "status": "QIR",
+   "date": "06/16/2026"
+  },
+  {
+   "id": "IN-260016",
+   "title": "Infotainment system restart issue",
+   "modelCode": "YD",
+   "system": "Infotainment",
+   "component": "Head unit",
+   "status": "QIR",
+   "date": "07/09/2026"
+  },
+  {
+   "id": "PT-260005",
+   "title": "6AT slip at cold start, intermittent",
+   "modelCode": "2 Models",
+   "system": "Powertrain",
+   "component": "6AT",
+   "status": "Investigating",
+   "date": "06/15/2026"
+  },
+  {
+   "id": "EE-260118",
+   "title": "Rear camera image lag on reverse",
+   "modelCode": "NQ",
+   "system": "Infotainment",
+   "component": "Camera",
+   "status": "Monitoring",
+   "date": "08/02/2026"
+  },
+  {
+   "id": "SU-260017",
+   "title": "Suspension noise investigation",
+   "modelCode": "LQ",
+   "system": "Suspension",
+   "component": "Front strut",
+   "status": "Investigating",
+   "date": "07/08/2026"
+  },
+  {
+   "id": "PT-260015",
+   "title": "Transmission failure pattern",
+   "modelCode": "3 Models",
+   "system": "Powertrain",
+   "component": "8AT",
+   "status": "Investigating",
+   "date": "07/08/2026"
+  },
+  {
+   "id": "IN-260008",
+   "title": "Infotainment reboot when CarPlay connects",
+   "modelCode": "YD",
+   "system": "Infotainment",
+   "component": "Head unit",
+   "status": "Monitoring",
+   "date": "06/10/2026"
+  },
+  {
+   "id": "BR-260018",
+   "title": "Brake component improvement",
+   "modelCode": "SV",
+   "system": "Brakes",
+   "component": "Caliper",
+   "status": "Closed",
+   "date": "06/16/2026"
+  },
+  {
+   "id": "EE-260090",
+   "title": "Steering noise",
+   "modelCode": "BD",
+   "system": "Steering",
+   "component": "Rack",
+   "status": "Open",
+   "date": "07/28/2026"
+  },
+  {
+   "id": "EL-260102",
+   "title": "Instrument cluster flicker during regenerative braking",
+   "modelCode": "YD",
+   "system": "Electrical",
+   "component": "Instrument cluster",
+   "status": "Open",
+   "date": "06/28/2026"
+  },
+  {
+   "id": "EE-260001",
+   "title": "Intermittent ICCU fault triggering 12V battery discharge on EV6 GT-Line",
+   "modelCode": "2 Models",
+   "system": "Electrical",
+   "component": "ICCU",
+   "status": "Investigating",
+   "date": "06/11/2026"
+  },
+  {
+   "id": "AC-260004",
+   "title": "HVAC fan noise above 2k RPM blower speed",
+   "modelCode": "2 Models",
+   "system": "HVAC",
+   "component": "Blower motor",
+   "status": "Investigating",
+   "date": "06/03/2026"
+  },
+  {
+   "id": "PT-260103",
+   "title": "Harsh 2–3 upshift after cold start",
+   "modelCode": "DL",
+   "system": "Powertrain",
+   "component": "8AT valve body",
+   "status": "Investigating",
+   "date": "06/20/2026"
+  },
+  {
+   "id": "BR-260009",
+   "title": "Brake squeal on HV regenerative blend",
+   "modelCode": "2 Models",
+   "system": "Brakes",
+   "component": "Regen blend",
+   "status": "Investigating",
+   "date": "05/28/2026"
+  },
+  {
+   "id": "BR-260104",
+   "title": "Brake booster vacuum decay after engine off",
+   "modelCode": "NQ",
+   "system": "Brakes",
+   "component": "Vacuum booster",
+   "status": "QIR",
+   "date": "06/14/2026"
+  },
+  {
+   "id": "EE-260023",
+   "title": "Engine vibration during idle",
+   "modelCode": "DL",
+   "system": "Engine",
+   "component": "Fuel System",
+   "status": "Investigating",
+   "date": "07/10/2026"
+  },
+  {
+   "id": "BD-260006",
+   "title": "Door latch stiffness in sub-zero conditions",
+   "modelCode": "2 Models",
+   "system": "Body",
+   "component": "Door latch",
+   "status": "Open",
+   "date": "05/19/2026"
+  },
+  {
+   "id": "AC-260105",
+   "title": "Evaporator odor on HVAC startup",
+   "modelCode": "VG",
+   "system": "HVAC",
+   "component": "Evaporator",
+   "status": "Investigating",
+   "date": "06/08/2026"
+  },
+  {
+   "id": "EE-260100",
+   "title": "Steering rack noise on lock-to-lock turns",
+   "modelCode": "LQ",
+   "system": "Steering",
+   "component": "Rack",
+   "status": "Investigating",
+   "date": "07/05/2026"
+  },
+  {
+   "id": "CH-260010",
+   "title": "Tire pressure sensor false low-pressure alert",
+   "modelCode": "KA",
+   "system": "Chassis",
+   "component": "TPMS",
+   "status": "Monitoring",
+   "date": "05/02/2026"
+  },
+  {
+   "id": "BD-260106",
+   "title": "Tailgate gas strut sag in high ambient heat",
+   "modelCode": "LQ",
+   "system": "Body",
+   "component": "Tailgate strut",
+   "status": "Closed",
+   "date": "05/12/2026"
+  },
+  {
+   "id": "BD-260012",
+   "title": "Wiper blade streak in heavy rain",
+   "modelCode": "2 Models",
+   "system": "Body",
+   "component": "Wiper",
+   "status": "NASO",
+   "date": "04/15/2026"
+  }
+ ]
+}

@@ -1,0 +1,5 @@
+/* Always-visible focus ring for the nav items (DS source omitted it). */
+.focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
