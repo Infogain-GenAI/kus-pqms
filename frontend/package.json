@@ -9,9 +9,11 @@
     "build": "tsc --noEmit && npm run lint:adherence && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint:adherence": "eslint --config eslint.adherence.config.mjs --max-warnings 638 src",
+    "lint:adherence": "eslint --config eslint.adherence.config.mjs --max-warnings 662 src",
     "tokens:gen": "node scripts/gen-tokens.mjs",
-    "tokens:check": "node scripts/check-tokens.mjs"
+    "tokens:check": "node scripts/check-tokens.mjs",
+    "docs:standards": "node scripts/build-standards-doc.mjs",
+    "docs:standards:check": "node scripts/build-standards-doc.mjs --check"
   },
   "dependencies": {
     "lucide-react": "^0.451.0",

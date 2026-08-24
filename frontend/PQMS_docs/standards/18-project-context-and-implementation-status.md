@@ -1,0 +1,907 @@
+# 18 — Project Context and Implementation Status
+**Tier:** 2
+**Status:** LIVE — both halves are drafted: the implementation snapshot below is dated and regenerated, the registers beneath it are authoritative
+**Purpose:** Living snapshot of what's built vs. planned for React app, periodically regenerated
+**Supersedes / absorbs:** ai/README.md, implementation-status.md, monorepo-tooling-reference.md, portal-runtime-reference.md, ui-library-component-reference.md, SuggestedUpdated.md
+---
+
+Assumes 00-core-rules.md; where the two conflict, 00 wins.
+
+**Read the status line above carefully — this file has two halves and
+both are load-bearing.** Earlier revisions were marked first
+`EMPTY — pending draft` and then `PARTIAL`, and both understated it: the
+tracked-decisions section below already carried substantive entries, and
+**other files point at it as the live tracking home** — several defer
+obligations here by name. An earlier revision of this sentence hand-
+counted that list as "four", naming 11, 12, 13 and 15; the real count
+was already seven (01, 08, 11, 12, 13, 15, 17), because files kept
+citing this one after the sentence was written and the count was never
+re-run. **The count is not maintained here for that reason** — see the
+generated distribution document's derived cross-reference index for
+who currently cites this file, computed fresh on every regeneration
+rather than fixed at some past revision. A reader trusting an `EMPTY`
+label would skip the corpus's only obligation register.
+
+**The snapshot half is now drafted** — see "Implementation status"
+immediately below. It is dated, states its method and that method's
+limits, and is meant to be **regenerated rather than edited in place**.
+
+What is still genuinely outstanding is narrower: the content absorbed
+from the six superseded `docs/ai/` files. Those are marked superseded by
+this file and their substance has not been taken. The
+`ui-library-component-reference.md` case is the one that matters —
+`component-specs/INVENTORY.md` now carries a candidate inventory, which
+is a partial answer, but the prior document's per-component detail has
+not been read across.
+
+## Implementation status — what exists, as of 2026-08-24
+
+**This is the snapshot half this file's Purpose describes and has never
+contained.** An earlier revision said it was "still pending"; it is now
+drafted, and the honest caveat comes first.
+
+**Method, and its limit.** Everything below is from **reading files**.
+No command was run — no install, no build, no test, no coverage report.
+So placement, presence and configuration are verified; behaviour,
+bundle size, coverage percentages and install resolution are **not**.
+Where a claim would need execution, it says so.
+
+**Regenerate this section rather than editing it in place.** It is a
+report on a moving target, and a half-updated snapshot is worse than a
+dated one.
+
+### Summary
+
+| | Conforming | Partial | Absent |
+|---|---|---|---|
+| Root configuration | 8 | 3 | 2 |
+| CI / DevSecOps | 0 | 0 | 6 |
+| `apps/portal` configuration | 4 | 4 | 3 |
+| `apps/portal` source layers | 4 | 3 | 5 |
+| `packages/ui-library` | 8 | 3 | 4 |
+| `packages/design-tokens` | 3 | 2 | 1 |
+| `PQMS_docs` | 4 | 0 | 1 |
+
+**The pattern is worth more than the counts.** Nothing that exists is
+wrong — the ESLint chain is in 14's specified order with its deviations
+commented, the tsconfig carries all four of 02's changes, Prettier
+matches verbatim, and every token in the token file carries a sourcing
+comment. What is missing is either infrastructure the first screen
+cannot do without, or **the enforcement layer that makes these rules real
+rather than aspirational.**
+
+### Built and conforming
+- Workspace shape: three packages, `pnpm-workspace.yaml`, `turbo.json`,
+  `tsconfig.base.json` with every value 02 requires
+- `eslint.config.js` — the five-position chain per 14, a11y severities
+  per 11, `control-has-associated-label` enabled explicitly with the
+  preset's own option object
+- `.prettierrc.json` — all six settings verbatim per 14
+- `packages/ui-library` — all eight category folders, the three
+  entry points 01 specifies including the heavy-dependency subpath,
+  `cn()`, and the `Pqms*` shared type vocabulary with an explicit
+  no-speculation note
+- `BaseButton` — four files in the shape 03/06/14 require, native
+  `<button>` per 06's exception table, token classes only, and an honest
+  "no direct evidence" flag on its `sm` size
+- `AppHeader` and its spec test, mirrored per 10
+- `design-tokens` — ~40 tokens, each with a sourcing comment citing the
+  prototype
+- `main.css` — the `@theme` mapping per 06, plus an empirically-verified
+  `@source` directive for the workspace-symlinked library
+- `i18n.ts` — matches 09 exactly
+- The standards generator and its `--check` gate
+
+### Absent — the enforcement layer
+**This is the group that matters most**, because every other rule in this
+corpus is enforced by CI and by nothing else.
+
+| Missing | Specified by |
+|---|---|
+| **The entire `.github/` directory** | 15 |
+| `pqms-portal-ci.yml` — `quality` and `e2e` jobs | 15 |
+| `pqms-portal-sonarqube.yml` | 15 |
+| `dependabot.yml` | 15 |
+| `sonar-project.properties` | 15 |
+| **The 85/85/85/85 coverage gate — present but commented out** in both `vitest.config.ts` files, with a rationale ("no source file exists yet") that is now stale | 10 |
+| Storybook — no builder, no addon, no story for either existing component | 01, 10, 24 |
+| MSW | 10, 26 |
+| `rollup-plugin-visualizer`, and therefore any bundle-budget check | 12 |
+| Git hooks — Husky, `lint-staged`, commitlint | 23 |
+| The log-hygiene scan | 21, 15 |
+
+### Absent — the environment contract
+Three artifacts that other standards depend on for *their* enforcement:
+
+- **`env.d.ts` has no `ImportMetaEnv` interface.** 13 makes that
+  interface the authoritative `VITE_*` inventory and builds its whole
+  mechanism on it, so **nothing currently enforces the `VITE_*` rule.**
+- **No `.env.example`.** 13 calls it the only file a new developer reads.
+- **No dev-server proxy** in `vite.config.ts`, which 20 quotes verbatim
+  with an ordering warning.
+
+### Absent — application layers
+Expected at this stage, but recorded because 01 says the portal shell
+"runs in parallel, not after" and should "start early regardless of
+library progress":
+
+HTTP client and the `ApiError` shape (05) · fixtures predicate and data
+layer (05) · TanStack Query provider and `queryKeys` (04, 05) · both
+Zustand stores (04) · MSAL bootstrap, `authReady`, permission layer (08)
+· the route tree, three layouts, `ChunkLoadErrorBoundary` (07, 03) ·
+route-change focus management (11) · `useDebouncedCallback` (03, 12).
+
+`main.tsx` currently renders a demo — `AppHeader` in a `MemoryRouter`
+plus six `BaseButton` variants — with a comment saying why. Correct for a
+scaffold; it is what the real shell replaces.
+
+### Divergences worth naming
+Neither is a defect; both are undocumented deviations from a table this
+corpus calls authoritative, which is the same class round 3 raised.
+
+| Divergence | Detail |
+|---|---|
+| Package scripts | `clean`, `prepare` (root); `test:unit`, `storybook`, `build-storybook` (portal); `build`, `storybook`, `build-storybook` (`ui-library`); `build` (`design-tokens`) are all specified in 20 and absent. **`turbo.json`'s `typecheck` declares `dependsOn: ["^build"]`, which resolves to nothing for two of three packages** until the missing `build` scripts exist. |
+| ESLint `ignores` | The actual array uses `**/*.css` and `PQMS_docs/**`; 20 specifies the two token-file paths individually plus three others. The actual version is arguably better and is still an undocumented deviation. |
+
+### Two open questions this snapshot raised
+- **`AppHeader` lives under `src/layouts/`**, which 07 reserves for the
+  three layout components. `AppHeader` is a component the layouts render.
+  01's app-wide shared location is `src/components/shared/`. Nothing
+  places it. **[PLACEHOLDER — where `AppHeader` belongs. Trigger: when
+  the layouts are built. Owner: Frontend Lead.]**
+- **Two `tokens.css` files exist** — `design-tokens/src/tokens.css` and
+  `ui-library/src/styles/tokens.css` — with no stated relationship in
+  either. 01 says `ui-library` exports `"./styles"`; 06 says
+  `design-tokens` is the source of truth. Both can be true; nobody has
+  said how. **[PLACEHOLDER — the relationship between the two token
+  files. Trigger: before the token scales are authored. Owner: Frontend
+  Lead.]**
+
+### One unresolved provenance question
+Review round 3 records reading "`BaseButton`…and its spec" and
+"`AppHeader`…and its spec". **`PQMS_docs/component-specs/` contains only
+`TEMPLATE.md` and `INVENTORY.md`.** Either those specs were removed, or
+they live somewhere this reading did not look. Unresolved, and worth
+resolving — a spec that existed and was deleted is a different situation
+from one that never did.
+
+## Register scope — widened
+**This register now tracks every `[PLACEHOLDER]` in the corpus, not only
+the subset blocked on the React port.** Round 3 found that it covered a
+minority of them and correctly noted that whether that boundary was
+deliberate was itself unstated. It was not deliberate. The narrower
+scoping meant a placeholder with no owner and no trigger could sit in a
+tier file indefinitely, visible only to whoever happened to read that
+file.
+
+**Two rules follow, and they are enforceable rather than aspirational:**
+
+1. **Every `[PLACEHOLDER]` states a trigger and an owner.** A placeholder
+   with neither is not a deferral, it is an omission wearing a deferral's
+   syntax.
+2. **Every `[PLACEHOLDER]` appears in the table below.** Adding one to a
+   tier file without adding a row here is the same defect class as
+   hand-editing the generated distribution document: the corpus acquires
+   an obligation nothing tracks.
+
+### Open placeholders, by owning file
+
+| File | Placeholder | Trigger | Owner |
+|---|---|---|---|
+| 01 | Folder name for the Overview / QIR / TSB features | when that feature is built | Frontend Lead |
+| 01 | Whether `api-client` and `auth` are workspace packages or app-level behind a barrel | before the HTTP client is written | Frontend Lead |
+| 21 | Whether the error report carries a sanitised route pattern or no location at all | when the monitoring transport is written | Frontend Lead + security |
+| 02 | The TypeScript 7 path-alias mechanism (`baseUrl`/`paths` are deprecated in 6.0, removed in 7.0) | a TS 7 upgrade being considered | Frontend Lead |
+| 03 | `BaseTabs` — config-driven or compound API | when `BaseTabs` is specified | Frontend Lead |
+| 03 | The Issue Entry Zod schema and its step-grouping adapter | when Issue Entry is specified | Frontend Lead |
+| 05 | The number of backend origins, and therefore of HTTP-client instances | BRD `DEC-08` being signed | Architect |
+| 05 | Query-key conventions | first real hooks | Frontend Lead |
+| 06 | React Aria — does any CSS ship | scaffold time | Frontend Lead |
+| 06 | React Aria — bundle cost, and whether 14's barrel exclusion applies | same check | Frontend Lead |
+| 06 | Hues for `TOP_ISSUE` and `OUT_OF_SCOPE`, which the prototype's status palette has no counterpart for | before `BaseStatusPill` is specified | the designer, via the prototype |
+| 00 | The CI platform — no root pipeline definition found | Phase 0 baseline | Frontend Lead |
+| 00 | The frontend package manager — `package-lock.json` present, pnpm intended | before the gates epic | Frontend Lead |
+| 04 | Whether TanStack Query and Zustand are adopted, and in which SPEC | before the first screen with server data is restructured | Frontend Lead + client architect |
+| 07 | `AdminLayout` — distinct chrome, or only a route branch | first admin screen | Frontend Lead |
+| 08 | The identity provider, and therefore whether MSAL is the client library | before the auth SPEC is planned | client architect |
+| 33 | Whether an OpenAPI spec exists and can generate types | before the first API integration SPEC | backend lead |
+| 07 | `AuthLayout` — build only when a route needs it | before auth implementation | Frontend Lead |
+| 07 | Whether legacy Workspace deep links must keep resolving | before the Workspace shell ships | PQM |
+| 08 | The `ResolvedPermissions` response shape | the real FR-SEC-011 contract | Backend Lead *(unassigned — BRD Q7)* |
+| 08 | `redirectUri` — dedicated callback route or the app root | before auth implementation | Yogesh, with the client |
+| 08 | Does a Sharing surface exist in Phase 1 at all | before the Workspace tab set is implemented | PQM, via the BRD |
+| 08 | Fixtures-mode default role | a dev-workflow decision | Yogesh |
+| 10 | MSW handler organisation | first real test implementation | Test Architect |
+| 10 | Which axe binding, given `vitest-axe@0.1.0`'s packaging defects | test-harness setup | Test Architect |
+| 12 | The markdown editor's real weight (the "~350 KB" figure was misattributed and unverified) | visualizer installed and the editor built once | Frontend Lead |
+| 13 | CSP `connect-src` — the real production API origins | real backend URLs existing | Architect |
+| 17 | Whether Scoring is a sixth Workspace section, a sub-route of Detail, or a modal | before the Workspace shell is built | PQM |
+| 18 | Where `AppHeader` belongs — 07 reserves `src/layouts/` for layouts | when the layouts are built | Frontend Lead |
+| 18 | The relationship between the two `tokens.css` files | before the token scales are authored | Frontend Lead |
+| 21 | The date-arithmetic library | first screen needing date arithmetic | Frontend Lead |
+| 25 | The monitoring vendor | before go-live | Architect + Ops |
+*(30 carries no placeholder of its own: its open items belong to the
+consuming repository, not to this corpus.)*
+
+**Two files restate a placeholder rather than owning it** — 23 on the
+default branch name and 24 on whether CI builds Storybook. Both are 15's,
+counted once, above.
+
+**Closed since the last revision, and why**, so the list is not read as
+only growing:
+
+| Was | Resolution |
+|---|---|
+| 02 — declare path aliases once, or per package? | **Once, in the base config.** Verified working; the feared `baseUrl`-through-`extends` problem did not materialise. |
+| 05 — where fixture modules live | **`apps/portal/src/fixtures/`, feature-grouped.** Decided in 05, in the file that owns the data layer. |
+| 07 — is a skip-link in scope, and what does it target | **Yes; it targets `id="main-content"`.** 11 now owns WCAG 2.4.1 and requires one per layout. |
+| 12 — initial bundle budget | **300KB gzipped**, the BRD's `NFR-P-012` figure, replacing a self-described arbitrary 200KB. |
+| 20 — the Husky `prepare` script | **Ownership moved to 23**, which states the git-root dependency rather than leaving it inside a commands reference. **The value itself is still open** — see 23's row in the placeholder table above. |
+| The icon library | **`lucide-react`, ratified in 00's Confirmed stack.** |
+| Logging, error UX, git workflow, Storybook authoring, observability, test data, form/table/overlay review, Definition of Done, screen descriptions | **Nine new tier files, 21–29.** Each was a topic the Vue corpus covered and this one did not. |
+| Using this corpus against another repository | **30-restructuring-an-existing-react-project.md.** |
+
+## Decisions blocked on React port (tracked here, not scattered)
+
+- **`ui-library` component inventory AND component APIs — the corpus
+  specifies neither.** Two gaps, the second larger than the first.
+  Raised from 01-project-structure-and-architecture.md's "This file
+  does not enumerate the components" section, which is where a reader
+  hits it.
+
+  **No component list.** No file enumerates the `ui-library` component
+  set. Components appear incidentally as examples of other rules — in
+  01, in 06, in 11 — and those mentions must **not** be assembled into
+  an inventory: a list stitched from scattered examples silently omits
+  whatever no rule happened to mention. (This entry used to attach
+  counts to those three files and got all three wrong; see 01's
+  matching paragraph and the generated document's derived index for why
+  the counts are gone rather than corrected in place.)
+
+  **No component APIs.** Even a complete list of names would not be
+  buildable. Nothing specifies what a component's interface *is*:
+  `BaseSelect`'s options shape, controlled vs uncontrolled,
+  `BaseDataTable`'s column-definition contents, which props are
+  required. 01 governs placement, 03 governs prop-naming and
+  composition patterns, 06 governs styling and the headless primitive.
+  Three files of conventions — none is a specification, and conventions
+  do not compose into one.
+
+  **Source: the prototype**, per 17's Prototype register — it shows
+  which components the real SE screens use and how they behave.
+  **Trigger: pass 4**, which derives both from it. **Destination:**
+  `PQMS_docs/component-specs/`, one file per component, against
+  `TEMPLATE.md` there — the required sections are settled even though
+  no spec is written. This is a derivation
+  from an artifact, not a decision Yogesh makes in advance, so it is
+  not waiting on an answer — it is waiting on the pass that does the
+  work.
+
+  **Consequence until then**: do not build `ui-library` components
+  speculatively from the conventions. They can tell you a component is
+  correctly placed, named, and styled; they cannot tell you it is the
+  right component with the right interface.
+
+- **A distinct icon-only "small square button" pattern exists in the
+  prototype, unspecified anywhere in this corpus** (found while building
+  BaseButton, cross-referenced against the component-inventory gap
+  above): `requirements/ISM SE Role.html` contains 10+ raw `<button>`
+  elements sized continuously from 20px to 40px (20/22/24/26/28/30/32/
+  34/36/40px, appearing 1–21 times each), every one icon-only (a single
+  `<i data-lucide>` child, no visible text), labeled via `title="..."`
+  rather than visible content, with no shared variant vocabulary and no
+  `x-import` reference to the design-system `Button` component.
+  Confirmed **not** an instance of the real `Button` component:
+  exhaustive search of the prototype finds exactly two
+  `component-from-global-scope=` usages in the whole file (`Logo`, and
+  one `Button` at `variant="secondary" size="md"`) — none of these
+  icon-only buttons is either. **This is a separate,
+  currently-unspecified component** (an icon/dismiss-button concept),
+  not `BaseButton` at a small size. **Source: the prototype, same as the
+  component-inventory gap above. Trigger: pass 4**, when it should be
+  enumerated and specified alongside the rest of the `ui-library` set,
+  same destination (`PQMS_docs/component-specs/`).
+
+- **`BaseButton`'s `sm` size (36px) coincidentally lands on the
+  prototype's generic `--control-md` step, not `--control-sm`** — worth
+  resolving when the icon-button item above is specified, not a defect
+  in `BaseButton` as it stands today. The prototype's own generic
+  control-height scale is `--control-sm: 28px`, `--control-md: 36px`,
+  `--control-lg: 44px`. `BaseButton`'s `sm=36px` has no direct prototype
+  evidence of its own and happens to equal `--control-md`, while
+  `--control-sm` (28px) instead sits inside the icon-only
+  square-button cluster described above (28px is that cluster's
+  second-most-common size, 10 occurrences). This raises the possibility
+  `--control-sm` was intended for that icon-button component rather than
+  for `BaseButton`, and that `BaseButton`'s sizes may need renumbering
+  once that component exists — not something to act on now. **Trigger:
+  same pass-4 work as the item above.**
+
+- **No standard names an icon library for React — AppHeader installed
+  `lucide-react` without one existing.** Justified by direct provenance:
+  the prototype uses Lucide icons via `data-lucide="..."` hundreds of
+  times, and the prior Vue implementation (`kus-pqms`) used the direct
+  equivalent, `@lucide/vue`. That provenance is real, but the decision
+  itself was made inside one component's build, not recorded anywhere a
+  second component could find it — the next component to need an icon
+  could as easily reach for a different library, or re-derive the same
+  choice from scratch, and neither would contradict anything written
+  down today. **Needs a real owner**: whichever tier file ends up owning
+  dependency/library choices for this stack — 00-core-rules.md's
+  "Confirmed stack" section is the closest existing precedent, since
+  TanStack Query, Zustand, and react-i18next are all recorded there the
+  same way. **Trigger: before a second component needs an icon**, so
+  the choice is confirmed rather than silently repeated or contradicted.
+
+- **No standard specifies keyboard or disclosure-pattern behavior for
+  dropdowns/popovers** — the same shape of gap as the icon-only-button
+  finding above: 11-accessibility-standards.md's per-component list
+  covers `BaseModal`, `BaseTooltip`, `BaseSelect`, `BaseSwitch`,
+  `BaseCheckbox`, `BaseTextarea`, and nothing resembling a dismissible
+  popover. AppHeader's notification dropdown added Escape-to-close
+  (returning focus to the trigger) and click-outside-to-close as
+  sensible defaults, because nothing governs this and the prototype's
+  static export cannot show interaction behavior at all — there is no
+  keyboard trace to read there. **This is case 4 of 00-core-rules.md's
+  Source precedence** (nothing governs, decide deliberately and record
+  the reasoning) — that is what happened here, just not written down
+  until now. Worth a real requirement once a second dropdown- or
+  popover-shaped component exists, so the two don't diverge on which
+  keys do what.
+
+- **`AppHeader` hard-depends on a `Router` context to render at all** —
+  it uses `react-router`'s `NavLink`/`Link` directly, and no routing is
+  wired up anywhere else in this app yet (07-routing-and-layouts.md's
+  route tree is specified but not built). This is a deliberate choice,
+  not an oversight: it gives real `aria-current="page"` marking for
+  free, which is more correct than the prototype's own nav (which has
+  no current-page indication at all). **The cost**: every future test,
+  Storybook story, or standalone dev preview of `AppHeader` needs a
+  `MemoryRouter` (or equivalent) wrapper — confirmed necessary in
+  `AppHeader.spec.tsx` and in `main.tsx`'s dev preview. **Recorded as a
+  known coupling cost, not a defect. Trigger: revisit once real routing
+  exists** in the app shell, to confirm the dependency resolves cleanly
+  rather than needing a wrapper everywhere it's used.
+
+- **`apps/portal/src/i18n.ts` (the i18next bootstrap) is
+  foundational portal-shell infrastructure, built as a side effect of
+  AppHeader's task rather than as its own decision.** Nothing
+  initialized i18next anywhere in this app before AppHeader needed it,
+  so the bootstrap was written to unblock one component's `.i18n.ts`
+  file — matching 09-i18n-and-localization.md's convention, but the
+  bootstrap itself (its `lng`/`fallbackLng`/`supportedLngs`
+  configuration, where it lives, whether it needs anything beyond what
+  one component required) has not been reviewed as shell-level
+  infrastructure the way 01-project-structure-and-architecture.md
+  frames Zustand/TanStack Query/Vite setup ("the portal shell runs in
+  parallel... Vite/ESLint/test-harness scaffolding"). **Needs a
+  deliberate owner and review once a second component needs
+  translation**, not just a side effect of the first one that happened
+  to need it.
+
+- **Screen descriptions: permanent artifact or working notes?** —
+  **CLOSED. Decision: a permanent artifact.**
+
+  **Location**: `PQMS_docs/screen-descriptions/`, one file per screen,
+  a sibling of `standards/` and `component-specs/`.
+
+  **Why pass 4 needs them at all**: pass 4 derives component specs from
+  the prototype, but the path runs through screens. You cannot specify
+  `BaseDataTable`'s API without knowing what Issue List does with it —
+  which columns, which states, whether rows are selectable. The
+  component **inventory** is derived the same way: read a screen, see
+  which controls it contains. So the screen-level knowledge exists
+  either way; the only question was whether it survives the pass that
+  produces it.
+
+  **Three reasons it survives, recorded so this is not relitigated:**
+
+  - **The staleness argument cuts the other way.** A screen description
+    records **structure** — Issue List has a filter drawer, a scope tab
+    row with counts, a table with these columns. Prototype revisions
+    mostly change detail, not structure. An unreviewable inventory, by
+    contrast, is **permanently** unreviewable: there is no later moment
+    at which it becomes checkable. A description that has drifted can be
+    re-checked against the prototype; a derivation that happened in
+    someone's head cannot.
+  - **It matches how everything else in this corpus earned trust.** The
+    four fabrications this corpus caught — a permission call that did
+    not exist, a hex colour that was not the brand colour, a status
+    value not in the real set, a service namespace never implemented —
+    were caught because a source existed to check against. A component
+    inventory derived in someone's head has no source, so nothing about
+    it is checkable in the way everything else here has had to be.
+  - **The staleness cost is lower than it looks, because these are
+    read-once artifacts.** Pass 4 consumes them; afterwards they are
+    reference. A stale screen description does not misdirect
+    implementation the way a stale component spec does, because nobody
+    builds from it directly — which is also why 01 deletes a spec with
+    its component but no equivalent rule is needed here.
+
+  **Currency, carrying 17's register caveat**: each description records
+  **which prototype file and which reading it came from**, and is
+  current as of that reading — not permanently. The prototype has been
+  revised and renamed three or more times; a description that does not
+  say which reading produced it cannot be re-checked, which would
+  forfeit the first reason above.
+
+  **The boundary against component specs, since the two are adjacent**:
+  a **screen description says what a screen contains and what it does.**
+  A **component spec says what a component's API is.** The first is an
+  input to the second. A screen description does not specify props, and
+  a component spec does not describe a screen's layout.
+
+  **No template, deliberately, and no descriptions yet.** Their shape
+  should follow from the first prototype read rather than precede it —
+  writing a template now would specify a form for content nobody has
+  seen, which is the opposite of how `component-specs/TEMPLATE.md`
+  came about (that one was derived from 03's `BaseDataTable` gap list,
+  i.e. from real accumulated questions). **Trigger for the template, if
+  one is wanted at all: after the first screen is described.**
+
+- **When the `e2e` CI job first runs** — **OPEN. Owner: Yogesh.
+  Trigger: first CI setup.** (From 15-devsecops-and-ci-cd.md, which
+  carries the placeholder.)
+
+  Per 10-testing-standards.md no Playwright spec carries forward, so on
+  day one this repo has **zero** e2e tests, and `playwright test`
+  matching nothing is an error condition rather than a pass. So the job
+  15 specifies fails from the first commit unless something is decided:
+  introduce it alongside the first spec, or introduce it now with an
+  explicit, commented allowance until then.
+
+  Recorded here rather than left to scaffold time because **the
+  available wrong fix is the one that happens under time pressure** —
+  softening the job (`continue-on-error`, a `|| true`, a passthrough)
+  until it is green and meaningless. That is the same failure 10 names
+  for coverage thresholds on an empty repo, and it is silent
+  afterwards: a permanently green job that runs nothing looks identical
+  to a passing one.
+
+- **Whether Storybook builds in CI** — **OPEN. Owner: Yogesh. Trigger:
+  when the Storybook builder is set up per
+  01-project-structure-and-architecture.md.** (From 15, which carries
+  the placeholder.)
+
+  **No precedent either way**: `kus-pqms` had `storybook` and
+  `build-storybook` scripts at the root and in both `ui-library` and the
+  app, and neither workflow invoked either one. The question was never
+  asked there.
+
+  The trade is a build-time cost on every PR against discovering, weeks
+  late, that Storybook has stopped building — 01 makes Storybook the
+  component verification surface, so a broken one is a broken gate on
+  component review. **One limit already recorded in 15 and worth
+  keeping attached to the decision**: a `build-storybook` step catches
+  **build breakage only, not accessibility regressions**, because the
+  a11y addon's checks are manual per 10. So this is not a way to get
+  a11y coverage into CI; 10's axe assertions remain the only automated
+  a11y surface.
+
+- **BaseTabs' composition API** (from 03-react-component-patterns-and-
+  naming.md): config-driven (an array of tab configs, with panel
+  content rendered outside the component by the consumer switching on
+  the active tab key) or a compound-component API
+  (Tabs.List/Tabs.Trigger/Tabs.Panel). Config-driven is the incumbent
+  option — provenance: it is what `kus-pqms` shipped, and it worked.
+  Full framing in 03; this entry is the tracking record. Decided when
+  BaseTabs is specified, not at the standards level.
+
+- **Large Lists/Tables performance guidance** (from 12-performance-
+  guidelines.md): depends on `BaseDataTable`'s API, which is part of the
+  component-specification gap above. **12 now states its side**: its
+  "Large lists and tables — what this file needs from `BaseDataTable`'s
+  API" section lists the five API facts that determine which strategies
+  remain available, starting with maximum page size — an answer that may
+  close the item entirely, since pagination is already in the state
+  model. **Trigger: pass 4**, which must read that section before
+  finalizing the API rather than after.
+
+- **File Uploads performance guidance** (from 12-performance-
+  guidelines.md): chunked-upload and client-side-compression approach
+  depends on the attachment components, which are not specified in this
+  corpus. Trigger: those components being specified.
+
+- **Charts and Analytics performance guidance** (from 12-performance-
+  guidelines.md): no charting library has been chosen for this project
+  at any point — this isn't blocked on a port, it's blocked on a
+  decision that hasn't been made yet. Flag if/when a charting need
+  actually arises.
+
+- **Dashboard Accessibility guidance** (from 11-accessibility-
+  standards.md): chart alternatives (text summary, data table
+  alternative) depend on a charting library being chosen — same
+  blocker as the performance item above, not a separate decision.
+
+- **Workflow Accessibility guidance** (from 11-accessibility-
+  standards.md): workflow-timeline text-alternative requirements,
+  blocked on a workflow-timeline component existing at all — none does
+  in this app today.
+
+- **Frontend deployment target and its header behavior** (from
+  13-security-standards.md): no deployment target (Static Web Apps,
+  App Service, container, or otherwise) has been chosen anywhere in
+  this repo for the frontend — confirmed absent, not just undocumented.
+  13's CSP design assumes no competing headers are injected elsewhere;
+  this must be revisited once a real deployment target exists, since
+  it could override or conflict with what 13 specifies.
+
+- ~~**DTC's expansion**~~ **RESOLVED.** BRD C1.0 (Appendix A — Glossary)
+  defines DTC as "Diagnostic Trouble Code." Trivial, closed out. Full
+  detail in 17's "Core Entities" section.
+
+- ~~**ASM naming**~~ **RESOLVED.** BRD C1.0 Appendix A defines `ASM` as
+  "After-Sales Manager / Service Engineer Manager" — a deliberate
+  compound title, per contradiction X-2 (§0.6). Full detail in 17's
+  "Roles & Capabilities" and 08's "Permission model" → "ASM naming".
+
+- **CE/DM naming and scope — still open.** Not resolved by BRD C1.0. C1.0
+  was checked directly (full glossary, Appendix A, and the role-mapping
+  appendix, B.1) and defines neither term — this is a genuine gap in
+  the consolidated document, not a case of an answer sitting in a
+  newer source nobody checked. The HLD-vs-old-glossary conflict this
+  entry originally tracked stands unchanged. Full detail lives in 17
+  (terms) — this entry exists only as a pointer, not a restatement.
+
+- ~~**Whether BRD v1.5 should replace the v1.3 the corpus cites**~~
+  **RESOLVED — for now.** A consolidated baseline,
+  BRD/NPQMS-ISM-customized-BRD.md (**C1.0**, dated 2026-08-20), now
+  exists — it merges v1.5 and a parallel "Greenfield BRD v1.0" and
+  states plainly it is **"Draft for ratification,"** superseding both
+  source documents only on ratification. This corpus now cites C1.0 as
+  the current best source (see 00's source-precedence section and the
+  updated citations throughout 06, 08, 11, 17), while stating its draft
+  status rather than treating it as more settled than it is. If
+  ratification changes anything in C1.0, those citations need a second
+  pass — this entry stays open in that narrow sense, not resolved
+  permanently.
+
+- ~~**2-vs-4-tier capability model**~~ **RESOLVED — with a bigger answer
+  than either option this question originally posed.** The question was
+  framed as a choice between the implemented two-value
+  `"read"`/`"override"` model and a four-tier expansion suggested by
+  BRD NFR-05 prose. BRD C1.0 supersedes both options: §7.2–§7.4 commit
+  to five system roles and a 38-row per-action authorization matrix
+  (§7.3), consumed by the frontend as server-resolved named permissions
+  (FR-SEC-011), not a client-side capability-ordering gate at any tier
+  count. See 08-authentication-and-authorization.md's "Permission
+  model" for the full rewrite — this entry is the tracking pointer, not
+  a restatement.
+
+- **Whether "QE" (BRD/HLD) and the real implemented "SE" role are the
+  same persona renamed, or genuinely different roles** (from
+  17-domain-glossary-and-business-context.md): SE appears under that
+  abbreviation in neither the BRD's stakeholder table nor the HLD's
+  role table — the only resemblance is a description-level similarity
+  to QE in both documents. Needs Yogesh to confirm.
+
+  These three are blocked on a stakeholder/business answer, not a React
+  port — kept here as the closest existing tracking home per Yogesh's
+  own steer, not because they fit this list's original framing.
+
+- **Fixtures mode — CLOSED. Ownership assigned; one item still open.**
+  This entry existed because no file owned fixtures-mode behaviour. Every
+  half now has an owner:
+
+  | Concern | Owner |
+  |---|---|
+  | Auth behaviour (MSAL bypass, PROD fuse, seeded identity via `setUser`) | 08's "Fixtures-mode authentication" |
+  | `isFixtureMode()` predicate, opt-in default, what a service returns | 05's "Fixtures mode" |
+  | `use*`-prefix naming rule for non-hook predicates | 14's naming conventions |
+  | `VITE_USE_FIXTURES` contract across `.env`, `.env.example`, `env.d.ts` | 13's `VITE_*` inventory |
+  | Store-layer behaviour (unchanged in both modes) | 04, pointer only |
+
+  **The question this entry was opened to prevent is answered**: a
+  service returns **fixture data** in fixtures mode and calls HTTP in
+  real mode, with the switch inside the service function and nothing
+  above it changing. Queries, hooks and components are identical in both
+  modes. The one exception is a query whose purpose is to observe change
+  over time — notifications — which is disabled rather than fed static
+  data. 05 carries the test for when a new exception qualifies.
+
+  **Still open, narrowly — but the blocker has changed shape.** The
+  role model itself is no longer unsettled (BRD §7.2 defines five
+  roles: SE/ASM/PQM/ADMIN/VIEWER). What remains is a separate,
+  narrower question: which of the five roles a fixtures-mode
+  environment should default to for local development. That is a
+  dev-workflow convenience decision, not a spec gap, and CE/DM's
+  still-open status doesn't gate it — CE/DM are not part of the
+  five-role model. Deferred as a `[PLACEHOLDER]` in 08's "Fixtures-mode
+  authentication" section 4. **Trigger**: a dev-workflow decision, not
+  a spec resolution. **Owner**: Yogesh.
+
+  **Also open, smaller**: where fixture modules live. 01 names
+  `services/`, `hooks/`, `components/` and `types/` but no location for
+  fixture data. (Page-host placement is 07's; Zustand store
+  organization is 04's — 01 owns neither, correcting an earlier
+  revision of this entry that attributed both to it.) `kus-pqms` used
+  `src/api/`, which also held domain types that 02 now places
+  elsewhere. Recorded as a `[PLACEHOLDER]` in 05; resolve when 01 is
+  next revised or at scaffold time.
+
+- **Prototype register — CLOSED, with a standing maintenance
+  obligation.** Both halves of this item are answered: 17-domain-
+  glossary-and-business-context.md owns prototype provenance and
+  carries a "Prototype register" section, and the SE prototype's path
+  is confirmed and recorded in it. No path is repeated here — the
+  register is the single place it lives.
+
+  The convention: every file needing a prototype cites it **by role
+  through the register, never by filename**, so a designer rename is a
+  one-cell edit. Role-specific prototypes are planned and arrive as
+  **new rows, not replacements**. Per-role UI differences remain useful
+  confirming evidence against the BRD's §7.3 authorization matrix — see
+  the resolved "2-vs-4-tier capability model" entry below for the
+  larger answer this question turned into.
+
+  **What remains is maintenance, not a decision.** The prototype is
+  under active revision and has been renamed at least three times, so
+  the register needs updating as the designer renames files and adds
+  per-role prototypes. This is the standing cost of treating a moving
+  artifact as a source of truth; the register exists to hold that cost
+  at one row per change. No owner assignment needed — whoever notices
+  the rename updates the row.
+
+  **Related standing note, recorded in the register**: file
+  modification dates are not evidence of currency anywhere in this
+  repository, because `git pull` rewrites mtimes on every changed file.
+  An earlier analysis of this item drew a wrong conclusion from exactly
+  that inference. It is noted in 17 rather than here because it applies
+  to every file in the repo, not just prototypes.
+
+- ~~**Whether the browser holds an auth token at all**~~ **RESOLVED —
+  previously the highest-consequence open item in this list.** BRD
+  AR-06/DEC-07 confirm: authentication is OIDC Authorization Code +
+  PKCE against the enterprise identity provider, with the token
+  validated **in-process** — "no separate gateway is needed to validate
+  one token for one application" (AR-06). Kia's SSO does not terminate
+  at a gateway or reverse proxy in front of this app. 08's entire
+  token-storage decision (`cacheLocation`, the accepted XSS cost, the
+  CSP condition) stands as written — it is **confirmed valid, not
+  voided**, and so is the underlying choice of MSAL. Full detail in
+  08's "Token storage" section; this entry is the tracking record, not
+  a restatement.
+
+- **The cross-reference claim-level audit is incomplete — a known
+  verification gap, not a clean bill of health.** Two independent
+  reviews of this corpus have each said the same thing about their own
+  cross-reference checks: the first verified that ~30 of 207 citations
+  named a real target file; the second verified 21 section-naming
+  citations and all of 20's 25 `(used in:)` attributions completely,
+  but its own broader attributive-claim pass covered only a fraction of
+  the corpus's 217 filename-style citations before the checking method
+  stopped being precise enough to trust its output as findings. **Every
+  report to date is a floor, not a ceiling, and each has said so
+  explicitly rather than implying completeness.**
+
+  What is confirmed clean, so this entry does not overstate the risk:
+  all 21 section-naming citations verified; all of 20's acronym
+  attributions checked (14 of 25 were wrong — fixed, and no longer
+  hand-maintained, see 20's glossary note); every citation *into* 18 or
+  20 from another file checked and correct; all 13 of 18's own outbound
+  citations checked and correct. The defects found so far are 18 and 20
+  describing themselves and each other by stale or underived counts —
+  not the rule tier's cross-references to one another.
+
+  **What remains unverified**: whether a citing file's *prose claim*
+  about a target — not just the filename, and not just a quoted section
+  title, but a paraphrased assertion of what the target says — actually
+  matches the target, across the full 217-citation set. M1 (05 and 18
+  both mischaracterizing what 01 names) was found this way, by hand, on
+  two citations; nothing has swept the rest by any method precise
+  enough to report findings from.
+
+  **Trigger: build a tool that tests this precisely, not another manual
+  or heuristic pass.** A heuristic that flags "a token near this
+  citation is absent from the target" was tried during this review and
+  discarded — it returned ~74 candidates from noise, mostly citing
+  sentences quoting the *citing* file's own code rather than the
+  target's. The right tool extracts each citation's actual attributed
+  claim (a quoted phrase, a named rule, a stated fact) and checks it
+  against the target with enough precision to report a verdict per
+  citation, not a candidate list to re-read by hand. Until it exists,
+  treat every "cross-references verified" claim about this corpus,
+  including this one, as bounded by what was actually checked. **Owner:
+  whoever builds that tool. No date trigger — this is a capability gap,
+  not a scheduled task.**
+
+- **Root `lint` script — CLOSED. Decision: `turbo lint`, not a bare
+  `eslint .`.** Round-3 review flagged that the repo's root `lint`
+  script (`turbo lint`, fanning out to each package's own `lint`) had
+  drifted from 20-glossary-and-appendix.md's Commands Reference, which
+  specified a bare `eslint .`/`eslint . --fix` and was never updated
+  once `build`, `test`, and `typecheck` all moved to the same
+  Turbo-delegation pattern. Decided in favor of the repo's `turbo
+  lint`: there is no reason for `lint` alone to skip the caching and
+  parallelism the other three commands already get, and every package
+  already carries its own scoped `eslint .`. 20 is updated to state
+  this as current. The two previously undocumented root scripts,
+  `lint:eslint` and `lint:eslint:fix`, are kept and now documented as a
+  deliberate escape hatch, not drift: a package-scoped `turbo lint` run
+  never reaches root-only files (`eslint.config.js`, `scripts/*.mjs`),
+  since no workspace package's `eslint .` is rooted there. Both pairs
+  are required; neither is redundant with the other.
+
+- **AppHeader notification trigger — CLOSED. Decision: drop
+  `aria-haspopup`.** Companion to the dropdown/popover gap above (no
+  standard specifies keyboard or disclosure-pattern behavior). Round-3
+  review flagged that the trigger button carried `aria-haspopup="true"`
+  over a panel whose rows are plain `<button type="button">` — no
+  `role="menuitem"`, no roving tabindex, no arrow-key navigation —
+  reachable only by Tab. That combination promises assistive tech an
+  interaction model (a real ARIA menu) the markup doesn't implement.
+  Decided in favor of dropping `aria-haspopup` entirely rather than
+  building a real menu: the panel is a disclosure region, already
+  correctly described by `aria-expanded`/`aria-controls` on the trigger
+  and `aria-labelledby` on the panel, and those alone are sufficient —
+  a disclosure region doesn't need `aria-haspopup`. Implementing a true
+  ARIA menu instead would mean adding roving tabindex and arrow-key
+  handling across `NotificationRow`, a materially bigger interaction-
+  model change that nothing here calls for. If a future revision turns
+  this panel into an actual keyboard-navigable menu, `aria-haspopup`
+  and the missing menu semantics should be added back together, not
+  `aria-haspopup` alone.
+
+## A fourth source, and what it did to this register
+
+`../analysis/vue-baseline-audit.md` (2026-08-24) audits the shipped Vue
+portal's **code**, which no previous revision of this corpus had read.
+00-core-rules.md ranks it: evidence, below all three existing sources, never
+authority. It is a **reference** document under
+31-documentation-standards-and-decision-records.md — dated, method-stated,
+regenerated rather than patched.
+
+It raised **four new placeholders**, all now in the table above, and it changed
+the status of one already there.
+
+### Two `tokens.css` files — the ambiguity is inherited, not introduced
+This file has carried an open placeholder asking how `design-tokens`' token file
+relates to `ui-library`'s. The audit answers a different and more useful
+question: **the prior repository has exactly the same two files, with the same
+absent explanation**, both listed in its formatter and lint ignores as "owned by
+the token pipeline, not hand-formatted" — describing a pipeline that does not
+appear to exist there either.
+
+So the scaffold did not invent this. It inherited it, which means:
+
+- **Nobody on the current team can resolve it by reading the code**, because
+  nobody on the current team decided it.
+- **It is a prerequisite of the restructure, not a cleanup task inside one.**
+  30-restructuring-an-existing-react-project.md's Phase 0 now separates inherited
+  questions from introduced defects for exactly this reason.
+
+The placeholder stays open and its trigger is unchanged — before the token
+scales are authored.
+
+### One unresolved provenance question, still unresolved
+The audit did not find the missing `BaseButton` and `AppHeader` component specs
+recorded by review round 3. `component-specs/` still holds only `TEMPLATE.md`
+and `INVENTORY.md`. Whether those specs were deleted or never existed remains
+open, and remains worth resolving.
+
+### What the audit did **not** change
+No status in the summary table above. The audit read a different repository; it
+says nothing about what this scaffold contains. **That section is still
+regenerated by re-reading this repository, and it is still dated 2026-08-24 on
+the strength of that reading, not this one.**
+
+## Closed in this revision — nine placeholders, and how each closed
+
+Two of these closed on **evidence** (someone looked) and seven on a **stated
+default** (someone decided, and wrote down what would change it). The
+distinction matters: an evidence closure is settled, a default closure is a
+position that a reader may overturn with an argument.
+
+31-documentation-standards-and-decision-records.md requires an ADR for each of
+the seven. **Those ADRs are not yet written** — that is the outstanding half of
+this closure, and it is tracked here rather than being quietly skipped.
+
+| File | Question | Closed as | Basis |
+|---|---|---|---|
+| 07 | Fixed-height layout — fourth layout or variant | **A fourth layout.** The two differ in where the scroll container lives, and a boolean prop that relocates it changes sticky positioning, focus restoration and `scrollIntoView` invisibly at the call site | default |
+| 15 | The default branch's name | **`main`** — trigger on `[main]` only, not the `[master, main]` hedge | **evidence** — the repository's branch |
+| 15 | `.nvmrc` pin granularity | **Exact `major.minor.patch`.** `engines` stays a floor; `.nvmrc` pins; `engine-strict=true` enforces the floor | default |
+| 15 | When the `e2e` job first runs | **With the first spec, in the same PR.** Five jobs until then, stated rather than omitted | default |
+| 15 | Does Sonar gate a merge | **Advisory for 30 days, then blocking on PRs only.** Date recorded in the workflow file | default |
+| 15 | `pnpm audit` severity floor | **Fail at `high`, warn below.** Allowlist entries carry an advisory ID, a reason, a **required expiry ≤90 days** and an owner; an expired entry fails the build | default |
+| 15 | Does CI build Storybook | **Yes, path-filtered to the library and story files.** Catches build breakage only — **not** accessibility | default |
+| 23 | Husky install path | `prepare` = `cd .. && husky pqms-portal/.husky`; `core.hooksPath` = `pqms-portal/.husky/_` | **evidence** — `.git` sits one level above the pnpm workspace root |
+| 23 | Standalone or polyglot monorepo | **Sub-directory shape.** The git root holds `BRD/` and `requirements/` beside `pqms-portal/`, so all three hook guards are required | **evidence** — the directory listing |
+
+**The 23 closure also closes the matching placeholder in
+20-glossary-and-appendix.md**, which restated the same question.
+
+### What this changed about the corpus
+
+15-devsecops-and-ci-cd.md carried **six** open questions — the most of any file
+— and the pipeline could not be built without answering three of them. It now
+carries none. 23-git-workflow-hooks-and-commits.md's two questions blocked all
+three hooks and both were answerable by looking at the repository, which is the
+uncomfortable part: **they were open because nobody had looked, not because the
+answer was hard.**
+
+The general lesson for the remaining open rows above: **before deferring a
+question to a person, check whether the repository already answers it.**
+
+## The target repository changed — what that did to this register
+
+The client's `project-template-java` documentation (`TEAM-GUIDE.md`,
+`STACK.md`, `DEVELOPER_GUIDE.md`) arrived after the corpus was written, and it
+describes a materially different target: **GitLab CI not GitHub Actions,
+Lefthook not Husky, TypeScript 5.9 not 6, a split coverage floor, no state
+library, and a SPEC-driven harness.** 00-core-rules.md lists all eight
+corrections.
+
+### Placeholders this closed on client evidence
+
+| File | Question | Closed as |
+|---|---|---|
+| 08 | Does the browser hold a token | **Yes.** `STACK.md` §7: OAuth2 JWT **Bearer** with an API Gateway JWT authorizer — the gateway validates, it does not terminate |
+| 07 | `AuthLayout` — build it or not | **Build it.** A Bearer flow has a redirect callback, so the layout has a consumer |
+| 05 | The number of origins and clients | **One.** One Spring Boot service behind one gateway; the second client and the proxy-ordering hazard both disappear |
+
+### Placeholders this opened
+
+Three, all in the table above: the state-library adoption (04), the identity
+provider (08), and whether an OpenAPI spec exists (33). **All three are the
+client's to answer, not the Frontend Lead's**, which is a different escalation
+path from every other row in this register.
+
+### Two stale artifacts, and they are Phase 0 findings
+
+`STACK.md` §8 item 5 records both: **`frontend/.storybook/` exists with no
+`storybook` dependency**, and **Lefthook invokes `prettier` which is not a
+declared dependency**. Tiers 24 and 14 both assume working installations.
+
+Neither is a restructure task. **Establish first whether each is failing or
+silently no-opping** — a hook calling a binary nobody installed does one of
+those two things, and which one determines whether the format gate has ever run.
+
+### Four contradictions inside the client's own documents
+
+Region, Node version, backend port, and the backend package root all have two
+different values across `TEAM-GUIDE.md` and `STACK.md`.
+33-polyglot-monorepo-integration.md tabulates them.
+
+**Only the Node one blocks a frontend developer** — following the prerequisites
+table installs Node 20, which React Router v8 will not run on. **Report all
+four; resolve none.** A document corrected in passing by someone outside the
+team that owns it is how the drift `STACK.md` §8 records began.
+
+### What this section does not claim
+**The implementation-status snapshot above is unchanged and still describes the
+scaffold in this repository**, not the client's `frontend/`. Nothing here was
+verified against the target repository — it was read from the client's
+documentation, which is itself dated 2026-08-20 and carries its own drift
+warnings. **A fresh Phase 0 baseline against the real `frontend/` supersedes all
+of it**, and is the first SPEC.
+
+### Closed 2026-08-25 — the workspace question, and the corpus's first ADR
+
+**`frontend/` is always a pnpm workspace** (ADR 0001, decided by Prisilla
+Ghadi). The observed flat tree is a defect corrected in Phase 2, not a layout
+the corpus adapts to.
+
+This is the **first decision record written to the format**
+31-documentation-standards-and-decision-records.md specifies — numbered,
+dated, named decider, and an *options rejected* section. Three alternatives
+were considered and recorded rather than lost: staying flat, splitting after
+conformance, and splitting into more than three packages. **That section is the
+one that pays for itself**, because staying flat was genuinely defensible and
+someone will propose it again.
+
+### The consequence worth carrying forward is not about structure
+
+A workspace split **silently disables any tool keyed on a path or an import
+specifier.** A lint glob that matches nothing reports **zero violations**, not
+an error.
+
+So: the move and the tool re-pointing land in **one commit**, and that commit
+records the violation count on both sides. **A count that drops to zero is the
+failure, not the success** — and it is indistinguishable from a clean result
+unless someone wrote the before-number down.
+
+This generalises past this decision. Any gate keyed on a location — coverage
+path configuration, Sonar source roots, a formatter ignore list, a CSS scrape —
+has the same property, and Phase 2 moves all of them at once.

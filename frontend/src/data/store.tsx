@@ -36,7 +36,13 @@ export interface NewIssueInput {
   source: Issue['source']
   model: string
   modelCode?: string
+  /** All affected codes (V4-V5 multi-select). `modelCode` stays the anchor for display. */
+  modelCodes?: string[]
+  /** code → selected model years. Absent code means "all years for that code". */
+  yearsByCode?: Record<string, string[]>
   modelYear: number
+  /** Issues linked at creation time. Linked reciprocally, same as linkIssue(). */
+  linkedIssueIds?: string[]
   system?: string
   subSystem?: string
   component?: string
@@ -132,7 +138,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: 'open',
       model: input.model,
       modelCode: input.modelCode ?? '',
+      modelCodes: input.modelCodes?.length ? input.modelCodes : undefined,
       modelYear: input.modelYear,
+      linkedIssueIds: input.linkedIssueIds?.length ? input.linkedIssueIds : undefined,
       system: input.system,
       subSystem: input.subSystem,
       component: input.component,
@@ -146,8 +154,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createdAt: now(),
       updatedAt: now(),
     }
-    setIssues((list) => [issue, ...list])
+    const links = input.linkedIssueIds ?? []
+    setIssues((list) => [
+      issue,
+      // Mirror the link onto each counterpart so the relationship reads the same from
+      // either side — the same invariant linkIssue()/unlinkIssue() maintain.
+      ...list.map((i) => (links.includes(i.id) ? { ...i, linkedIssueIds: Array.from(new Set([...(i.linkedIssueIds ?? []), issue.id])), updatedAt: now() } : i)),
+    ])
     appendAudit(issue.id, actor, input.submit ? 'Submitted' : 'Draft saved', input.submit ? 'Draft → Open' : undefined)
+    if (links.length) appendAudit(issue.id, actor, 'Issues linked', links.join(', '))
     return issue
   }, [issues, appendAudit])
 

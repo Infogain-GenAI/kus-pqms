@@ -67,6 +67,9 @@ interface FilterDraft {
 }
 const EMPTY_FILTERS: FilterDraft = { modelCode: '', modelYear: '', system: '', subSystem: '', component: '', symptom: '', status: '', source: '', owner: '', grouping: '', dateFrom: '', dateTo: '', days: '', linked: '', ews: '' }
 
+/** Default list sort: Issue Date descending (the prototype's 'registered desc'). */
+const DEFAULT_SORT: DataTableSort = { key: 'issueDate', dir: 'desc' }
+
 const drawerLabel = { font: 'var(--fw-bold) 11px/1.35 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)' } as const
 const fieldRow = { display: 'grid', gridTemplateColumns: '116px 1fr', gap: 16, alignItems: 'center', padding: '8px 0' } as const
 
@@ -140,7 +143,7 @@ export function IssueListScreen() {
   // Visible columns (defaults per the prototype) + the Columns drawer's working draft.
   const [cols, setCols] = useState<string[]>(DEFAULT_VISIBLE)
   const [colsDraft, setColsDraft] = useState<string[]>(DEFAULT_VISIBLE)
-  const [sort, setSort] = useState<DataTableSort>({ key: 'issueDate', dir: 'desc' })
+  const [sort, setSort] = useState<DataTableSort>(DEFAULT_SORT)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [selected, setSelected] = useState<Array<string | number>>([])
@@ -303,7 +306,11 @@ export function IssueListScreen() {
     bulkStatus(selected.map(String), bulkTarget as StatusKey, bulkReason.trim(), { name: user.name, role: user.role })
     setSelected([]); setBulkTarget(''); setBulkReason('')
   }
-  const clearFilters = () => { setQ(''); setFlt(EMPTY_FILTERS); setDraft(EMPTY_FILTERS) }
+  // Clearing filters also restores the default sort, which is what the prototype intends.
+  // Its own clearFilters() assigns sortKey twice — 'registered' then 'priority' — so the
+  // last write silently re-sorts by priority. That is a bug, not a spec: fixed here rather
+  // than ported. Decision recorded in the UX memlog (2026-08-24).
+  const clearFilters = () => { setQ(''); setFlt(EMPTY_FILTERS); setDraft(EMPTY_FILTERS); setSort(DEFAULT_SORT) }
 
   const draftSelect = (key: keyof FilterDraft, label: string, options: string[] | { value: string; label: string }[]) => (
     <div style={fieldRow}>

@@ -4,35 +4,19 @@ import { ChevronRight, Info, Link2, RotateCcw, Send } from 'lucide-react'
 import { Badge, Button, Input, Select, SOURCE, SOURCE_KEYS, SourceBadge, StatusBadge, Textarea, type SourceKey } from '@/components'
 import { Icon } from '@/icons/Icon'
 import { CardHead, Modal, PageContainer, PageCrumb, SectionCard, ULabel } from '@/app/chrome'
+import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
+import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
+import { LinkIssuesSection } from './LinkIssuesSection'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
-
-// Model Code master data — verbatim from the export's MC_MASTER (the New Issue > Model Code
-// dropdown's single source of truth for vehicle selection; no invented codes).
-const MODELS = [
-  { code: 'GH', name: 'AMANTI', y0: 2004, y1: 2009 },
-  { code: 'HM', name: 'BORREGO', y0: 2009, y1: 2011 },
-  { code: 'TD', name: 'FORTE', y0: 2010, y1: 2013 },
-  { code: 'VG', name: 'CADENZA', y0: 2014, y1: 2016 },
-  { code: 'YD', name: 'FORTE', y0: 2014, y1: 2018 },
-  { code: 'KH', name: 'K900', y0: 2015, y1: 2018 },
-  { code: 'CK', name: 'STINGER', y0: 2018, y1: 2023 },
-  { code: 'BD', name: 'FORTE MEXICO', y0: 2019, y1: 2024 },
-  { code: 'DL', name: 'K5', y0: 2021, y1: 2027 },
-  { code: 'KA', name: 'CARNIVAL', y0: 2022, y1: 2027 },
-  { code: 'CV', name: 'EV6.KR', y0: 2022, y1: 2025 },
-  { code: 'NQ', name: 'SPORTAGE PLUG-IN HYBRID', y0: 2023, y1: 2027 },
-  { code: 'SV', name: 'EV3', y0: 2027, y1: 2027 },
-  { code: 'LQ', name: 'TELLURIDE', y0: 2027, y1: 2027 },
-]
 
 export function CreateIssueScreen() {
   const nav = useNavigate()
   const { user } = useRole()
   const store = useStore()
 
-  const [modelCode, setModelCode] = useState('')
-  const [modelYear, setModelYear] = useState('')
+  const [vehicle, setVehicle] = useState<ModelCodeSelection>({ codes: [], yearsByCode: {} })
+  const [linkedIds, setLinkedIds] = useState<string[]>([])
   const [sysId, setSysId] = useState(''); const [subId, setSubId] = useState(''); const [compId, setCompId] = useState(''); const [symId, setSymId] = useState('')
   const [pendingSymptom, setPendingSymptom] = useState('')
   const [requestOpen, setRequestOpen] = useState(false)
@@ -47,16 +31,20 @@ export function CreateIssueScreen() {
   const comps = useMemo(() => (subId ? store.classChildren(subId) : []), [subId, store])
   const symptoms = useMemo(() => (compId ? store.classChildren(compId) : []), [compId, store])
 
-  const model = MODELS.find((m) => m.code === modelCode)
-  const years = useMemo(() => (model ? Array.from({ length: model.y1 - model.y0 + 1 }, (_, i) => String(model.y0 + i)) : []), [model])
+  // The anchor is the first code in master order; it supplies the displayed model name.
+  const anchorCode = vehicle.codes[0] ?? ''
+  const anchorYears = useMemo(
+    () => (anchorCode ? (vehicle.yearsByCode[anchorCode] ?? modelYearsFor(anchorCode)) : []),
+    [anchorCode, vehicle.yearsByCode],
+  )
   const label = (list: { id: string; label: string }[], id: string) => list.find((c) => c.id === id)?.label
   const symptomLabel = pendingSymptom || (symId ? label(symptoms, symId) : undefined)
   const correlated = useMemo(() => (symptomLabel ? store.issues.filter((i) => i.symptom === symptomLabel).slice(0, 5) : []), [symptomLabel, store.issues])
 
-  const canRegister = !!source && !!modelCode && title.trim().length >= 5 && description.trim().length > 0
+  const canRegister = !!source && vehicle.codes.length > 0 && title.trim().length >= 5 && description.trim().length > 0
 
   const clearAll = () => {
-    setModelCode(''); setModelYear(''); setSysId(''); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('')
+    setVehicle({ codes: [], yearsByCode: {} }); setLinkedIds([]); setSysId(''); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('')
     setTitle(''); setDescription(''); setDtc(''); setSource('')
   }
 
@@ -67,9 +55,13 @@ export function CreateIssueScreen() {
         title: title.trim(),
         description: description.trim(),
         source,
-        model: model?.name ?? modelCode,
-        modelCode,
-        modelYear: Number(modelYear) || 2026,
+        model: modelNameFor(anchorCode) ?? anchorCode,
+        modelCode: anchorCode,
+        modelCodes: vehicle.codes,
+        yearsByCode: vehicle.yearsByCode,
+        // The record carries one year; use the earliest selected on the anchor code.
+        modelYear: Number(anchorYears[0]) || 2026,
+        linkedIssueIds: linkedIds,
         system: sysId ? label(systems, sysId) : undefined,
         subSystem: subId ? label(subs, subId) : undefined,
         component: compId ? label(comps, compId) : undefined,
@@ -83,7 +75,7 @@ export function CreateIssueScreen() {
   }
 
   const pathSteps: { label: string; done: boolean }[] = [
-    { label: 'Model Code', done: !!modelCode },
+    { label: 'Model Code', done: vehicle.codes.length > 0 },
     { label: 'System', done: !!sysId },
     { label: 'Sub-System', done: !!subId },
     { label: 'Component', done: !!compId },
@@ -106,22 +98,7 @@ export function CreateIssueScreen() {
         {/* Vehicle Information */}
         <SectionCard>
           <CardHead title="Vehicle Information" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', maxWidth: 720 }}>
-            <div>
-              <ULabel>Model code *</ULabel>
-              <Select
-                aria-label="Model code"
-                value={modelCode}
-                placeholder="Search model code… (e.g. KA, DL, CV)"
-                options={MODELS.map((m) => ({ value: m.code, label: `${m.code} — ${m.name}` }))}
-                onChange={(e) => { setModelCode(e.target.value); setModelYear(''); setSysId(''); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('') }}
-              />
-            </div>
-            <div>
-              <ULabel>Model year</ULabel>
-              <Select aria-label="Model year" value={modelYear} placeholder={modelCode ? 'Select year' : 'Select model code first'} disabled={!modelCode} options={years} onChange={(e) => setModelYear(e.target.value)} />
-            </div>
-          </div>
+          <ModelCodeYearPicker value={vehicle} onChange={setVehicle} />
         </SectionCard>
 
         {/* System Classification */}
@@ -137,7 +114,7 @@ export function CreateIssueScreen() {
               </span>
             ))}
           </div>
-          {!modelCode && (
+          {!anchorCode && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 'var(--space-3)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-muted)' }}>
               <Icon icon={Info} size={14} /> Select a Model Code in Vehicle information to enable classification.
             </div>
@@ -149,7 +126,7 @@ export function CreateIssueScreen() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
             <div>
               <ULabel>System *</ULabel>
-              <Select aria-label="System" value={sysId} placeholder={modelCode ? 'Search system… (e.g. “Bat”, “Electrical”)' : 'Select model code first'} disabled={!modelCode} options={systems.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => { setSysId(e.target.value); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('') }} />
+              <Select aria-label="System" value={sysId} placeholder={anchorCode ? 'Search system… (e.g. “Bat”, “Electrical”)' : 'Select model code first'} disabled={!anchorCode} options={systems.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => { setSysId(e.target.value); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('') }} />
             </div>
             <div>
               <ULabel>Sub-system *</ULabel>
@@ -225,12 +202,27 @@ export function CreateIssueScreen() {
                     <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{i.title}</span>
                     <StatusBadge status={i.status} size="sm" />
                     <Button variant="link" size="sm" onClick={() => nav(`/issues/${i.id}`)}>Preview</Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={linkedIds.includes(i.id)}
+                      iconLeft={<Icon icon={Link2} size={13} />}
+                      onClick={() => setLinkedIds((l) => (l.includes(i.id) ? l : [...l, i.id]))}
+                    >
+                      {linkedIds.includes(i.id) ? 'Linked' : 'Link'}
+                    </Button>
                   </div>
                 ))}
               </div>
             )}
           </SectionCard>
         )}
+
+        <LinkIssuesSection
+          linkedIds={linkedIds}
+          onLink={(id) => setLinkedIds((l) => (l.includes(id) ? l : [...l, id]))}
+          onUnlink={(id) => setLinkedIds((l) => l.filter((x) => x !== id))}
+        />
       </div>
 
       {/* Request-new classification (submits to approval queue; non-blocking) */}

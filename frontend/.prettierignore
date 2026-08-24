@@ -1,0 +1,6 @@
+# The PQMS docs corpus is hand-wrapped: line breaks, column alignment and
+# table padding are authored deliberately. Letting Prettier reflow this
+# markdown destroys the tables and rewrites every line, which turns
+# `git blame` into a single useless commit for the whole file.
+PQMS_docs/**
+**/*.md

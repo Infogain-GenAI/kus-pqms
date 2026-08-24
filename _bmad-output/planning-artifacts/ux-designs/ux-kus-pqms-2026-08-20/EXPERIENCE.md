@@ -2,7 +2,7 @@
 name: Kia N-PQMS — Issue & Signal Management (ISM)
 status: final
 created: 2026-08-20
-updated: 2026-08-20
+updated: 2026-08-24
 sources:
   - _bmad-output/planning-artifacts/prds/prd-kus-pqms-2026-08-20/prd.md
   - _bmad-output/planning-artifacts/prds/prd-kus-pqms-2026-08-20/addendum.md
@@ -58,7 +58,9 @@ Behavioral rules; visual specs in `DESIGN.md.Components`.
 | Correlation panel | Create | Non-blocking advisory; appears once **Symptom** is selected; lists classification-matched candidates with match reason. Never blocks registration. |
 | Suggested-link preview | Create, Workspace | Read-only preview opens without losing entered data; link directly from preview or close without linking. |
 | Status change + `{components.approval-bar}` | Workspace | SE **proposes** a transition with a mandatory rationale → issue enters **Pending Approval**. ASM/PQM **approve/reject** with a mandatory approver remark. Start Investigation (Open → In Review) is self-service. |
-| Parts request | Workspace · Resolution | Part number live-lookup auto-fills description/cost (snapshot at request). Urgency selector surfaces the rule: Priority/Emergency need manager approval; Routine auto-approves within 24h. Status: Submitted → Approved → Ordered → Received. |
+| Model code &amp; year | Issue Entry · Vehicle Information | Model codes are **multi-select**; each selected code gets its own row of model-year checkboxes with a per-code select-all/clear and a remove-row control. A code's year universe is the **union** of its nominal MC_MASTER range and the years actually recorded, so a stored out-of-range year still appears (checked) rather than vanishing. Selecting no year for a code is a permitted state and is surfaced, not blocked. The first code in master order is the anchor and supplies the displayed model name. |
+| Issue linking | Issue Entry · Search &amp; link issue; also Issue Detail edit mode | Search by id / title / model / symptom. Results exclude the issue itself and anything already linked, so no offered action is a no-op. Linking is idempotent. Links are **reciprocal** — the relationship reads identically from either side. Unlink is available per linked row. Correlation ("Same Existing Issues") rows carry a Link action directly, since that card's own copy invites linking. |
+| Parts request | Workspace · **Investigation** | Part number live-lookup auto-fills description/cost (snapshot at request). Urgency selector surfaces the rule: Priority/Emergency need manager approval; Routine auto-approves within 24h. Status: Submitted → Approved → Ordered → Received. |
 | Communication composer | Workspace · Communication | Message-type selector (Internal / External; Email auto-captured), rich text, attachments, Post. `@mention` validated before posting → notifies the mentioned party. Entries are immutable (admin soft-hide only). |
 | Manage Linked Issues popup | Workspace | Search by classification; suggest → approve workflow; unlink is a soft-delete. Classification mismatch at link raises an alert requiring a conscious decision. |
 | Document upload | Workspace · Investigation | Background upload; type/size validated (PDF/CSV/JPEG/PNG, ≤25 MB, ≤10 files); virus-scanned before storage; user notified on completion. |
@@ -114,7 +116,7 @@ Behavioral; visual contrast lives in `DESIGN.md` (AA-verified tokens).
 
 ### Flow 2 — Investigate and request a part (Arpita, later that morning)
 1. In the Workspace she opens **Investigation**, logs a Field Inspection activity, and attaches a photo (background upload; success Toast).
-2. Under **Resolution**, she submits a **Parts Request**; the part number auto-fills description and cost; she marks it **Priority**.
+2. Under **Investigation** — the second of its two segments, beside Investigation Activities — she submits a **Parts Request**; the part number auto-fills description and cost; she marks it **Priority**.
 3. **Climax:** the urgency note tells her Priority needs manager approval; on submit the request shows **Submitted** and a notification routes to her manager. Her investigation record and the parts request both sit under the one issue, timestamped and attributed.
 
 ### Flow 3 — Propose a disposition; the manager approves (Arpita → Park, After-Sales Manager)

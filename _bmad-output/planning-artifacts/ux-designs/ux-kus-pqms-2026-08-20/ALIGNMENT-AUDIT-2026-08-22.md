@@ -50,3 +50,19 @@ The design projects contain more than the ISM rebuild's scope. The artifacts cor
 ## Notes
 - The mirrored `specs/ISM SE Role - Spec.md` still contains the "JetBrains Mono" phrasing; it was left unedited to keep the mirror faithful to the source export. The drift is corrected in the derived `DESIGN.md`, which is the canonical spine.
 - No changes were made to the `design-source/` mirror during this audit (read-only reference).
+
+---
+
+## Correction #3 REVERSED — 2026-08-24
+
+Correction #3 above moved Part Requests from Investigation to **Resolution**, citing
+`_tabAlias: parts → resolution`.
+
+That inference does not hold. Read against the **complete** V4–V5 export (the audit ran
+against a 256 KiB-truncated MCP pull — see `.memlog.md`), `_tabAlias` maps *legacy tab keys*
+so old deep links still resolve; it does not express current information architecture. The
+live V4–V5 IA places Part Requests **inside Investigation**, as one of the two
+`invFilterOpts` segments beside Investigation Activities.
+
+`EXPERIENCE.md` has been restored to **Investigation**. Confirmed by Prisilla, 2026-08-24.
+Everything else in this audit stands.
