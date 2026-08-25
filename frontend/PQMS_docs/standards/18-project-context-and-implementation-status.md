@@ -1016,3 +1016,45 @@ not run.
   `package.json`, a documented clone step, or a checked-in setup script that the
   README makes unavoidable. **Trigger:** the next component to add real hook
   checks. **Owner:** repo owner — it cannot be decided inside `frontend/`.]**
+
+## Closed 2026-08-25 (third pass) — the two decisions that had no record
+
+`steps-for-new-repo.md`'s decision log listed both as settled with the note
+*"needs ADR"*. 31-documentation-standards-and-decision-records.md is explicit
+that a closed placeholder with no ADR loses the reasoning, so both are now
+written.
+
+| File | Question | Closed as | Record | Basis |
+|---|---|---|---|---|
+| 06 | Token **value** source | **The vendored design system.** `design-system-manifest.json` (156 tokens) is the source of truth; the CSS is a byte-copy and the typed map is generated, both gated. A value changes by re-vendoring | **ADR-0003** | **evidence** — 156 = 156 with 0 unchecked, `tokens:check` passes, generated map byte-identical, 1,829 `var()` refs with 0 unresolved |
+| 00 | Frontend package manager | **pnpm.** `package-lock.json` deleted; converted with `pnpm import` preserving all 336 resolutions exactly | **ADR-0004** | **evidence** — resolution sets identical after normalisation; `engineStrict` proved by forcing an impossible `engines.node` |
+
+**Both closed on evidence rather than a stated default**, which is the stronger
+of the two closure kinds this file distinguishes.
+
+### What ADR-0003 changes about 06's role
+
+06 was written for a repository that must *decide* its token values. This one
+receives them with a manifest and a drift gate attached. **A value with a
+machine-checkable provenance beats a value with a well-argued derivation**, so
+06 yields on the values and keeps everything else — naming, the ordinal scale,
+semantic mapping, and the rule that a hardcoded value traces to a real source.
+
+This also closes 00's source-precedence **case 5** for these 156 values
+specifically: a re-vendor that changes a value now fails `tokens:check` rather
+than drifting silently. The hazard remains for every value *not* in the manifest
+— the prototype constants Step 8 has to give a named home.
+
+### What ADR-0004's placeholder got wrong, and why that is worth keeping
+
+00's placeholder warned that two lockfiles mean "CI will install whichever its
+command picks". **There is no CI.** The hazard arrived by a different route: one
+`pnpm` command, run to answer a read-only question, hit pnpm's auto-install
+preflight, which adopted the npm-installed `node_modules`, wrote two lockfiles
+and **re-resolved every `^` range before the requested script ran at all**.
+
+**The general form is the part to carry forward: a package manager that is
+intended but not adopted is not a neutral state. The un-adopted one still runs,
+and it acts on being invoked.** The placeholder was right that it was a hazard
+and wrong about the mechanism — which is an argument for naming hazards by their
+cause rather than by the scenario you first imagine for them.

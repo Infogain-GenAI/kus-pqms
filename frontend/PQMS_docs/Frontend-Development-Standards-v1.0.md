@@ -681,11 +681,24 @@ the tree, every time. Both errors cost a full revision.
   is not stood up yet. 15-devsecops-and-ci-cd.md currently carries a GitHub
   Actions body and a superseding GitLab section, and **neither is confirmed.**
   **Trigger:** Phase 0 baseline. **Owner:** Frontend Lead.]**
-- **[PLACEHOLDER — the frontend package manager.** `frontend/` contains a
-  `package-lock.json` (npm) while pnpm is intended. **Two lockfiles in one
-  project is not a preference, it is a hazard** — the two resolve different
-  trees and CI will install whichever its command picks. **Trigger:** before the
-  gates SPEC. **Owner:** Frontend Lead.]**
+- **RESOLVED 2026-08-25 — pnpm. See ADR 0004.** `package-lock.json` is deleted
+  and `pnpm-lock.yaml` replaces it, converted with **`pnpm import`** so every
+  pinned resolution carried over unchanged — verified, 336 `name@version` pairs
+  on each side, identical. `pnpm install` was **not** used: it re-resolves every
+  `^` range, and the fidelity captures that are Step 6's acceptance test cannot
+  be compared across two dependency graphs. Settings (`allowBuilds.esbuild`,
+  `engineStrict`) live in `pnpm-workspace.yaml`, **not `.npmrc`**, which pnpm 11
+  no longer reads for non-auth settings.
+
+  The hazard this placeholder named arrived in a form it did not predict. It
+  warned that "CI will install whichever its command picks" — but there is no CI.
+  What actually happened is that **one `pnpm` command, run to answer a read-only
+  question, silently re-resolved the whole tree**: pnpm's auto-install preflight
+  adopted the npm-installed `node_modules`, wrote two lockfiles and re-resolved
+  every range **before the requested script ran at all**. Recovery took deleting
+  both files, `rm -rf node_modules` and `npm ci`. **The general form is worth
+  keeping: a package manager that is intended but not adopted is not a neutral
+  state — the un-adopted one still runs, and it acts on being invoked.**
 - **RESOLVED — `frontend/` is always a pnpm workspace. See ADR 0001.** The
   observed flat tree is a **defect to be corrected in Phase 2**, not a
   constraint the corpus adapts to. Every path here stays relative to the
@@ -2912,6 +2925,34 @@ Recorded here so the consequences are not discovered piecemeal:
   chunk's budget. No new splitting mechanism is implied.
 
 ### Design tokens via `@theme`
+
+> **RESOLVED 2026-08-25 — the token VALUE source is the vendored design system.
+> See `decisions/0003-the-vendored-design-system-is-the-token-value-source.md`.**
+>
+> This section describes authoring token values into a `design-tokens` package.
+> This repository does not author them: it receives them.
+> **`design-system-manifest.json` (156 tokens) is the source of truth for every
+> token value**, `src/styles/design-system/tokens/*.css` is a byte-copy of the
+> same source, and `src/tokens/tokens.generated.ts` is generated from the
+> manifest. A value is changed by **re-vendoring**, never by editing a file here.
+>
+> Measured: 156 manifest tokens, 156 CSS custom properties, **0** defined in CSS
+> but absent from the manifest; `tokens:check` passes; the generated map is
+> byte-identical to a fresh regeneration; 1,829 `var(--x)` references across 119
+> names, **0 unresolved**.
+>
+> **This section still governs everything else** — naming, the ordinal scale's
+> meaning, semantic mapping, and the rule that a hardcoded value must trace to a
+> real source. Only the question "where do the literal values come from" is
+> settled elsewhere.
+>
+> Two carried-forward warnings are unaffected and still bite. **The spacing scale
+> is ordinal, not pixel-named**: `--space-4` is 16px and `--space-8` is 32px, and
+> nothing in the manifest prevents misreading `--space-8` as 8px. And the
+> `@theme`/Tailwind mechanism below **does not exist in this repository** —
+> there is no Tailwind; styling is inline style objects plus these custom
+> properties.
+
 **`packages/design-tokens` is the source of truth for every design
 value.** Two layers, and the separation between them is deliberate:
 
@@ -9613,6 +9654,48 @@ not run.
   `package.json`, a documented clone step, or a checked-in setup script that the
   README makes unavoidable. **Trigger:** the next component to add real hook
   checks. **Owner:** repo owner — it cannot be decided inside `frontend/`.]**
+
+### Closed 2026-08-25 (third pass) — the two decisions that had no record
+
+`steps-for-new-repo.md`'s decision log listed both as settled with the note
+*"needs ADR"*. 31-documentation-standards-and-decision-records.md is explicit
+that a closed placeholder with no ADR loses the reasoning, so both are now
+written.
+
+| File | Question | Closed as | Record | Basis |
+|---|---|---|---|---|
+| 06 | Token **value** source | **The vendored design system.** `design-system-manifest.json` (156 tokens) is the source of truth; the CSS is a byte-copy and the typed map is generated, both gated. A value changes by re-vendoring | **ADR-0003** | **evidence** — 156 = 156 with 0 unchecked, `tokens:check` passes, generated map byte-identical, 1,829 `var()` refs with 0 unresolved |
+| 00 | Frontend package manager | **pnpm.** `package-lock.json` deleted; converted with `pnpm import` preserving all 336 resolutions exactly | **ADR-0004** | **evidence** — resolution sets identical after normalisation; `engineStrict` proved by forcing an impossible `engines.node` |
+
+**Both closed on evidence rather than a stated default**, which is the stronger
+of the two closure kinds this file distinguishes.
+
+#### What ADR-0003 changes about 06's role
+
+06 was written for a repository that must *decide* its token values. This one
+receives them with a manifest and a drift gate attached. **A value with a
+machine-checkable provenance beats a value with a well-argued derivation**, so
+06 yields on the values and keeps everything else — naming, the ordinal scale,
+semantic mapping, and the rule that a hardcoded value traces to a real source.
+
+This also closes 00's source-precedence **case 5** for these 156 values
+specifically: a re-vendor that changes a value now fails `tokens:check` rather
+than drifting silently. The hazard remains for every value *not* in the manifest
+— the prototype constants Step 8 has to give a named home.
+
+#### What ADR-0004's placeholder got wrong, and why that is worth keeping
+
+00's placeholder warned that two lockfiles mean "CI will install whichever its
+command picks". **There is no CI.** The hazard arrived by a different route: one
+`pnpm` command, run to answer a read-only question, hit pnpm's auto-install
+preflight, which adopted the npm-installed `node_modules`, wrote two lockfiles
+and **re-resolved every `^` range before the requested script ran at all**.
+
+**The general form is the part to carry forward: a package manager that is
+intended but not adopted is not a neutral state. The un-adopted one still runs,
+and it acts on being invoked.** The placeholder was right that it was a hazard
+and wrong about the mechanism — which is an argument for naming hazards by their
+cause rather than by the scenario you first imagine for them.
 
 ---
 

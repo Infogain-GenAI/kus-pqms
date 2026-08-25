@@ -605,11 +605,24 @@ the tree, every time. Both errors cost a full revision.
   is not stood up yet. 15-devsecops-and-ci-cd.md currently carries a GitHub
   Actions body and a superseding GitLab section, and **neither is confirmed.**
   **Trigger:** Phase 0 baseline. **Owner:** Frontend Lead.]**
-- **[PLACEHOLDER — the frontend package manager.** `frontend/` contains a
-  `package-lock.json` (npm) while pnpm is intended. **Two lockfiles in one
-  project is not a preference, it is a hazard** — the two resolve different
-  trees and CI will install whichever its command picks. **Trigger:** before the
-  gates SPEC. **Owner:** Frontend Lead.]**
+- **RESOLVED 2026-08-25 — pnpm. See ADR 0004.** `package-lock.json` is deleted
+  and `pnpm-lock.yaml` replaces it, converted with **`pnpm import`** so every
+  pinned resolution carried over unchanged — verified, 336 `name@version` pairs
+  on each side, identical. `pnpm install` was **not** used: it re-resolves every
+  `^` range, and the fidelity captures that are Step 6's acceptance test cannot
+  be compared across two dependency graphs. Settings (`allowBuilds.esbuild`,
+  `engineStrict`) live in `pnpm-workspace.yaml`, **not `.npmrc`**, which pnpm 11
+  no longer reads for non-auth settings.
+
+  The hazard this placeholder named arrived in a form it did not predict. It
+  warned that "CI will install whichever its command picks" — but there is no CI.
+  What actually happened is that **one `pnpm` command, run to answer a read-only
+  question, silently re-resolved the whole tree**: pnpm's auto-install preflight
+  adopted the npm-installed `node_modules`, wrote two lockfiles and re-resolved
+  every range **before the requested script ran at all**. Recovery took deleting
+  both files, `rm -rf node_modules` and `npm ci`. **The general form is worth
+  keeping: a package manager that is intended but not adopted is not a neutral
+  state — the un-adopted one still runs, and it acts on being invoked.**
 - **RESOLVED — `frontend/` is always a pnpm workspace. See ADR 0001.** The
   observed flat tree is a **defect to be corrected in Phase 2**, not a
   constraint the corpus adapts to. Every path here stays relative to the

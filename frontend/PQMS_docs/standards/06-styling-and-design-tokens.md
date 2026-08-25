@@ -227,6 +227,34 @@ Recorded here so the consequences are not discovered piecemeal:
   chunk's budget. No new splitting mechanism is implied.
 
 ## Design tokens via `@theme`
+
+> **RESOLVED 2026-08-25 — the token VALUE source is the vendored design system.
+> See `decisions/0003-the-vendored-design-system-is-the-token-value-source.md`.**
+>
+> This section describes authoring token values into a `design-tokens` package.
+> This repository does not author them: it receives them.
+> **`design-system-manifest.json` (156 tokens) is the source of truth for every
+> token value**, `src/styles/design-system/tokens/*.css` is a byte-copy of the
+> same source, and `src/tokens/tokens.generated.ts` is generated from the
+> manifest. A value is changed by **re-vendoring**, never by editing a file here.
+>
+> Measured: 156 manifest tokens, 156 CSS custom properties, **0** defined in CSS
+> but absent from the manifest; `tokens:check` passes; the generated map is
+> byte-identical to a fresh regeneration; 1,829 `var(--x)` references across 119
+> names, **0 unresolved**.
+>
+> **This section still governs everything else** — naming, the ordinal scale's
+> meaning, semantic mapping, and the rule that a hardcoded value must trace to a
+> real source. Only the question "where do the literal values come from" is
+> settled elsewhere.
+>
+> Two carried-forward warnings are unaffected and still bite. **The spacing scale
+> is ordinal, not pixel-named**: `--space-4` is 16px and `--space-8` is 32px, and
+> nothing in the manifest prevents misreading `--space-8` as 8px. And the
+> `@theme`/Tailwind mechanism below **does not exist in this repository** —
+> there is no Tailwind; styling is inline style objects plus these custom
+> properties.
+
 **`packages/design-tokens` is the source of truth for every design
 value.** Two layers, and the separation between them is deliberate:
 
