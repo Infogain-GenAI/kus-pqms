@@ -16,8 +16,9 @@ order of work.
 | Pass | Source | What it changed |
 |---|---|---|
 | 1 | client `project-template-java` docs | GitLab CI, Lefthook, MoAI-ADK, pnpm 11, TS 5.9 |
-| 2 | the observed `KUS-PQMS` root tree | **BMAD** not MoAI; **`.githooks/`** not Lefthook; no root CI; **four submodules** |
+| 2 | the observed `KUS-PQMS` root tree | **BMAD** not MoAI; **`.githooks/`** not Lefthook; no root CI; ~~four submodules~~ **(wrong — see pass 4)** |
 | 3 | the `frontend/` walkthrough | **React 18.3 / Vite 5 / RR6** — not 19/8/8; no backend at all; the adherence and token gates; ADR 0001 |
+| 4 | **`RESTRUCTURE-BASELINE.md` — measured, not read** | **NOT submodules** — four ordinary directories in one repository; hooks **do** fire; **no CI anywhere**; the numeric count is **348**, not 415 |
 
 **Each pass corrected the one before it.** The lesson, now in
 `standards/00-core-rules.md`: **a document about a repository ranks below the
@@ -214,7 +215,10 @@ cd frontend && node scripts/build-standards-doc.mjs --check
 Invoke with `node` directly — that works whichever package manager is active.
 Expect **"is up to date (34 tier files)"**. If it fails, line endings changed in
 transit: **`frontend/` needs its own `.gitattributes` with `* text=auto eol=lf`,
-because a submodule does not inherit the parent's.**
+because the root file lacks `eol=lf`.** (An earlier revision said "because a
+submodule does not inherit the parent's" — **withdrawn, these are not
+submodules**; the root file *is* inherited. The frontend file is still wanted, for
+`33`'s boundary rule and the missing `eol=lf`.)
 
 **Done when:** the check passes.
 
@@ -238,11 +242,15 @@ git diff HEAD~1 --stat
 **Additions only.** Any pre-existing file showing modifications means something
 reformatted — revert, return to Step 0.
 
-⚠️ **Submodule:** this commit is inside `frontend/`. The parent `KUS-PQMS` needs
-a **second commit** moving the pointer, or nobody else sees the corpus.
-Forgetting it looks exactly like a successful push.
+⚠️ ~~**Submodule:** the parent needs a second commit moving the pointer.~~
+**WITHDRAWN — there is no pointer.** `frontend/` is an ordinary directory in a
+single repository (`git submodule status` empty, no `.gitmodules`, no
+`frontend/.git`, no gitlinks). One commit is the whole change.
 
-**Done when:** committed in `frontend/`, pointer committed in the parent.
+**Done when:** committed in `frontend/`. Additions only — and note that in this
+repository that acceptance criterion **failed**: the corpus commit also carried
+real source changes to three files under `src/`. Not a formatter problem; a
+violation of `30`'s R-2.
 
 ---
 
@@ -275,7 +283,8 @@ commits the numbers so later stories can reference them.
 >    or any hook actually invoke?
 > 6. Is there a pipeline definition anywhere — root, or inside `frontend/`?
 > 7. Does a commit inside `frontend/` actually fire the root `.githooks/`
->    scripts? **Test it — a submodule has its own `.git` and may fire nothing.**
+>    scripts? **Test it, do not infer it.** (Answered: **yes, they fire.** These
+>    are not submodules, and a commit staged in `frontend/` runs the root router.)
 > 8. Does `frontend/.gitattributes` exist with `* text=auto eol=lf`?
 >
 > **The codebase:**
@@ -322,8 +331,8 @@ commits the numbers so later stories can reference them.
 `App.tsx` uses `BrowserRouter`. **Without a 404 → `index.html` rewrite at
 whatever serves `dist/`, a hard refresh on `/issues/EE-260041` 404s at the
 server** — while working perfectly in development and in every test. It is
-`infrastructure/`-owned, therefore a separate submodule and a separate merge
-request, and it makes the entire route table non-functional on cold load.
+`infrastructure/`-owned — a separate *team*, but **the same repository**, so it
+can land in the same merge request if the teams agree, and it makes the entire route table non-functional on cold load.
 
 Cache headers and the CSP travel with it (`standards/12`, `standards/13`).
 
@@ -363,8 +372,11 @@ All of this is **zero rendered pixels**, so the fidelity captures are safe.
 >
 > One story each:
 >
-> 1. **`frontend/.gitattributes`** (`* text=auto eol=lf`) — a submodule does not
->    inherit the parent's — and `frontend/.git-blame-ignore-revs`.
+> 1. **`frontend/.gitattributes`** (`* text=auto eol=lf`) — **not** because a
+>    submodule fails to inherit (it is not one), but because the root file has
+>    `* text=auto` **without** `eol=lf`, and `33`'s boundary rule keeps the
+>    frontend's policy out of three other components. **Re-declare the binary
+>    formats**, or the bare `*` shadows the root's pins — and `frontend/.git-blame-ignore-revs`.
 > 2. **Delete `package-lock.json`** (decision 6). Add `pnpm-workspace.yaml` —
 >    it may list only the current root for now; the packages arrive in Step 6.
 >    Engine enforcement goes in `pnpm-workspace.yaml`, **not `.npmrc`**: pnpm 11
@@ -412,7 +424,8 @@ All of this is **zero rendered pixels**, so the fidelity captures are safe.
 > `frontend/src` in the diff; the fidelity captures unchanged.
 
 **Done when:** the values ratchet is a real number you trust, and you have
-confirmed the hooks fire from inside the submodule.
+confirmed the hooks fire from inside `frontend/` (they do), **and a bootstrap
+exists so a fresh clone gets them at all**.
 
 ---
 
@@ -612,9 +625,9 @@ the record, the tier-file edit, the register move
 | Build fails on a correct `<Button onClick>` | the prop allowlist predates TypeScript | Step 5.3 |
 | A warning disappears without a token being used | the numeric loophole | Step 5.5 |
 | `tokens:check` has never failed | it is not in `build` and the hooks are stubs | Step 5.6 |
-| A hook never fires | `core.hooksPath` is **local config**, does not clone; or not executable; or submodules do not inherit | Step 3 item 7 |
+| A hook never fires | `core.hooksPath` is **local config and does not clone**; or the hook is not `100755` in the index | run `node frontend/scripts/setup-hooks.mjs`; `pnpm run hooks:check` verifies |
 | A hook fires but never fails | the script ends in `echo`/`tee`, returning that exit code | Step 5.8 |
-| **Your commits appear to vanish** | the parent shows a submodule as one opaque pointer | open the submodule directly; commit the pointer |
+| ~~Your commits appear to vanish~~ | **cannot happen** — one repository, no pointers | n/a; withdrawn in pass 4 |
 | Dev server dies on boot after a seed edit | `assertSeed.ts` date-anchor guard | working as designed |
 | Fidelity captures differ after a "pure move" | it was not pure | revert; separate the behavioural change |
 | A hard refresh on `/issues/:id` 404s | `BrowserRouter` with no server rewrite | decision 5 |

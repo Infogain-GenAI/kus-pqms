@@ -12464,56 +12464,80 @@ Router v8 requires 22.22.0+ regardless. **`.nvmrc` is the operative answer.**
 document corrected in passing, by someone outside the team that owns it, is how
 the drift these files record began.
 
-### Correction: four git submodules, not four directories
+### Withdrawn: they are NOT submodules. Four ordinary directories, one repository.
 
-The observed repository is **not one git repository with four folders.**
-`backend/`, `frontend/`, `automation/` and `infrastructure/` are **git
-submodules**, each with its own history, its own lockfile and its own
-`commit-msg.rules`.
+**An earlier revision of this file asserted that `backend/`, `frontend/`,
+`automation/` and `infrastructure/` are git submodules "each with its own
+history, its own lockfile and its own `commit-msg.rules`". That is false, and
+everything derived from it below is withdrawn.**
 
-That changes several things this file assumed, and one of them is the reason
-this corpus was hard to see in the first place.
+Measured 2026-08-25 against the repository, recorded in
+`../../RESTRUCTURE-BASELINE.md`:
 
-#### What submodules change
+```
+$ git submodule status          # no output, exit 0
+$ cat .gitmodules               # No such file or directory
+$ ls -ld frontend/.git          # No such file or directory
+$ git ls-files -s | awk '$1=="160000"'    # no gitlinks in the index
+```
 
-| Assumption above | With submodules |
+Every one of the four is mode `100644` in a single index. There is **one** git
+repository, rooted at `KUS-PQMS/`. The tell was available without running
+anything: the entire corpus and the entire React port arrived in **two commits
+touching all four areas**, which no submodule arrangement can produce.
+
+#### What the withdrawal changes back
+
+| Claim in the withdrawn section | Actually |
 |---|---|
-| One `.gitattributes` covers everything | **each submodule needs its own**, or line-ending policy stops at the boundary |
-| `.git-blame-ignore-revs` at the git root serves all four | **it does not** — blame is per repository; the frontend needs its own |
-| A change spans components in one MR | **it cannot** — each submodule is a separate MR, plus a pointer commit in the parent |
-| `core.hooksPath` at the root governs all commits | **untested** — see 23-git-workflow-hooks-and-commits.md; a commit made inside a submodule may fire nothing |
+| Each submodule needs its own `.gitattributes` | **The root file is inherited.** `frontend/.gitattributes` exists anyway — for 33's boundary reason and because the root lacks `eol=lf` — not because inheritance fails |
+| `.git-blame-ignore-revs` at the root does not serve all four | **It does, and it belongs there.** `blame.ignoreRevsFile` is one repository-level value and forge auto-detection reads only the repo root; a per-component copy is inert |
+| A change cannot span components in one MR | **It can.** One repository, one branch, one MR |
+| The pointer-commit trap | **Does not exist.** There is no pointer. A commit inside `frontend/` is simply a commit |
+| `core.hooksPath` governing submodule commits is "untested" | **Tested, and it works.** A commit staged in `frontend/` fires the root router, which ran `frontend/scripts/pre-commit.sh` and rejected an invalid message via `frontend/commit-msg.rules` |
+| "If the frontend's changes seem to have vanished, open the submodule directly" | **Nothing vanishes.** `git log -- frontend/` shows every file |
 
-#### The pointer-commit trap
-A submodule change is **two** commits: the change inside the submodule, and a
-commit in the parent repository moving the pointer. **Forgetting the second is
-the single most common submodule mistake** — the work is pushed, the branch
-looks correct, and everyone else's checkout still has the old commit.
+#### What survives, and it is the part that mattered
 
-For a restructure this is worse than usual: Phase 2 produces many commits inside
-`frontend/`, and the parent pointer moves once at the end. **Anyone reviewing
-from the parent sees one opaque hash change.** Say so in the MR description.
+**The boundary between components is real. It is simply not enforced by git.**
 
-#### The cross-component defects get harder
-This file names three requirements that live in `infra/` — the SPA rewrite,
-cache headers, the CSP — and one that spans both components, the backend port
-mismatch. **None of them can be fixed in a single merge request.** Each is a
-separate MR in a separate repository, coordinated by hand.
+Everything this file says about *why* the boundary exists stands unchanged: a
+formatter or lint glob that escapes `frontend/` reformats another team's code and
+they find out from `git blame`; the frontend's `commit-msg.rules` is
+authoritative for the frontend and reaches into no other component; the
+infra-owned requirements are still owned by another team.
 
-That is not a reason to defer them. It is a reason to **raise them early**,
-because the coordination cost is paid on the calendar, not in the diff.
+**What changes is the enforcement mechanism, and it changes for the worse.** The
+withdrawn section closed with "one thing that got simpler" — that submodules made
+the boundary structural, so a frontend tool "cannot reach `backend/` because it is
+not in the same repository."
 
-#### Why you could not see the corpus's changes earlier
-The same mechanism. A nested repository shows in its parent as a single
-untracked or modified entry with no per-file diff. **If the frontend's changes
-seem to have vanished, open the submodule directly** — the parent will only ever
-show you a pointer.
+**That protection was never there.** In one repository a glob that escapes its
+directory reaches every other component immediately, and nothing stops it. So:
 
-#### One thing that got simpler
-Path filtering. With submodules, a frontend change **cannot** touch another
-component by construction, so the boundary rule above is enforced by git rather
-than by review. The glob-escape hazard
-(23-git-workflow-hooks-and-commits.md) largely disappears — a frontend
-formatter cannot reach `backend/` because it is not in the same repository.
+- **The glob-escape hazard is live, not "largely disappeared".** Every path
+  filter, ignore file and lint glob in `frontend/` must be scoped to `frontend/`
+  by its own construction, because no repository boundary will do it.
+- **Enforcement is review and configuration, not git.** The boundary is a
+  convention this corpus states and reviewers uphold.
+- **One instance is already unavoidable.** `core.hooksPath` is a single
+  repository-level value, so `frontend/scripts/setup-hooks.mjs` necessarily
+  configures hooks for all four components. It enables the shared router that
+  dispatches to each component's own scripts rather than reaching into their code
+  — but it is repo-wide, and that is a real tension rather than a technicality.
+
+#### The lesson is 00's, for the third time
+
+00-core-rules.md records it after two earlier passes: **a document about a
+repository ranks below the repository.** The template documentation described a
+template; the prior audit assumed written guidelines described built code; and
+this section asserted a repository shape nobody had run `git submodule status`
+against. **Each cost a full revision, and each was answerable in one command.**
+
+18-project-context-and-implementation-status.md already draws the general
+conclusion from the *first* two: "before deferring a question to a person, check
+whether the repository already answers it." This is the same failure with the
+person removed — nobody deferred it; it was simply asserted.
 
 ---
 
@@ -12587,7 +12611,7 @@ For each file, which other files cite its filename at least once.
 | 15 | 00, 10, 13, 18, 20, 24, 26 | 7 |
 | 16 | 12, 13, 15, 24, 27, 33 | 6 |
 | 17 | 00, 01, 02, 03, 07, 08, 11, 18, 20 | 9 |
-| 18 | 00, 01, 06, 08, 11, 12, 13, 14, 15, 17, 20, 29, 30, 31 | 14 |
+| 18 | 00, 01, 06, 08, 11, 12, 13, 14, 15, 17, 20, 29, 30, 31, 33 | 15 |
 | 19 | 05, 23, 30, 33 | 4 |
 | 20 | 05, 10, 18, 19, 23 | 5 |
 | 21 | 00, 13, 15, 19, 25, 26 | 6 |
