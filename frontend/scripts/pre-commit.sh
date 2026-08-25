@@ -36,6 +36,11 @@ run "tokens:check" node scripts/check-tokens.mjs
 # hand-edited generated map passes every other gate.
 run "tokens:drift" node scripts/check-tokens-drift.mjs
 
+# Every var(--x) under src/ names a property that actually exists. A fabricated
+# name is valid CSS that compiles, ships and renders nothing, and no other gate
+# in this project sees it.
+run "css-vars" node scripts/check-css-vars.mjs
+
 if [ "$STATUS" -ne 0 ]; then
   echo "   Commit blocked by frontend pre-commit checks."
   echo "   Fix the above, or bypass with --no-verify and say why in the message."

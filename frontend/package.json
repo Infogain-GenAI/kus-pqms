@@ -10,7 +10,7 @@
   "description": "N-PQMS Issue & Signal Management (ISM) — React UI. Mirrors the current UX design 1:1 (no new features). Design system vendored from _bmad-output/planning-artifacts/ux/design-source/design-system.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && pnpm run tokens:check && pnpm run tokens:drift && pnpm run lint:ds && vite build",
+    "build": "tsc --noEmit && pnpm run tokens:check && pnpm run tokens:drift && pnpm run lint:css-vars && pnpm run lint:ds && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint:adherence": "pnpm run lint:ds",
@@ -22,7 +22,8 @@
     "lint:ds:imports": "node scripts/ds-gate.mjs imports",
     "lint:ds": "pnpm run lint:ds:values && pnpm run lint:ds:numeric && pnpm run lint:ds:imports",
     "lint:ds:numeric": "node scripts/ds-gate.mjs numeric",
-    "tokens:drift": "node scripts/check-tokens-drift.mjs"
+    "tokens:drift": "node scripts/check-tokens-drift.mjs",
+    "lint:css-vars": "node scripts/check-css-vars.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.451.0",
