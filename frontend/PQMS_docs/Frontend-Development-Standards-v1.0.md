@@ -6910,27 +6910,76 @@ verification step that covers what lint misses. Do not treat a clean
 lint run as proof a component was optimized.
 
 ### Prettier
-Exactly one config exists: `.prettierrc.json` at the workspace root, applying
-monorepo-wide. **No per-package overrides** — one Prettier config for
-the whole repo.
+Exactly one config exists, at the workspace root, applying monorepo-wide.
+**No per-package overrides** — one Prettier config for the whole repo.
+(In this repository the file is `frontend/.prettierrc`. An earlier revision named
+it `.prettierrc.json`; that was carried from `kus-pqms` along with the values
+below and is corrected here too — Prettier reads either name, so the mismatch was
+invisible until someone looked for the file.)
 
-Real settings, verbatim:
+**The values this section used to state were wrong for this repository and are
+corrected — see `decisions/0002-prettier-configuration-follows-the-repository.md`.**
+An earlier revision stated them as absolutes:
+
+```json
+{ "printWidth": 100, "semi": true, "singleQuote": false }
+```
+
+with the provenance "carried forward verbatim from `kus-pqms`" — the prior
+**Vue** repository. They were never derived from this project, and this
+project's `frontend/.prettierrc` says the opposite on all three: `printWidth`
+120, `semi` false, `singleQuote` true. **The code matches the local file.**
+Adopting the withdrawn values would have rewritten every line of every module.
+
+**The rule, corrected:** where a consuming repository already has a Prettier
+configuration that its code consistently follows, **that configuration wins**,
+and this file records it. A formatter setting is a convention rather than a
+value derived from a source, so
+30-restructuring-an-existing-react-project.md's conflict rule applies: a
+consistent existing convention is evidence, and a standard that contradicts one
+is re-argued rather than mechanically applied.
+
+Real settings for **this** repository (`frontend/.prettierrc`), verbatim:
 
 ```json
 {
-  "printWidth": 100,
-  "tabWidth": 2,
-  "semi": true,
-  "singleQuote": false,
+  "semi": false,
+  "singleQuote": true,
   "trailingComma": "all",
-  "endOfLine": "lf"
+  "printWidth": 120,
+  "tabWidth": 2
 }
 ```
 
-That is: 100-character print width, 2-space tabs, semicolons on, double
-quotes (`singleQuote: false`), trailing commas everywhere valid, LF line
-endings. Provenance: carried forward verbatim from `kus-pqms`
-(`frontend/.prettierrc.json`).
+That is: 120-character print width, 2-space tabs, semicolons **off**, single
+quotes, trailing commas everywhere valid. `endOfLine` is not set in the file;
+LF is enforced by `frontend/.gitattributes` (`* text=auto eol=lf`) instead —
+see "Line endings" below.
+
+**Everything else in this section stands unchanged**: exactly one config, no
+per-package overrides, Prettier ignores `**/*.md`, and `eslint-config-prettier`
+stays last in the chain.
+
+#### The provenance defect, recorded rather than quietly fixed
+
+This value did not *become* wrong. **It was never derived from this project.**
+It was lifted from another repository and given a provenance line, which made it
+read as checked when nothing had been checked.
+
+00-core-rules.md's source-precedence **case 5** is written about design-token
+literals — *"never trust a prior citation's value, however well-sourced it
+looked at the time, including citations from this corpus's own earlier revisions
+or from the legacy Vue codebase."* This is that same failure applied to a
+formatter setting, which is evidence the case is not specific to token values.
+**A provenance line records where a value came from. It is not evidence that the
+value is correct here.**
+
+Two further sections of this file — "Export conventions" and "Two compiler flags
+the prior config turns off" — cite `kus-pqms` in exactly the same way and
+**have not been re-derived against this repository.** They may well be right;
+they have not been checked. Tracked as an open row in
+18-project-context-and-implementation-status.md's register rather than silently
+trusted or silently changed.
 
 ### Export conventions
 A settled decision, stated plainly so it is not re-litigated per-file:
@@ -9410,6 +9459,45 @@ unless someone wrote the before-number down.
 This generalises past this decision. Any gate keyed on a location — coverage
 path configuration, Sonar source roots, a formatter ignore list, a CSS scrape —
 has the same property, and Phase 2 moves all of them at once.
+
+### Closed 2026-08-25 (second pass) — Prettier configuration, and a provenance defect
+
+**`frontend/.prettierrc` governs; 14-code-style-and-linting.md's stated values
+are withdrawn** (ADR-0002, decided by Prisilla Ghadi).
+
+| File | Question | Closed as | Basis |
+|---|---|---|---|
+| 14 | Which Prettier configuration governs | **The repository's own.** `printWidth` 120, `semi` false, `singleQuote` true — and the code matches it | **evidence** — 42 files differ from the local config; every file would differ from 14's |
+
+**The reason this needed an ADR rather than an edit** is that it is a standard
+being deliberately not followed, which
+31-documentation-standards-and-decision-records.md names as a trigger. It is also
+the third time source precedence has resolved the same way — the ordinal spacing
+scale (`--space-8` is 32px, not 8px) and the seven-status vocabulary were both
+settled by the local artefact over the written standard.
+
+#### The open row this opens
+
+14's Prettier values were "carried forward verbatim from `kus-pqms`", the prior
+Vue repository, and were never re-derived against this project. **Two further
+sections of 14 cite `kus-pqms` the same way and have not been checked:**
+
+- **[PLACEHOLDER — 14's "Export conventions".** Default-export-per-component and
+  named-exports-for-everything-else are justified entirely by a count of `.vue`
+  files in `kus-pqms`. Whether this React port follows it is unverified.
+  **Trigger:** before any lint rule enforces export style. **Owner:** Frontend
+  Lead.]
+- **[PLACEHOLDER — 14's "Two compiler flags the prior config turns off".** The
+  reasoning is sound and framework-specific; the claim that `noUnusedLocals` and
+  `noUnusedParameters` are both on in this repository is unverified.
+  **Trigger:** the TypeScript baseline story. **Owner:** Frontend Lead.]
+
+**This is 00-core-rules.md's source-precedence case 5 occurring inside the
+corpus.** Case 5 is written about design-token literals; a formatter setting is
+not a token value, and it failed the same way. **A provenance line records where
+a value came from, not that it is correct here.** Any corpus statement whose only
+support is "carried forward from `kus-pqms`" is unverified until someone checks
+it against this repository.
 
 ---
 
@@ -12495,11 +12583,11 @@ For each file, which other files cite its filename at least once.
 | 11 | 00, 01, 03, 06, 07, 10, 14, 18, 20 | 9 |
 | 12 | 03, 06, 07, 09, 13, 14, 15, 18, 33 | 9 |
 | 13 | 05, 08, 12, 15, 18, 20, 21, 25, 33 | 9 |
-| 14 | 00, 01, 02, 03, 05, 06, 10, 11, 12, 15, 23, 30, 31 | 13 |
+| 14 | 00, 01, 02, 03, 05, 06, 10, 11, 12, 15, 18, 23, 30, 31 | 14 |
 | 15 | 00, 10, 13, 18, 20, 24, 26 | 7 |
 | 16 | 12, 13, 15, 24, 27, 33 | 6 |
 | 17 | 00, 01, 02, 03, 07, 08, 11, 18, 20 | 9 |
-| 18 | 00, 01, 06, 08, 11, 12, 13, 15, 17, 20, 29, 30, 31 | 13 |
+| 18 | 00, 01, 06, 08, 11, 12, 13, 14, 15, 17, 20, 29, 30, 31 | 14 |
 | 19 | 05, 23, 30, 33 | 4 |
 | 20 | 05, 10, 18, 19, 23 | 5 |
 | 21 | 00, 13, 15, 19, 25, 26 | 6 |

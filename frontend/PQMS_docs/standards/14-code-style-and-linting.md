@@ -86,27 +86,76 @@ verification step that covers what lint misses. Do not treat a clean
 lint run as proof a component was optimized.
 
 ## Prettier
-Exactly one config exists: `.prettierrc.json` at the workspace root, applying
-monorepo-wide. **No per-package overrides** — one Prettier config for
-the whole repo.
+Exactly one config exists, at the workspace root, applying monorepo-wide.
+**No per-package overrides** — one Prettier config for the whole repo.
+(In this repository the file is `frontend/.prettierrc`. An earlier revision named
+it `.prettierrc.json`; that was carried from `kus-pqms` along with the values
+below and is corrected here too — Prettier reads either name, so the mismatch was
+invisible until someone looked for the file.)
 
-Real settings, verbatim:
+**The values this section used to state were wrong for this repository and are
+corrected — see `decisions/0002-prettier-configuration-follows-the-repository.md`.**
+An earlier revision stated them as absolutes:
+
+```json
+{ "printWidth": 100, "semi": true, "singleQuote": false }
+```
+
+with the provenance "carried forward verbatim from `kus-pqms`" — the prior
+**Vue** repository. They were never derived from this project, and this
+project's `frontend/.prettierrc` says the opposite on all three: `printWidth`
+120, `semi` false, `singleQuote` true. **The code matches the local file.**
+Adopting the withdrawn values would have rewritten every line of every module.
+
+**The rule, corrected:** where a consuming repository already has a Prettier
+configuration that its code consistently follows, **that configuration wins**,
+and this file records it. A formatter setting is a convention rather than a
+value derived from a source, so
+30-restructuring-an-existing-react-project.md's conflict rule applies: a
+consistent existing convention is evidence, and a standard that contradicts one
+is re-argued rather than mechanically applied.
+
+Real settings for **this** repository (`frontend/.prettierrc`), verbatim:
 
 ```json
 {
-  "printWidth": 100,
-  "tabWidth": 2,
-  "semi": true,
-  "singleQuote": false,
+  "semi": false,
+  "singleQuote": true,
   "trailingComma": "all",
-  "endOfLine": "lf"
+  "printWidth": 120,
+  "tabWidth": 2
 }
 ```
 
-That is: 100-character print width, 2-space tabs, semicolons on, double
-quotes (`singleQuote: false`), trailing commas everywhere valid, LF line
-endings. Provenance: carried forward verbatim from `kus-pqms`
-(`frontend/.prettierrc.json`).
+That is: 120-character print width, 2-space tabs, semicolons **off**, single
+quotes, trailing commas everywhere valid. `endOfLine` is not set in the file;
+LF is enforced by `frontend/.gitattributes` (`* text=auto eol=lf`) instead —
+see "Line endings" below.
+
+**Everything else in this section stands unchanged**: exactly one config, no
+per-package overrides, Prettier ignores `**/*.md`, and `eslint-config-prettier`
+stays last in the chain.
+
+### The provenance defect, recorded rather than quietly fixed
+
+This value did not *become* wrong. **It was never derived from this project.**
+It was lifted from another repository and given a provenance line, which made it
+read as checked when nothing had been checked.
+
+00-core-rules.md's source-precedence **case 5** is written about design-token
+literals — *"never trust a prior citation's value, however well-sourced it
+looked at the time, including citations from this corpus's own earlier revisions
+or from the legacy Vue codebase."* This is that same failure applied to a
+formatter setting, which is evidence the case is not specific to token values.
+**A provenance line records where a value came from. It is not evidence that the
+value is correct here.**
+
+Two further sections of this file — "Export conventions" and "Two compiler flags
+the prior config turns off" — cite `kus-pqms` in exactly the same way and
+**have not been re-derived against this repository.** They may well be right;
+they have not been checked. Tracked as an open row in
+18-project-context-and-implementation-status.md's register rather than silently
+trusted or silently changed.
 
 ## Export conventions
 A settled decision, stated plainly so it is not re-litigated per-file:

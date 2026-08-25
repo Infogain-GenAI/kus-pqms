@@ -905,3 +905,42 @@ unless someone wrote the before-number down.
 This generalises past this decision. Any gate keyed on a location — coverage
 path configuration, Sonar source roots, a formatter ignore list, a CSS scrape —
 has the same property, and Phase 2 moves all of them at once.
+
+## Closed 2026-08-25 (second pass) — Prettier configuration, and a provenance defect
+
+**`frontend/.prettierrc` governs; 14-code-style-and-linting.md's stated values
+are withdrawn** (ADR-0002, decided by Prisilla Ghadi).
+
+| File | Question | Closed as | Basis |
+|---|---|---|---|
+| 14 | Which Prettier configuration governs | **The repository's own.** `printWidth` 120, `semi` false, `singleQuote` true — and the code matches it | **evidence** — 42 files differ from the local config; every file would differ from 14's |
+
+**The reason this needed an ADR rather than an edit** is that it is a standard
+being deliberately not followed, which
+31-documentation-standards-and-decision-records.md names as a trigger. It is also
+the third time source precedence has resolved the same way — the ordinal spacing
+scale (`--space-8` is 32px, not 8px) and the seven-status vocabulary were both
+settled by the local artefact over the written standard.
+
+### The open row this opens
+
+14's Prettier values were "carried forward verbatim from `kus-pqms`", the prior
+Vue repository, and were never re-derived against this project. **Two further
+sections of 14 cite `kus-pqms` the same way and have not been checked:**
+
+- **[PLACEHOLDER — 14's "Export conventions".** Default-export-per-component and
+  named-exports-for-everything-else are justified entirely by a count of `.vue`
+  files in `kus-pqms`. Whether this React port follows it is unverified.
+  **Trigger:** before any lint rule enforces export style. **Owner:** Frontend
+  Lead.]
+- **[PLACEHOLDER — 14's "Two compiler flags the prior config turns off".** The
+  reasoning is sound and framework-specific; the claim that `noUnusedLocals` and
+  `noUnusedParameters` are both on in this repository is unverified.
+  **Trigger:** the TypeScript baseline story. **Owner:** Frontend Lead.]
+
+**This is 00-core-rules.md's source-precedence case 5 occurring inside the
+corpus.** Case 5 is written about design-token literals; a formatter setting is
+not a token value, and it failed the same way. **A provenance line records where
+a value came from, not that it is correct here.** Any corpus statement whose only
+support is "carried forward from `kus-pqms`" is unverified until someone checks
+it against this repository.
