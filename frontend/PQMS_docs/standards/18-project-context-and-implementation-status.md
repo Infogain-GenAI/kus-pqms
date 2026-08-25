@@ -944,3 +944,75 @@ not a token value, and it failed the same way. **A provenance line records where
 a value came from, not that it is correct here.** Any corpus statement whose only
 support is "carried forward from `kus-pqms`" is unverified until someone checks
 it against this repository.
+
+## Enforcement layer — built 2026-08-25, and its numbers
+
+The "Absent — the enforcement layer" section above is superseded for the gates
+listed here. This is the reference half of this file: **a dated snapshot, not a
+standard.** Where it disagrees with a tier file, the tier file wins.
+
+**Method:** every number produced by running the gate, on commit `4259b33`,
+against unmodified `src/`. Nothing is quoted from a plan.
+
+### The three adherence ceilings
+
+Ceilings live in `frontend/.ds-ceilings.json` and are **written by
+`scripts/ds-gate.mjs`, not by a human**: a count that drops rewrites the file, a
+count that rises fails, and raising means editing a tracked file by hand.
+
+| Family | Count | Ceiling | Nature |
+|---|---:|---:|---|
+| `values` — raw px / hex / font literals | **467** | 467 | ratchet; falls as Step 8 converts to tokens |
+| `numeric` — hard-coded numeric dimensions | **348** | 348 | ratchet; newly visible |
+| `imports` — restricted imports | **0** | 0 | regression guard, already clean |
+
+**Per-component prop/enum selectors: NOT EXECUTED.** They were 195 permanent
+false positives — regex prop allowlists written against the design system's
+plain-JS source where `Button` declared six props, while this port's
+`Button extends ButtonHTMLAttributes` makes `onClick`/`disabled`/`aria-*` correct
+and type-safe. `tsc --noEmit` checks props against the real interfaces and is
+strictly stronger. Filtered in `eslint.adherence.config.mjs`;
+`_adherence.oxlintrc.json` remains a byte-copy.
+
+### 815 is not a regression
+
+The single number moved 662 → 467 when the false positives stopped executing,
+and the newly-closed numeric loophole then added 348 previously-unobserved
+violations to the tracked total.
+
+**467 + 348 = 815 is 467 real signals plus 348 that were always present in the
+code and are now counted.** Nothing was introduced. The earlier 662 was smaller
+because it included 195 warnings that were wrong and excluded 348 that were real.
+
+**Any comparison against 662 is a comparison against a number of a different
+kind**, and Step 6's "the adherence count is unchanged and non-zero" acceptance
+must be read against the per-family ceilings above, never against 662.
+
+### Other gates now enforced
+
+| Gate | Result | Where it runs |
+|---|---|---|
+| `tokens:check` | 156 tokens, passes | build + pre-commit |
+| `tokens:drift` | generated map matches the manifest | build + pre-commit |
+| `lint:css-vars` | 1,829 `var()` refs, 119 names, **0 unresolved** | build + pre-commit |
+| `typecheck` | `tsc --noEmit`, exit 0 | build + pre-push |
+
+Every one was proved to **fail** as well as pass, by breaking it deliberately and
+reverting. A gate that has never failed is indistinguishable from one that does
+not run.
+
+### What is still absent
+
+- **CI. There is none, anywhere in the repository.** Every gate above is local,
+  so all of them reach one machine. The `[PLACEHOLDER — the CI platform]` in
+  00-core-rules.md stays open; the Phase 0 baseline that was its trigger has run
+  and found nothing to identify a platform with.
+- **Tests.** Zero, no runner, no coverage. 10-testing-standards.md's ratchet has
+  a floor of 0 and nothing to ratchet.
+- **A repository-wide hooks bootstrap.** `frontend/scripts/setup-hooks.mjs`
+  covers anyone who installs in `frontend/`; `core.hooksPath` is a single
+  repository-level value, so someone working only in `backend/` still gets no
+  hooks. **[PLACEHOLDER — a root-level hooks bootstrap.** Needs a root
+  `package.json`, a documented clone step, or a checked-in setup script that the
+  README makes unavoidable. **Trigger:** the next component to add real hook
+  checks. **Owner:** repo owner — it cannot be decided inside `frontend/`.]**
