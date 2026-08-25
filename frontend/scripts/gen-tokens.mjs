@@ -8,7 +8,12 @@ import { dirname, join } from 'node:path'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const manifest = JSON.parse(readFileSync(join(root, 'design-system-manifest.json'), 'utf8'))
 const tokens = manifest.tokens ?? []
-const outDir = join(root, 'src/tokens')
+// Output directory is overridable so the drift check (scripts/check-tokens-drift.mjs)
+// can regenerate to a temp path and diff, WITHOUT writing into src/. One generator,
+// one set of generation logic — a drift checker that reimplemented this would drift
+// from it, which is the failure it exists to catch.
+const outFlag = process.argv.indexOf('--out')
+const outDir = outFlag !== -1 && process.argv[outFlag + 1] ? process.argv[outFlag + 1] : join(root, 'src/tokens')
 mkdirSync(outDir, { recursive: true })
 
 const entries = tokens.map((t) => `  '${t.name}': ${JSON.stringify(t.value)},`).join('\n')
