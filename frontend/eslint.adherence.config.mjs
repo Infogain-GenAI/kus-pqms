@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs'
 import react from 'eslint-plugin-react'
 import tsParser from '@typescript-eslint/parser'
+import { NUMERIC_DIM_MESSAGE } from './scripts/ds-messages.mjs'
 
 const rc = JSON.parse(readFileSync(new URL('./_adherence.oxlintrc.json', import.meta.url), 'utf8'))
 
@@ -64,6 +65,43 @@ const restrictedSyntax = (() => {
   return [severity, ...kept]
 })()
 
+// ---------------------------------------------------------------------------
+// CLOSING THE NUMERIC LOOPHOLE.
+//
+// The vendored `Raw px value` selector matches a STRING containing `px`:
+//
+//     padding: '12px 14px'   // warns
+//     gap: 20                //  silent — the identical hard-coded value
+//
+// So a developer blocked by the gate learns that deleting the quotes and the
+// `px` makes the warning disappear, without a token being used. That is a gate
+// teaching the opposite of what it exists for, and it is why this lands BEFORE
+// the Step 8 conversion pass rather than after: converting '20px' -> 20 while the
+// hole is open drains one bucket into another.
+//
+// Scale, measured in RESTRUCTURE-BASELINE.md with this exact selector: 348
+// numeric dimensions invisible to the gate, against 4 string-px values on the
+// same 15 properties. 98.9% of the hard-coded dimensions on these properties
+// were unobserved.
+//
+// `[value>0]` deliberately skips `padding: 0` — a bare zero needs no unit and no
+// token, and flagging it would be noise that trains people to ignore the rule.
+//
+// This selector is APP-SIDE and additive. It is not in _adherence.oxlintrc.json
+// and must not be added there: the byte-copy is the design system's shipped
+// ruleset, and this is this port's own adaptation.
+//
+// Its message text is the join key with scripts/ds-gate.mjs's `numeric` family.
+// Both sides import it from one place so a reworded message cannot silently
+// empty that family's count.
+const NUMERIC_DIM_PROPS =
+  '^(padding|margin|gap|width|height|top|right|bottom|left|borderRadius|fontSize|minWidth|maxWidth|minHeight|flexBasis)$'
+
+const numericDimension = {
+  selector: `Property[key.name=/${NUMERIC_DIM_PROPS}/] > Literal[value>0]`,
+  message: NUMERIC_DIM_MESSAGE,
+}
+
 export default [
   {
     files: ['src/**/*.{ts,tsx}'],
@@ -75,7 +113,7 @@ export default [
     rules: {
       ...rc.rules,
       'no-restricted-imports': restrictedImports,
-      'no-restricted-syntax': restrictedSyntax,
+      'no-restricted-syntax': [...restrictedSyntax, numericDimension],
     },
   },
   // The ruleset's own override: the barrel may import component internals.

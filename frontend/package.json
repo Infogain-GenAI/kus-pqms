@@ -20,7 +20,8 @@
     "docs:standards:check": "node scripts/build-standards-doc.mjs --check",
     "lint:ds:values": "node scripts/ds-gate.mjs values",
     "lint:ds:imports": "node scripts/ds-gate.mjs imports",
-    "lint:ds": "pnpm run lint:ds:values && pnpm run lint:ds:imports"
+    "lint:ds": "pnpm run lint:ds:values && pnpm run lint:ds:numeric && pnpm run lint:ds:imports",
+    "lint:ds:numeric": "node scripts/ds-gate.mjs numeric"
   },
   "dependencies": {
     "lucide-react": "^0.451.0",

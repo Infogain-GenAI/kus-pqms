@@ -29,6 +29,7 @@ import { ESLint } from 'eslint'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { NUMERIC_DIM_MESSAGE } from './ds-messages.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CEILINGS = join(root, '.ds-ceilings.json')
@@ -56,15 +57,14 @@ const FAMILIES = {
     label: 'restricted imports',
     match: (m) => m.ruleId === 'no-restricted-imports',
   },
-  // The numeric blind spot — see story 6 and .ds-ceilings.json.
+  // The numeric blind spot the vendored `Raw px value` rule cannot see, closed by
+  // an app-side selector in eslint.adherence.config.mjs. Also a ratchet: these
+  // convert to tokens alongside the string-px values in Step 8.
   numeric: {
     label: 'numeric hard-coded dimensions',
-    match: (m) => m.ruleId === 'no-restricted-syntax' && m.message === NUMERIC_MESSAGE,
+    match: (m) => m.ruleId === 'no-restricted-syntax' && m.message === NUMERIC_DIM_MESSAGE,
   },
 }
-
-export const NUMERIC_MESSAGE_TEXT = 'Numeric hard-coded dimension — use a design-system token via var().'
-const NUMERIC_MESSAGE = NUMERIC_MESSAGE_TEXT
 
 const family = process.argv[2]
 if (!family || !FAMILIES[family]) {
