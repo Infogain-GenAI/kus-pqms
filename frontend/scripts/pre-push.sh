@@ -38,13 +38,17 @@ run() {
 
 # Types first: it is the check most likely to fail and the one whose failure makes
 # the others meaningless.
-run "typecheck" npx tsc --noEmit
+run "typecheck" pnpm -r --parallel exec tsc --noEmit
 
 # The three adherence ratchets. Each has its own ceiling in .ds-ceilings.json.
 # A drop rewrites that file — if it does, commit it; the push is not blocked.
 run "lint:ds:values" node scripts/ds-gate.mjs values
 run "lint:ds:numeric" node scripts/ds-gate.mjs numeric
 run "lint:ds:imports" node scripts/ds-gate.mjs imports
+
+# Proves the import rule still MATCHES something. Its count is 0 either way, so the
+# ceiling cannot tell "clean" from "dead" — see scripts/check-import-rule.mjs.
+run "lint:ds:selftest" node scripts/check-import-rule.mjs
 
 if [ "$STATUS" -ne 0 ]; then
   echo "   Push blocked by frontend pre-push checks."

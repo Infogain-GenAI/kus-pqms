@@ -20,12 +20,12 @@ PQMS_docs/**
 # tokens:check / the generated-file drift gate would then fail against files
 # nobody knowingly edited.
 _adherence.oxlintrc.json
-design-system-manifest.json
-src/styles/design-system/**
-src/tokens/tokens.generated.ts
+packages/design-tokens/design-system-manifest.json
+packages/design-tokens/src/styles/design-system/**
+packages/design-tokens/src/tokens/tokens.generated.ts
 
 # Build output, dependencies, lockfiles, binary captures.
-dist/**
+**/dist/**
 node_modules/**
 pnpm-lock.yaml
 .fidelity/**

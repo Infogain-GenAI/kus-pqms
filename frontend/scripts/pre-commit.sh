@@ -29,7 +29,7 @@ run() {
 }
 
 # The vendored token CSS still matches the design-system manifest.
-run "tokens:check" node scripts/check-tokens.mjs
+run "tokens:check" node packages/design-tokens/scripts/check-tokens.mjs
 
 # src/tokens/tokens.generated.ts still matches what the manifest generates.
 # tokens:check cannot see this file at all, so without this a stale or

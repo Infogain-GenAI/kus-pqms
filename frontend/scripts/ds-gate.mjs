@@ -76,7 +76,18 @@ const eslint = new ESLint({
   cwd: root,
   overrideConfigFile: join(root, 'eslint.adherence.config.mjs'),
 })
-const results = await eslint.lintFiles(['src'])
+// Re-pointed by the Phase 2 workspace split. ESLint's own file globs in
+// eslint.adherence.config.mjs also moved to three src roots; this is the target list.
+// If these paths ever stop matching, ESLint lints NOTHING and every family counts 0 —
+// which ds-gate would then RATCHET IN as success. That is why the split's acceptance is
+// 'counts unchanged AND non-zero', and why the guard below exists.
+const LINT_TARGETS = ['apps', 'packages']
+const results = await eslint.lintFiles(LINT_TARGETS)
+if (results.length === 0) {
+  console.error('x ds-gate:' + family + ' — ESLint matched ZERO files under ' + LINT_TARGETS.join(', ') + '.');
+  console.error('   A ceiling computed from no files is not a clean result, it is a dead gate.');
+  process.exit(1);
+}
 
 // An error (as opposed to a warning) is never in scope for a ceiling — it means
 // the config itself failed to run, or a rule is misconfigured. Fail immediately

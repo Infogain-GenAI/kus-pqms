@@ -11,11 +11,35 @@ import { NUMERIC_DIM_MESSAGE } from './scripts/ds-messages.mjs'
 const rc = JSON.parse(readFileSync(new URL('./_adherence.oxlintrc.json', import.meta.url), 'utf8'))
 
 // The shipped no-restricted-imports patterns match bare `components/...` specifiers. This app
-// reaches the same internals through its `@/` alias, so mirror each pattern with an alias twin —
-// an app-side adaptation, not a change to the vendored ruleset.
+// reaches the same internals two other ways, so each pattern gets TWO twins — an app-side
+// adaptation, not a change to the vendored ruleset.
+//
+// ⚠️ THE THIRD TWIN IS THE ONE THE WORKSPACE SPLIT MADE NECESSARY, AND IT IS WHY THIS RULE
+// COULD HAVE GONE SILENT. Before the split, components lived at src/components/** and were
+// imported as '@/components/...'. They now live in packages/ui-library and are imported as
+// '@pqms/ui-library'. The vendored patterns match `components/**`; the '@/' twins match
+// `@/components/**`. AFTER THE MOVE BOTH MATCH NOTHING.
+//
+// A no-restricted-imports pattern that matches nothing DOES NOT ERROR. It reports zero
+// violations, exactly like a clean codebase. And this family's ceiling was ALREADY 0 before
+// the split, so the count could not have revealed the breakage either — 0 before, 0 after,
+// gate dead in the middle. That is the precise failure 30/33 and steps-for-new-repo.md Step 6
+// warn about, and the count is not the instrument that catches it.
+//
+// What catches it is scripts/check-import-rule.mjs, which feeds the rule a deliberately
+// violating import and fails if it is NOT reported. Run it whenever these patterns or the
+// package layout change.
 const restrictedImports = structuredClone(rc.rules['no-restricted-imports'])
 for (const p of restrictedImports[1].patterns) {
-  p.group = [...p.group, ...p.group.map((g) => `@/${g}`)]
+  p.group = [
+    ...p.group,
+    // in-app alias twin: '@/components/core/**'
+    ...p.group.map((g) => `@/${g}`),
+    // package-specifier twin: '@pqms/ui-library/src/components/core/**' and any deep path
+    // under the package that reaches an internal rather than the barrel.
+    ...p.group.map((g) => `@pqms/ui-library/**/${g}`),
+    ...p.group.map((g) => `@pqms/ui-library/src/${g}`),
+  ]
 }
 
 // ---------------------------------------------------------------------------
@@ -104,7 +128,19 @@ const numericDimension = {
 
 export default [
   {
-    files: ['src/**/*.{ts,tsx}'],
+    // ⚠️ THREE src ROOTS NOW, NOT ONE. Before the workspace split this was a single
+    // 'src/**/*.{ts,tsx}'. That glob still parses after the move and matches NOTHING,
+    // because there is no top-level src/ any more — and a no-restricted-syntax rule whose
+    // glob matches nothing reports zero violations rather than erroring. The values count
+    // would have dropped 467 -> 0 and read as a clean codebase.
+    //
+    // The ceilings are what catch this one: ds-gate.mjs fails on a count ABOVE its ceiling,
+    // and a drop to zero would be silently ratcheted in as success. So the acceptance check
+    // for the split is "counts unchanged AND non-zero", never "counts pass".
+    files: [
+      'apps/*/src/**/*.{ts,tsx}',
+      'packages/*/src/**/*.{ts,tsx}',
+    ],
     plugins: { react },
     languageOptions: {
       parser: tsParser,
@@ -118,7 +154,13 @@ export default [
   },
   // The ruleset's own override: the barrel may import component internals.
   {
-    files: ['src/components/index.ts'],
+    // The ruleset's own override: the barrel may import component internals.
+    // Two entries now — the vendored barrel moved into the package, and the package's own
+    // public entry re-exports it. Both are barrels by definition.
+    files: [
+      'packages/ui-library/src/components/index.ts',
+      'packages/ui-library/src/index.ts',
+    ],
     rules: { 'no-restricted-imports': 'off' },
   },
 ]

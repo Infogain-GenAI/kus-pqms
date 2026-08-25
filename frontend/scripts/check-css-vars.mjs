@@ -18,12 +18,20 @@
 // Cheaper and strictly broader.
 //
 // Fallback syntax is honoured: `var(--a, var(--b))` checks both --a and --b.
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, relative } from 'node:path'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const SRC = join(root, 'src')
+// Re-pointed by the Phase 2 workspace split: THREE src roots now, not one.
+// A scan rooted at a path that no longer exists would either throw (loud, fine) or —
+// worse, if it were a glob — quietly find nothing and report 'all resolve'. The
+// existsSync guard below makes a missing root LOUD rather than a silent zero.
+const SRC_ROOTS = [
+  join(root, 'apps/portal/src'),
+  join(root, 'packages/ui-library/src'),
+  join(root, 'packages/design-tokens/src'),
+]
 
 const walk = (dir, out = []) => {
   for (const entry of readdirSync(dir)) {
@@ -34,12 +42,19 @@ const walk = (dir, out = []) => {
   return out
 }
 
-const files = walk(SRC)
+for (const r of SRC_ROOTS) {
+  if (!existsSync(r)) {
+    console.error('x css-vars: source root missing: ' + r);
+    console.error('   The package layout changed and this gate was not re-pointed.');
+    process.exit(1);
+  }
+}
+const files = SRC_ROOTS.flatMap((r) => walk(r))
 
 // Known names: the manifest is the source of truth, plus anything this app
 // defines itself in CSS (`--x: value`). A locally-defined property is legitimate
 // even though it is not a design-system token.
-const manifest = JSON.parse(readFileSync(join(root, 'design-system-manifest.json'), 'utf8'))
+const manifest = JSON.parse(readFileSync(join(root, 'packages/design-tokens/design-system-manifest.json'), 'utf8'))
 const known = new Set((manifest.tokens ?? []).map((t) => t.name))
 for (const f of files.filter((f) => f.endsWith('.css'))) {
   for (const m of readFileSync(f, 'utf8').matchAll(/(--[\w-]+)\s*:/g)) known.add(m[1])

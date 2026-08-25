@@ -20,11 +20,15 @@ import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const COMMITTED = join(root, 'src/tokens/tokens.generated.ts')
+const TOKENS_PKG = join(root, 'packages/design-tokens')
+// Re-pointed by the Phase 2 workspace split. tokens.generated.ts moved from
+// src/tokens/ into packages/design-tokens/src/tokens/, and the generator moved with it.
+// This gate fails LOUDLY when its path breaks (ENOENT), unlike the lint globs.
+const COMMITTED = join(TOKENS_PKG, 'src/tokens/tokens.generated.ts')
 
 const tmp = mkdtempSync(join(tmpdir(), 'pqms-tokens-'))
 try {
-  execFileSync(process.execPath, [join(root, 'scripts/gen-tokens.mjs'), '--out', tmp], { stdio: 'pipe' })
+  execFileSync(process.execPath, [join(TOKENS_PKG, 'scripts/gen-tokens.mjs'), '--out', tmp], { stdio: 'pipe' })
 
   const norm = (s) => s.replace(/\r\n/g, '\n')
   const fresh = norm(readFileSync(join(tmp, 'tokens.generated.ts'), 'utf8'))
