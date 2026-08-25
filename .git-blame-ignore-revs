@@ -1,0 +1,38 @@
+# Revisions ignored by `git blame`.
+#
+# Bulk mechanical commits only — a formatting sweep, a mass rename, a pure move.
+# A commit that also changed behaviour must NEVER be listed here: blame would then
+# hide a real change, which is worse than the noise this file removes.
+# See 23-git-workflow-hooks-and-commits.md and
+# 30-restructuring-an-existing-react-project.md ("Protect the history you are about
+# to churn"), whose R-2 this file is the practical enforcement of.
+#
+# ---------------------------------------------------------------------------
+# ENABLE IT — this file does nothing until you run this once, per clone:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# It is local config and does not clone, exactly like core.hooksPath.
+# GitHub and GitLab apply a root-level .git-blame-ignore-revs automatically in
+# their blame views; your local `git blame` does not until you run the line above.
+# ---------------------------------------------------------------------------
+#
+# LOCATION: this file lives at the GIT ROOT, shared by all four components, per
+# 23-git-workflow-hooks-and-commits.md ("create it before the first bulk commit, at
+# the git root, shared by all four components"). It is deliberately NOT in frontend/:
+# blame.ignoreRevsFile is a single repo-level config value and forge auto-detection
+# only reads the repo root, so a copy inside a component directory would be inert.
+#
+# FORMAT: one full 40-character SHA per line, with a comment naming the commit.
+# Add the SHA in the SAME commit that performs the sweep is impossible (the SHA does
+# not exist yet), so add it in the immediately following commit and say so.
+#
+# Example:
+#   # chore(frontend): apply prettier formatting baseline
+#   0000000000000000000000000000000000000000
+#
+# ---------------------------------------------------------------------------
+# Nothing to ignore yet. History is flat: the corpus and the port arrived in two
+# import commits (fa25e69, bb2c891) and no bulk mechanical sweep has run.
+# The first entries will come from the Phase 2 workspace split (Step 6) and, if it
+# is ever run, the deferred Prettier formatting baseline.

@@ -1,0 +1,37 @@
+# Line endings for frontend/ only.
+#
+# Scoped here rather than at the git root because 33-polyglot-monorepo-integration.md's
+# boundary rule applies to configuration as much as to code: the frontend's settings must
+# not reach backend/, automation/ or infrastructure/. The root .gitattributes already
+# carries the repo-wide rules and is NOT replaced by this file.
+#
+# NOTE ON THE REASON, because the runbook records a different one:
+# steps-for-new-repo.md 5.1 justifies this file with "a submodule does not inherit the
+# parent's". That premise is false here — RESTRUCTURE-BASELINE.md established that
+# frontend/ is an ordinary directory in a single git repository, so it DOES inherit the
+# root file. This file exists for the boundary reason above, and because the root's
+# `* text=auto` lacks `eol=lf` (14-code-style-and-linting.md requires it, and a
+# `prettier --check`-class gate is unsatisfiable on a CRLF checkout without it).
+
+* text=auto eol=lf
+
+# Binaries must be re-declared HERE.
+# A .gitattributes in a subdirectory takes precedence over the root for files beneath it,
+# so the bare `*` line above would otherwise override the root's `*.png binary` for
+# everything in frontend/ — including .fidelity/ (91 tracked PNGs, 11.3 MB) and the
+# vendored TTF fonts (8.67 MB). `text=auto` does auto-detect binary content, but the
+# fidelity captures are the acceptance test for the Phase 2 workspace split and are not
+# worth resting on auto-detection.
+#
+# The fonts are pinned explicitly because the ROOT FILE DOES NOT PIN THEM — it lists
+# png/jpg/gif/ico/jar/zip/pdf and no font formats, so *.ttf is `text: auto` today.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.ttf  binary
+*.otf  binary
+*.woff binary
+*.woff2 binary
