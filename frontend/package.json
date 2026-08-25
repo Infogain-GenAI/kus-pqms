@@ -3,10 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@11.1.3",
+  "engines": {
+    "node": "^20.9.0 || >=21.1.0"
+  },
   "description": "N-PQMS Issue & Signal Management (ISM) — React UI. Mirrors the current UX design 1:1 (no new features). Design system vendored from _bmad-output/planning-artifacts/ux/design-source/design-system.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && npm run lint:adherence && vite build",
+    "build": "tsc --noEmit && pnpm run lint:adherence && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint:adherence": "eslint --config eslint.adherence.config.mjs --max-warnings 662 src",

@@ -1,0 +1,35 @@
+# pnpm workspace root for frontend/.
+#
+# Decision 6 (pnpm over npm) and ADR 0001 ("frontend/ is a pnpm workspace. Always.").
+# Only the current root is listed; apps/portal, packages/ui-library and
+# packages/design-tokens arrive in the Phase 2 split (Step 6), not here.
+packages:
+  - '.'
+
+# --- Dependency build scripts -------------------------------------------------
+# pnpm blocks dependency lifecycle scripts by default. esbuild's postinstall
+# (`node install.js`) fetches its platform binary, and WITHOUT IT `vite build`
+# fails — so this is not optional hardening, it is a build prerequisite.
+#
+# Observed directly: a `pnpm` invocation in this project aborts with
+# ERR_PNPM_IGNORED_BUILDS naming esbuild, and pnpm writes this exact key with the
+# value left as a placeholder for a human to resolve. Resolved here, deliberately.
+#
+# npm has the same gate under a different name: `npm ci` prints
+# "allow-scripts esbuild@0.21.5 (postinstall: node install.js)" and skips it.
+# RESTRUCTURE-BASELINE.md records that as an unverified clean-clone risk; moving to
+# pnpm with this key set closes it, because here the answer is written down.
+allowBuilds:
+  esbuild: true
+
+# --- Engine enforcement -------------------------------------------------------
+# This lives HERE and not in .npmrc. 14-code-style-and-linting.md originally
+# specified `engine-strict=true` in .npmrc and then corrects itself: pnpm 11 no
+# longer reads non-auth settings from .npmrc, so the setting would fail SILENTLY
+# and look identical to one that works. .npmrc keeps registry and auth only.
+#
+# 14 also says to verify the setting takes effect rather than assume it. Verified:
+# with engineStrict on and a deliberately impossible `engines.node` in
+# package.json, `pnpm install` fails with ERR_PNPM_UNSUPPORTED_ENGINE. Evidence is
+# in the commit message for this story.
+engineStrict: true
