@@ -1,10 +1,14 @@
 # pnpm workspace root for frontend/.
 #
 # Decision 6 (pnpm over npm) and ADR 0001 ("frontend/ is a pnpm workspace. Always.").
-# Only the current root is listed; apps/portal, packages/ui-library and
-# packages/design-tokens arrive in the Phase 2 split (Step 6), not here.
+# The Phase 2 split (Step 6) has landed: three real packages.
+#   apps/portal            @pqms/portal          the application
+#   packages/ui-library    @pqms/ui-library      generic components + the icon path
+#   packages/design-tokens @pqms/design-tokens   vendored tokens (ADR-0003)
+# frontend/ itself is the workspace ROOT and is no longer a package.
 packages:
-  - '.'
+  - 'apps/*'
+  - 'packages/*'
 
 # --- Dependency build scripts -------------------------------------------------
 # pnpm blocks dependency lifecycle scripts by default. esbuild's postinstall

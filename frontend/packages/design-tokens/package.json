@@ -1,0 +1,16 @@
+{
+  "name": "@pqms/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Vendored Kia N-PQMS design-system tokens. Byte-copies and generated output — see ADR-0003.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles/design-system/styles.css",
+    "./design-system-manifest.json": "./design-system-manifest.json"
+  },
+  "scripts": {
+    "tokens:gen": "node scripts/gen-tokens.mjs",
+    "tokens:check": "node scripts/check-tokens.mjs"
+  }
+}

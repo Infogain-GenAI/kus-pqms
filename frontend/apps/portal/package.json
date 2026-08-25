@@ -1,0 +1,28 @@
+{
+  "name": "@pqms/portal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "N-PQMS Issue & Signal Management (ISM) — React UI. Mirrors the current UX design 1:1 (no new features).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pqms/design-tokens": "workspace:*",
+    "@pqms/ui-library": "workspace:*",
+    "lucide-react": "^0.451.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}
