@@ -309,6 +309,49 @@ first commit**, before any formatting baseline is written. Retrofitting it later
 means renormalising the whole tree, which is a diff touching every file — and
 23-git-workflow-hooks-and-commits.md's blame-ignore rule then applies to it.
 
+### A subdirectory `.gitattributes` shadows its parent's binary pins
+
+**Rule: any `.gitattributes` in a subdirectory that writes a bare `*` pattern
+MUST re-declare every binary format it shadows.**
+
+Attribute files in deeper directories take precedence over shallower ones for
+the files beneath them. So a subdirectory file containing
+
+```
+* text=auto eol=lf
+```
+
+overrides the root's `*.png binary`, `*.jpg binary` and every other binary pin
+**for everything in that subdirectory** — not just the line-ending attribute, but
+the `binary` (`-text`) macro those pins exist to set. `text=auto` does sniff for
+NUL bytes and will usually classify a binary correctly, so this normally works.
+"Usually" is the problem: the failure is a silently corrupted asset, discovered
+whenever someone next looks at it.
+
+**Worked example, from this repository.** `frontend/.gitattributes` was added in
+Phase 1 with `* text=auto eol=lf`. Beneath it sit **11.3 MB of tracked PNG
+fidelity captures** (91 files, which are the acceptance test for the Phase 2
+workspace split) and **8.67 MB of vendored TTF fonts**. Before the file existed,
+`git check-attr` reported:
+
+```
+.fidelity/app-01-home.png            binary: set      <- from the root's *.png
+…/KiaSignatureFix-Bold.ttf           text: auto       <- NOT PINNED ANYWHERE
+```
+
+**The root pins `png/jpg/gif/ico/jar/zip/pdf` and no font format at all**, so the
+fonts were already relying on content sniffing before any subdirectory file
+existed. The frontend file re-declares both groups explicitly, and
+`git check-attr` now reports `binary: set` for each.
+
+Two general points worth keeping:
+
+- **Check `git check-attr` before and after adding an attributes file**, on one
+  binary and one text file. It is the only way to see what the file actually did,
+  as opposed to what it appears to say.
+- **A parent's pins are not a safety net for a child's bare `*`.** The direction
+  of precedence is the opposite of what "the root sets the defaults" suggests.
+
 Two supporting files, both small and both easy to omit:
 
 - **`.editorconfig`** — charset, LF, final newline, trimmed trailing whitespace,
