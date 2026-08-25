@@ -4,10 +4,11 @@
 rules. Where it and a tier file disagree, **the tier file wins**
 (`standards/31-documentation-standards-and-decision-records.md`).
 
-**Written:** 2026-08-25. **Last revised:** 2026-08-25, third revision — against
-the walkthrough of the real `frontend/`, which corrected the stack, answered
-four of the eight decisions, and surfaced two gate defects that change the
-order of work.
+**Written:** 2026-08-25. **Last revised:** 2026-08-25, **fourth revision** —
+against `RESTRUCTURE-BASELINE.md`, which MEASURED the repository rather than
+reading a description of it. It withdrew the submodule premise entirely,
+corrected the numeric count from 415 to 348, and established that no CI exists
+anywhere. Steps 0-3 and 5 are complete.
 
 ---
 
@@ -112,9 +113,29 @@ padding: '12px 14px'   // warns
 gap: 20                //  silent — identical hard-coded value
 ```
 
-Measured: **415 numeric hard-coded dimensions** versus **365 string px
-literals.** More than half the hard-coded spacing is already invisible to the
-gate — and a developer blocked by it learns that `'20px'` → `20` makes the
+~~Measured: 415 numeric hard-coded dimensions versus 365 string px literals.~~
+**Corrected in pass 4 — the number is 348, and it was never 415.**
+
+`RESTRUCTURE-BASELINE.md` measured it with the exact selector Step 5.5 proposes,
+run through ESLint's own selector engine rather than a grep:
+
+```
+Property[key.name=/^(padding|margin|gap|width|height|top|right|bottom|left|
+  borderRadius|fontSize|minWidth|maxWidth|minHeight|flexBasis)$/] > Literal[value>0]
+```
+
+**348.** Four variants were tried to recover 415 and none lands there —
+descendant rather than direct child gives 359, any property gives 712, including
+zeros and strings gives 804. Use **348**: it is what this selector actually emits,
+which is the only number that can seed its ceiling. It is now the live ceiling in
+`.ds-ceilings.json`.
+
+**The loophole is worse than "more than half", not better.** On the same fifteen
+properties, string-px values number **4** against 348 numeric — **98.9%** of the
+hard-coded dimensions on those properties were invisible to the gate. The 362
+`Raw px value` warnings are overwhelmingly px strings in *other* positions
+(shorthand like `'12px 14px'`, `border`, `boxShadow`) that this selector does not
+reach. A developer blocked by the gate learns that `'20px'` → `20` makes the
 warning vanish without using a token.
 
 **So the loophole closes before the conversion pass, not after.** Otherwise you
@@ -152,12 +173,12 @@ against the story. Neither reads `PQMS_docs/` unless told to.
 
 ## Progress
 
-- [ ] **0** — Protect the docs from the formatter *(before copying)*
-- [ ] **1** — Copy the corpus and the generator
-- [ ] **2** — Commit, verify nothing was reformatted
-- [ ] **3** — Baseline epic (Phase 0)
+- [x] **0** — Protect the docs from the formatter *(before copying)*
+- [x] **1** — Copy the corpus and the generator
+- [x] **2** — Commit, verify nothing was reformatted
+- [x] **3** — Baseline epic (Phase 0)
 - [ ] **4** — Four remaining decisions
-- [ ] **5** — Enforcement epic (Phase 1) — **includes repairing both gates**
+- [x] **5** — Enforcement epic (Phase 1) — **done 2026-08-25**; both gates repaired, plus a hooks bootstrap
 - [ ] **6** — Workspace split (Phase 2a) — **re-point tooling in the same commit**
 - [ ] **7** — Structure within the workspace (Phase 2b)
 - [ ] **8** — Token conversion (Phase 3.1)
@@ -213,6 +234,25 @@ cd frontend && node scripts/build-standards-doc.mjs --check
 ```
 
 Invoke with `node` directly — that works whichever package manager is active.
+
+> ⚠️ **Never run a package-manager script before the package manager is settled.**
+> Not `pnpm run x`, not `npm run x` — `node scripts/x.mjs`.
+>
+> This is not tidiness. With `package-lock.json` present and pnpm intended, a
+> single `pnpm docs:standards:check` in this repository **never ran the script at
+> all**. pnpm's auto-install preflight fires first: it adopted the npm-installed
+> `node_modules`, moved 12 packages to `node_modules/.ignored`, wrote
+> `pnpm-lock.yaml` and `pnpm-workspace.yaml`, **re-resolved every `^` range**, and
+> then aborted on `ERR_PNPM_IGNORED_BUILDS` before reaching the script.
+>
+> Recovering it took `rm` on both new files, `rm -rf node_modules` and `npm ci`.
+> **Had it not been noticed, every number measured afterwards would have come
+> from a silently re-resolved dependency tree** — which is also a fidelity risk,
+> because the captures are the acceptance test for Step 6.
+>
+> The window closes at Step 5.2, which migrates with `pnpm import` (preserving
+> exact resolutions) rather than `pnpm install` (which re-resolves). Until then,
+> `node` only.
 Expect **"is up to date (34 tier files)"**. If it fails, line endings changed in
 transit: **`frontend/` needs its own `.gitattributes` with `* text=auto eol=lf`,
 because the root file lacks `eol=lf`.** (An earlier revision said "because a
@@ -426,6 +466,50 @@ All of this is **zero rendered pixels**, so the fidelity captures are safe.
 **Done when:** the values ratchet is a real number you trust, and you have
 confirmed the hooks fire from inside `frontend/` (they do), **and a bootstrap
 exists so a fresh clone gets them at all**.
+
+### What Step 5 actually produced — 2026-08-25
+
+Recorded because four items came out differently from the plan above.
+
+| # | Planned | Actual |
+|---|---|---|
+| 1 | `.gitattributes` "because a submodule does not inherit" | Added — but the reason is `33`'s boundary rule plus a root file missing `eol=lf`. **Binary formats re-declared**, or the bare `*` shadows the root's pins over 11.3 MB of PNGs and 8.67 MB of TTFs |
+| 1 | `frontend/.git-blame-ignore-revs` | **Placed at the GIT ROOT** per `23`. `blame.ignoreRevsFile` is one repo-level value and forges read only the root — a per-component copy is inert |
+| 2 | pnpm migration | `pnpm import` preserved all 336 resolutions exactly; verified identical after normalising notation. `allowBuilds.esbuild` and `engineStrict` in `pnpm-workspace.yaml`; `engineStrict` proved by forcing an impossible `engines.node` |
+| 3 | "declare it or delete `.prettierrc`" | **KEPT and declared.** Deleting was the initial recommendation and was wrong |
+| 5 | ceilings | `values` 467, `imports` 0, written by `scripts/ds-gate.mjs` |
+| 6 | numeric ceiling 415 | **348** — see the corrected section above |
+| 9 | CI | **None exists.** That is the finding; no platform was invented |
+
+**Why `.prettierrc` is kept rather than deleted.** Editors format-on-save with
+their own bundled Prettier regardless of project dependencies, so removing the
+config does not remove the formatter — it removes the only thing constraining it,
+and Prettier falls back to its **defaults** (80 columns, semicolons, double
+quotes). That is a *more* destructive rewrite than the config that was there,
+which matches the code. The real hazard was elsewhere and is now closed:
+`prettier --check` showed that `_adherence.oxlintrc.json`,
+`design-system-manifest.json`, `tokens.generated.ts` and every
+`src/styles/design-system/**` byte-copy **would be rewritten** by one
+`prettier --write .`. All are now in `.prettierignore`. See ADR-0002 for the
+values conflict with `14`.
+
+**One extra story, not in the plan:** a **hooks bootstrap**
+(`frontend/scripts/setup-hooks.mjs`, wired as `prepare` and documented in the
+README). Without it every gate above was invisible to a fresh clone —
+`core.hooksPath` is local config that does not clone, and with no CI that meant
+zero enforcement. Proved by clearing the setting: an invalid commit message was
+**accepted**; after the bootstrap the same message was refused.
+
+**It does not fully close.** `core.hooksPath` is a single repository-level value,
+so a bootstrap living in `frontend/` only reaches people who install in
+`frontend/`. Someone working solely in `backend/` still gets nothing. **That
+needs a root-level mechanism and is the repo owner's call** — see the report
+accompanying Step 5.
+
+**Final gate numbers:** `values` **467**, `numeric` **348**, `imports` **0**.
+**815 tracked is not a regression** — it is 467 real signals plus 348 that were
+always present and are now counted. The 195 per-component prop warnings are gone
+because those selectors are no longer executed.
 
 ---
 
