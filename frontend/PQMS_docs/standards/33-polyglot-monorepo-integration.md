@@ -17,15 +17,52 @@ Assumes 00-core-rules.md; where the two conflict, 00 wins.
 workspace and stops there. In the target repository the workspace is one of
 three components:
 
+**The tree this file used to draw was the client's `project-template-java`
+template, not this repository.** It showed `infra/`, `.moai/`, `lefthook.yml`
+and `.gitlab-ci.yml`; **none of those exist here.** Observed 2026-08-25:
+
 ```
-project-template-java/
-├─ backend/    Spring Boot 4.0.6 · Java 21 · Gradle · ECS Fargate
-├─ frontend/   React 19 · Vite 8 · pnpm 11 · S3 + CloudFront    <- this corpus
-├─ infra/      AWS CDK (TypeScript) · provisions what both deploy onto
-├─ docs/       the client's source of truth for versions and setup
-├─ .claude/ .moai/   the MoAI-ADK harness
-└─ scripts/ lefthook.yml .gitlab-ci.yml .gitlab-ci-templates/
+KUS-PQMS/                        ONE git repository — not four submodules
+├─ backend/          EMPTY of source — see below
+├─ frontend/         React 18.3 · Vite 5 · pnpm 11        <- this corpus
+│  ├─ apps/portal/               @pqms/portal
+│  ├─ packages/ui-library/       @pqms/ui-library
+│  ├─ packages/design-tokens/    @pqms/design-tokens
+│  ├─ pnpm-workspace.yaml        frontend/ IS the workspace root
+│  ├─ tsconfig.base.json
+│  └─ scripts/                   workspace-level gates
+├─ automation/       EMPTY of source
+├─ infrastructure/   EMPTY of source — and NOT named `infra/`
+├─ .githooks/        plain git hooks via core.hooksPath — no Husky, no Lefthook
+├─ _bmad/ _bmad-output/   BMAD harness — NOT MoAI-ADK
+├─ .claude/  docs/  issues/  scripts/
+└─ .gitattributes  .git-blame-ignore-revs  .gitignore  README.md
 ```
+
+**Four differences that change what this file can assume**, beyond the naming:
+
+- **No `.gitlab-ci.yml`, no `.github/`, no CI of any kind** — at the root or
+  inside any component. 15-devsecops-and-ci-cd.md's platform is an open
+  placeholder in 00-core-rules.md, not a settled fact.
+- **No `lefthook.yml`.** Hooks are `.githooks/` plus per-component scripts.
+- **No `.moai/`.** The harness is BMAD.
+- **`infrastructure/`, not `infra/`.** Every path this file states for
+  infra-owned requirements uses the wrong directory name; they are the same
+  concern under a different name.
+
+**Three of the four components contain no source code at all.** `backend/`,
+`automation/` and `infrastructure/` hold **exactly five files each** — a
+`.gitignore`, a `README.md`, a `commit-msg.rules`, and two hook scripts that
+`echo` and `exit 0`. There is no Spring Boot application, no CDK project and no
+test suite anywhere in this repository.
+
+**That is stronger than "not built yet", and it changes how to read this file.**
+Everything below about the API contract, the backend port mismatch and the
+infra-owned requirements describes a boundary with **nothing on the other side
+of it**. Those sections are a specification to build against, not a description
+of an integration that exists. Where this file previously cited `docs/STACK.md`
+for backend versions and ports, it was citing the client's *template*
+documentation about a service this repository does not contain.
 
 Three of this corpus's rules cannot be satisfied inside `frontend/` at all —
 the Content-Security-Policy, the cache headers, and the SPA deep-link rewrite

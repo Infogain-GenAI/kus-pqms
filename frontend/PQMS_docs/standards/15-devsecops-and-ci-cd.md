@@ -451,6 +451,137 @@ Nothing inside the repo can verify these settings, so if it matters,
 someone opens the settings page and checks — this file is the record of
 what they should find, not evidence that they will.
 
+## A gate whose "clean" is indistinguishable from its "dead" needs a positive control
+
+**The rule.** Any gate whose passing result looks identical to the result it
+gives when it has stopped checking anything **requires a positive control**: a
+deliberate violation fed to it, with the check **failing if the violation is not
+reported**.
+
+This applies to every allow-list, ignore-list and path-scoped check — lint
+globs, import restrictions, coverage path configuration, Sonar source roots,
+formatter ignore files, CSS scrape paths. All of them share the property that
+**a pattern matching nothing does not error; it reports zero.**
+
+### The worked example, and why no count could have caught it
+
+`frontend/scripts/check-import-rule.mjs`. The design-system import restriction
+forbids reaching into component internals instead of the barrel. Its violation
+count was **0 before** the Phase 2 workspace split — because the codebase was
+clean.
+
+After the split, components moved from `src/components/**` to
+`packages/ui-library`, and every consumer specifier changed from
+`@/components/...` to `@pqms/ui-library`. **The rule's patterns matched nothing,
+so it would have reported 0 after the split too** — because it was checking
+nothing.
+
+**0 and 0. Identical from outside. No threshold, ratchet or trend line can
+separate those two states**, because the number is the same and it is the
+*right* number in one case. This is not a monitoring gap that a better metric
+fixes; it is a property of the measurement.
+
+So the check does not measure the codebase. It measures **the gate**: it feeds
+the live configuration three deliberately-violating import shapes and fails if
+any goes unreported, plus one correct barrel import that must **not** be flagged
+— because a rule that over-fires pushes people back to the deep paths it exists
+to prevent.
+
+```
+v import-rule: package deep-path (post-split specifier) — reported
+v import-rule: in-app alias twin — reported
+v import-rule: bare vendored pattern — reported
+v import-rule: barrel import — correctly allowed
+```
+
+### The same idea applied to globs
+
+`frontend/scripts/ds-gate.mjs` carries a **zero-file guard**: if ESLint matches
+no files under the configured roots, it fails instead of reporting a count.
+Without it the Phase 2 split would have taken the values family from 467 to 0 —
+and because that gate *ratchets downward automatically*, *it would have written
+the 0 in as an improvement.* **A ratchet without a positive control converts a
+broken gate into recorded progress.**
+
+### Where to put one
+
+A positive control belongs **in the gate's own tier**, not in a test suite: it
+runs wherever the gate runs. These two run in `pre-push` and in `build`. When CI
+exists they run there, and they are among the few checks worth running on
+**every** pipeline rather than path-filtered — a gate that silently died is not
+scoped to the files that killed it.
+
+**This generalises past linting.** 30-restructuring-an-existing-react-project.md's
+definition of done already requires that every Phase 1 gate "fails on a
+deliberately-introduced violation". This section is that requirement stated as a
+standing rule rather than a one-time acceptance step, because the failure it
+prevents arrives long after the gate was accepted.
+
+## A gate whose necessary tolerance exceeds its signal is structurally blind
+
+**The rule.** A gate whose necessary tolerance exceeds the signal it exists to
+detect **is not a weak gate — it is structurally blind.** Choose the mechanism
+that asserts the invariant, not the one that looks most thorough.
+
+This is a different failure from the positive-control rule above. There, the gate
+was silently checking nothing. Here the gate runs perfectly, reports honestly, and
+**still cannot separate a regression from ambient noise**, because the two overlap
+in the only quantity it measures. No amount of care in operating it helps.
+
+### The worked example — screenshots versus computed styles
+
+A pixel comparison *appears* to be the strongest possible fidelity check: it sees
+literally everything the user sees. Measured on the N-PQMS ISM port, it is
+**weaker than a computed-style assertion** for the change it most needs to catch.
+
+The numbers (`../../RESTRUCTURE-BASELINE.md` addendum):
+
+| Source | Pixel difference |
+|---|---|
+| Screens whose source never changed, captured on a different machine | **0.66 – 2.14%** |
+| A screen with a genuine source change | **4.61%** |
+
+A tolerance must sit above the first band to avoid failing on every machine that
+is not the one that captured the baselines. **At that tolerance a 1px padding
+change in a text-dense table does not clear the bar** — it moves a few hundred
+pixels in a 1,152,000-pixel frame, well inside the environment noise. The gate
+returns green on exactly the regression it was installed to find.
+
+Two further properties made it worse here, and both generalise:
+
+- **The drift is structural, not colour.** It persists at a loose per-pixel colour
+  threshold (0.94% at `threshold: 0.5`), so tuning the colour tolerance does not
+  reach it. Text sits at different coordinates.
+- **Failure output is a heatmap.** Even when it fires correctly it reports *that*
+  something moved, not *what*. Triage is manual.
+
+**The computed-style assertion has neither problem.** `padding-top: 20px → 16px`
+is exact, names the element and the property, and is **identical on every
+machine**, because that property resolves without consulting layout or text
+metrics. It is a narrower instrument that is strictly better at the job.
+
+### The general test to apply before building a gate
+
+Ask, in this order:
+
+1. **What is the invariant?** For a token substitution: *this value is unchanged*.
+2. **What asserts it most directly?** Compare the values. Not the rendering of the
+   values, and not a photograph of the rendering.
+3. **What is the noise floor of the instrument, in the same units as the signal?**
+   If the noise floor is at or above the signal, **stop** — the gate is blind and
+   more effort spent on it is wasted.
+
+Step 3 is the one that gets skipped, and skipping it is how a project ends up with
+a thorough-looking gate that has never once caught anything.
+
+**A narrow check that asserts the invariant beats a broad check that observes its
+consequences.** Breadth is not sensitivity, and the two are routinely confused
+because breadth is the one that is easy to see.
+
+**This applies well beyond screenshots.** A flaky end-to-end test whose retry
+budget exceeds its failure rate, a performance budget wider than the regression it
+guards, a coverage threshold below the current number — all the same shape.
+
 ## Guard an optional gate, and make the skip visible
 The prior repository's SonarQube workflow is **separate from the main quality
 pipeline**, and every step in it is conditioned on a detected secret:

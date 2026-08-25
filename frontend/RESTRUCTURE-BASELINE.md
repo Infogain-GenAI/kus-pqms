@@ -967,3 +967,54 @@ git show bb2c891 --format= --numstat -w -- frontend/src/data/store.tsx
 **Baseline captured at commit `bb2c891`.** Per `30`'s definition-of-done item 8,
 this file is updated with the *after* numbers once Steps 5 and 6 land, so the
 next reader can see what the move cost and what it bought.
+
+---
+
+# ADDENDUM — 2026-08-25
+
+**The report above is unchanged and must stay that way.**
+31-documentation-standards-and-decision-records.md classes it as a point-in-time
+record; silently extending or editing it destroys the only property that makes it
+one. Everything below is new work, appended and dated.
+
+**Defect numbering continues at D14.** The original list ends at D13. Reusing
+D5–D7 would put two different defects under one identifier in a single document,
+which is worse than a gap in the sequence.
+
+## New defects
+
+| # | Defect | Evidence | Disposition |
+|---|---|---|---|
+| **D14** | **The 91 fidelity baselines were captured with parameters nobody recorded**, so they could neither be reproduced nor trusted. | **Seven distinct viewports** across 91 files — 1600×1000 (38), 1280×900 (21), 1920×1080 (21), 1280×1000 (3), 1920×1000 (3), and **1600×2926 and 1600×2922, which are the same screen 4px apart**. 53 files are `dev-*`/`dc-*` names matching no committed code path, including `dev-dashboard-r9` and `dev-dashboard-recheck`. | **RETAINED.** Superseded as a gate by `.style-baseline/`, but kept on disk — deleting them was proposed and reversed 2026-08-26; the decision is deferred. They remain unusable as a pass/fail gate for the reasons in the evidence column |
+| **D15** | **Dates render a day early or late depending on the developer's timezone.** `fmtMDY`/`fmtHM` in `apps/portal/src/data/util.ts` call `getMonth`/`getDate`/`getHours` — **local-time getters** — over UTC-anchored ISO strings. | Measured: the seed anchor `2026-07-09T02:00:00Z` renders **`07/08/2026`** on this machine (UTC−4) and `07/09/2026` on IST. | **Application defect, not a harness note.** Tracked in 18 with its own owner. **Do not fix in a structural phase** — it changes rendered output |
+| **D16** | **`IssueCard` is exported from the `ui-library` barrel and imported by nothing.** It is tree-shaken out of the bundle entirely. | Discovered while choosing a positive-control target: editing `padding: 16 → 20` produced an **identical bundle hash**, and `grep IssueCard` finds zero importers and zero occurrences in `dist`. | Dead code. Keep-or-delete is a Step 7-class decision, not done here |
+| **D17** | **`dc-compare.mjs` wrote `_boot-admin.dc.html` into the tracked UX design-source export.** A no-op today only because of an `existsSync` guard; the first run on a clean checkout would create an untracked file inside a tracked directory, where `git add -A` eventually commits it. | `scripts/dc-compare.mjs:23` | **Partly closed, and WORSE than stated.** The file was committed in `fa25e69` and is tracked TODAY — the write already happened. `.gitignore` does not untrack an existing file, so the entry prevents recurrence only; `git rm --cached` is still needed. Guard removed. Temp-directory relocation tried and **reverted** — the `.dc.html` resolves `support.js`/`_ds/` by relative path |
+
+## D16 has a consequence beyond one dead component
+
+**The bundle hash did not change for a real source edit.** Step 6's acceptance
+rested on identical bundle hashes, and that evidence is sound *for code that
+reaches the bundle*. It is blind to any change in code that is tree-shaken.
+
+That does not weaken the Step 6 conclusion — a pure move of unreachable code
+changes nothing by definition — but it does mean **"bundle hash unchanged" is
+not a general substitute for a behavioural check**, for a second reason beyond
+the one already recorded. The first was that Step 8 changes source bytes on
+purpose. The second is that some source has no representation in the output at
+all.
+
+## What replaced the pixel harness
+
+Two gates, built 2026-08-25, in place of repairing the screenshot comparison.
+The reasoning is in 15-devsecops-and-ci-cd.md; the sequencing is in
+`../PQMS_docs/steps-for-new-repo.md` Step 8.
+
+| Gate | What it asserts | Cross-machine? |
+|---|---|---|
+| `scripts/check-token-equivalence.mjs` | a proposed `'<literal>' → var(--token)` substitution preserves the value **exactly**, per the manifest | **Yes** — it reads two strings, no rendering at all |
+| `scripts/style-gate.mjs` (styles half) | every whitelisted computed style is unchanged, per element, per route | **Yes** — every whitelisted property resolves without consulting layout |
+| `scripts/style-gate.mjs` (geometry half) | rounded `getBoundingClientRect()` is unchanged | **No — same-machine only.** Diffed separately so a machine change degrades it to a warning |
+
+`.style-baseline/` (6 routes, 1,441 elements) replaces `.fidelity/`. It is
+regenerable in seconds by anyone, from `--write`, which is precisely the property
+the deleted baselines lacked.

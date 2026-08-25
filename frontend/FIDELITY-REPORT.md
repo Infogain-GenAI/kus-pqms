@@ -1,6 +1,6 @@
 # UI Fidelity Report — app vs UX prototype (`PQMS_SE.html`)
 
-**Date:** 2026-08-22 · **Method:** Playwright screenshot loop (`scripts/fidelity-capture.mjs`, 1280×900) — prototype (`ux/design-source/exports/pqms-bundled-page-2026-08-16/PQMS_SE.html`, navigated via its own UI) vs the app (`vite preview`), compared screen-by-screen, fixed, re-captured. Captures in `.fidelity/` (gitignored).
+**Date:** 2026-08-22 · **Method:** Playwright screenshot loop (`scripts/fidelity-capture.mjs`, 1280×900) — prototype (`ux/design-source/exports/pqms-bundled-page-2026-08-16/PQMS_SE.html`, navigated via its own UI) vs the app (`vite preview`), compared screen-by-screen, fixed, re-captured. Captures in `.fidelity/` (NOT gitignored — all 91 are tracked; see 18-project-context-and-implementation-status.md for why they are not usable as a gate).
 
 ## Verdict
 **Aligned.** After two iterations every in-scope screen mirrors the prototype's layout, structure and density. Remaining deltas are the **documented carve-outs** below (tokens-canonical rule + scope exclusions), not misalignments.

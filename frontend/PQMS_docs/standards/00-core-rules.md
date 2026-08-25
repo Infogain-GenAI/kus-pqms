@@ -9,6 +9,65 @@ before any Tier 1 or Tier 2 file. If anything in a Tier 1/2 file conflicts
 with this file, this file wins. If two Tier 1/2 files conflict with each
 other, stop and flag it to Yogesh — do not guess which one is correct.
 
+## ⚠️ READ THIS FIRST — this corpus was authored for a different repository
+
+**These standards were written for a React portal that does not exist yet, and
+they are being reconciled against one that does.** Until every row of the table
+below is dispositioned, **"Confirmed stack" below is not confirmed** — it is a
+target inherited from another project.
+
+That matters more here than anywhere else in the corpus, because this is Tier 0
+and this file wins every tie. A stack list that is aspirational but *labelled*
+confirmed will silently outrank the repository on every question it touches.
+**This file already records that exact failure happening to its own `ES2020`
+value**, where two Tier 1 files were right and Tier 0's stale value won.
+
+### The divergence table
+
+| Corpus asserts | Reality here | Disposition |
+|---|---|---|
+| React 19+, React Router v8, Vite 7+ | React **18.3**, `react-router-dom` **6.30**, Vite **5.4** | **architect decision required** |
+| Tailwind CSS with a `@theme` block | **none** — inline style objects + CSS custom properties | **architect decision required** |
+| Vitest + React Testing Library; coverage 90/90/90/80 | **no test framework at all** — 0 tests, no runner, no coverage | **repo is behind and will adopt** |
+| TanStack Query + Zustand | **no state library** — one React context over a seed array | **architect decision required** |
+| Node 24 pinned via `.nvmrc` | no `.nvmrc`; Node 24.19.0 in use, unpinned | **repo is behind and will adopt** |
+| Turborepo | **not used** — pnpm workspaces only | **architect decision required** |
+
+**Why each disposition, stated so it can be argued with:**
+
+- **React/Router/Vite versions — architect decision.** Not simply "behind":
+  React Router v8 removes the `react-router-dom` package entirely, so this is a
+  breaking migration against a codebase whose acceptance test is
+  pixel-fidelity to a prototype. Whether to upgrade, and when, is a scheduling
+  and risk judgement nobody has made.
+- **Tailwind — architect decision.** The app styles with the design system's own
+  CSS custom properties, which ADR-0003 establishes as the token *value* source.
+  Adopting Tailwind means rewriting every component's styling with the fidelity
+  captures as the only check — and that check is currently broken (see 18).
+  There is a real argument on both sides and no decision on record.
+- **Testing — repo is behind.** There is no argument for zero tests, and 10 and
+  26 already own the target. The direction is settled; only sequencing is open.
+- **State libraries — architect decision.** Already tracked as open decision 2
+  in `../steps-for-new-repo.md`, owned by the architect, and blocked on a
+  backend existing at all.
+- **`.nvmrc` — repo is behind.** 15 requires an exact `major.minor.patch` pin;
+  the running version already satisfies the intended floor. Adding it is
+  mechanical.
+- **Turborepo — architect decision.** One app and two packages may not justify
+  it. Adopting or dropping it from the corpus is a deliberate choice, not an
+  oversight to correct.
+
+**The whole table is ONE open placeholder, not six.** Splitting it into separate
+per-row placeholders is what produced the current state: each row looks small
+on its own, and collectively they mean the corpus describes a different project.
+See 18-project-context-and-implementation-status.md's register — **owner:
+architect.**
+
+**Rows dispositioned "architect decision required" are NOT settled by this
+file's authority in the meantime.** Where such a row conflicts with the
+repository, follow the repository, record the conflict, and do not resolve it by
+citing Tier 0 — that is precisely what Tier 0 is currently wrong about.
+
 ## Path convention
 **Every path in these standards is relative to the pnpm workspace root** —
 the directory holding `pnpm-workspace.yaml`, `turbo.json` and
@@ -18,10 +77,21 @@ written:
 - `packages/ui-library`
 - `packages/design-tokens`
 
-**In this repository the workspace root is `pqms-portal/`**, one level
-below the git root, because the monorepo will eventually also contain
-backend code. So `apps/portal/vite.config.ts` here resolves to
-`pqms-portal/apps/portal/vite.config.ts` on disk.
+**CORRECTED 2026-08-25 — in this repository the workspace root is
+`frontend/`**, one level below the git root. So `apps/portal/vite.config.ts`
+resolves to `frontend/apps/portal/vite.config.ts` on disk.
+
+An earlier revision said `pqms-portal/`. That was the *prior* repository's
+directory name, carried forward without being re-derived — the same provenance
+defect ADR-0002 records against this file's Prettier values. There is no
+`pqms-portal/` directory anywhere in this repository.
+
+Two further details of the real root, because the rule above names files that
+do not all exist here: `frontend/` holds `pnpm-workspace.yaml` and
+`tsconfig.base.json`, and **there is no `turbo.json`** — Turborepo is not used
+(see the divergence table below). The three packages named above are real as of
+the Phase 2 split: `apps/portal`, `packages/ui-library`, `packages/design-tokens`.
+18-project-context-and-implementation-status.md records the structure.
 
 **Two places where the git-root prefix must be written out, because the
 tool reads from the git root and not from the workspace root:**
@@ -50,6 +120,13 @@ Where a path could be read as either, say which root it is relative to.
 That is cheaper than a prefix nobody applies consistently.
 
 ## Confirmed stack (do not deviate without explicit sign-off)
+
+> ⚠️ **Six entries in this list are not confirmed for this repository.** See the
+> divergence table at the top of this file before treating any of the following
+> as settled: the React/Router/Vite versions, Tailwind, the test stack, the state
+> libraries, `.nvmrc`, and Turborepo. The rest of the list — icons, i18n library,
+> auth protocol, the ESLint-flat-config-only rule, the Redux prohibition — is
+> unaffected and stands.
 - Monorepo tooling: Turborepo + pnpm
 - Target framework: React 19+ (migrating from Vue 3 — migration in
   progress, not yet scaffolded as of this writing)
@@ -572,7 +649,7 @@ KUS-PQMS/
 ├─ _bmad/ _bmad-output/   BMAD harness — NOT MoAI-ADK
 ├─ .claude/
 ├─ .githooks/             plain git hooks via core.hooksPath — NOT Husky, NOT Lefthook
-├─ automation/ backend/ frontend/ infrastructure/    git submodules
+├─ automation/ backend/ frontend/ infrastructure/    ORDINARY DIRECTORIES
 ├─ docs/ issues/ scripts/
 ├─ .gitattributes         already present
 └─ .gitignore  README.md
@@ -583,16 +660,42 @@ KUS-PQMS/
 | 2 | Lefthook | **`.githooks/`** — plain hooks, `core.hooksPath` | 23's Lefthook section is superseded in turn |
 | 8 | MoAI-ADK, `/moai plan\|run\|sync` | **BMAD** — PRD → architecture → epics/stories → story → dev-story → code-review | 32 is rewritten for BMAD |
 | — | `.gitlab-ci.yml` at root | **no CI configuration at the root at all** | 15's platform is unresolved — see below |
-| — | one repository | **four git submodules** | 33 gains a submodule section |
+| — | ~~one repository~~ | ~~**four git submodules**~~ | **WITHDRAWN — see below. This row was wrong; it IS one repository** |
 
 **Corrections 1, 3, 4, 5, 6 and 7 are unaffected** — they came from
 `frontend/package.json` and `STACK.md`-class facts, not from the harness or
 hook tooling.
 
-### The lesson, and it is the same one twice
+### WITHDRAWN 2026-08-25 — the submodule row above was wrong
+
+**`backend/`, `frontend/`, `automation/` and `infrastructure/` are NOT git
+submodules. They are four ordinary directories in one git repository.**
+
+Measured, not read: `git submodule status` is empty, there is no `.gitmodules`,
+no `frontend/.git` exists, and the index contains no gitlink (mode `160000`)
+entries. `RESTRUCTURE-BASELINE.md` carries the commands and their output.
+
+**33-polyglot-monorepo-integration.md owns the full withdrawal** — what it
+changes back, and the one thing that gets *worse* rather than better. Not
+restated here; read it there.
+
+The single consequence that belongs in Tier 0, because it changes a rule rather
+than a fact: **the component boundary is real but is not enforced by git.** In
+one repository a glob that escapes its directory reaches every other component
+immediately. The boundary is upheld by review and by each tool's own path
+scoping, and by nothing structural.
+
+**This correction is recorded here rather than only in 33 because of the
+precedence rule this file already states about itself**: *"A stale value in
+Tier 0 outranks every file that has it right."* 33 was corrected first, and
+leaving the same falsehood in Tier 0 would have meant the wrong claim winning
+every tie — the exact failure this file records against its own `ES2020` value.
+
+### The lesson, and it is the same one three times now
 The template documentation described a *template*, not this repository. The
 prior audit made the same class of error in the other direction — assuming the
-prior team's written guidelines described their code.
+prior team's written guidelines described their code. **And the submodule claim
+above was asserted about a repository nobody had run one command against.**
 
 **`00`'s source precedence needs one more line: a document about a repository
 ranks below the repository.** Read the tree before trusting the description of
@@ -601,7 +704,7 @@ the tree, every time. Both errors cost a full revision.
 ### Three things now unresolved rather than resolved
 
 - **[PLACEHOLDER — the CI platform.** No `.gitlab-ci.yml`, no
-  `.github/workflows/` at the root. Either CI lives inside each submodule, or it
+  `.github/workflows/` at the root, and none inside any component directory. Either it
   is not stood up yet. 15-devsecops-and-ci-cd.md currently carries a GitHub
   Actions body and a superseding GitLab section, and **neither is confirmed.**
   **Trigger:** Phase 0 baseline. **Owner:** Frontend Lead.]**
@@ -641,5 +744,5 @@ fixing it now is far cheaper than after the formatting baseline.
 
 **`commit-msg.rules` is per-component**, and each component's differs. That is
 not Conventional Commits enforced by `commitlint` — it is a bespoke convention
-per submodule. 23-git-workflow-hooks-and-commits.md treats the frontend's file
-as authoritative for the frontend and reaches into no other.
+per component directory. 23-git-workflow-hooks-and-commits.md treats the
+frontend's file as authoritative for the frontend and reaches into no other.

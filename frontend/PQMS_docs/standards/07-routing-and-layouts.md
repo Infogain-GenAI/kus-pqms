@@ -247,6 +247,38 @@ Root (pathless root route)
     /*  (catch-all)                  → NotFoundPage                [EB]
 ```
 
+### Divergence — the N-PQMS ISM port's actual routes, 2026-08-25
+
+The tree above is the target. **The shipped application differs, and the
+differences are deliberate rather than drift.** Recorded so the gap is visible;
+**no route was changed to match this file**, because route paths are behavioural
+and scope is governed elsewhere.
+
+| This file specifies | The application has | Why |
+|---|---|---|
+| `/overview` | `/dashboard` | naming only; same screen |
+| `/issue-management`, `/issue-management/:id`, `/issue-management/new` | `/issues`, `/issues/:id`, `/issues/new` | naming only; same three screens, same shapes |
+| `/issues` → redirect to `/issue-management` | *(no redirect — `/issues` is canonical here)* | the back-compat alias is inverted, so it is unnecessary |
+| `/qir` → `QirManagementPage` | **no route** — nav item rendered and disabled | **out of scope**, per `frontend/README.md` |
+| `/tsb` → `TsbManagementPage` | **no route** — nav item rendered and disabled | **out of scope**, per `frontend/README.md` |
+| `AdminLayout` with no children | `/admin` under the single layout route | one layout exists, not four |
+| `/notifications` | `/notifications` | ✅ matches |
+| `/` → redirect, `/*` → catch-all | both present | ✅ matches |
+
+**QIR and TSB are the substantive rows, and they are not omissions.** The
+README's guardrails name them explicitly as out of scope alongside issue
+scoring/severity, EWS/GQIS ingestion and cross-org sharing. The prototype shows
+the nav items, so the port renders them **disabled** — which is fidelity to the
+design, not an unfinished route. **The README governs scope; this file governs
+route shape.** Where they meet, scope wins, and a route this corpus names does
+not become in-scope by being named here.
+
+**The naming rows are cosmetic and are not worth a rename.** `/issues` versus
+`/issue-management` changes every link, every `useNavigate` call and every
+bookmark, in a port whose acceptance test is pixel-fidelity — for no behavioural
+gain. If the names are ever unified, that is a deliberate migration with the
+back-compat redirect this file already specifies, not a tidy-up.
+
 `AdminLayout` appears in the tree with no children rather than being
 omitted, because leaving it out would force whoever adds the first
 admin screen to infer where it goes — and the likely wrong guess is
@@ -583,6 +615,40 @@ rendered anywhere, including in Storybook, without a router.
 Provenance: `kus-pqms` used exactly this split — one thin host component
 per route target in `pages/`, real screens under
 `components/<Module>/<Feature>/`.
+
+### The precondition — hosts alone do not deliver the benefit
+
+**The split delivers its stated benefit only in combination with a
+callback-props refactor. Adopt both, or neither. Adding hosts alone is
+ceremony.**
+
+The justification above is *testable*: "the feature component can be rendered
+anywhere, without a router." A host does not by itself make that true. If the
+screen still calls `useNavigate` for its own in-screen actions — a row click, an
+"Open" button, a post-submit redirect — **it still depends on the router, and the
+host has bought nothing.** Making it true means lifting those calls into the host
+and passing them down as callback props (`onSelectIssue`, `onCreated`), which is
+a **content refactor of every screen**, not a folder move.
+
+So the check before applying this convention is not "do we have `pages/`" but:
+**would the screens actually be router-free afterwards, and is there a consumer
+that benefits?** A test suite, Storybook, or a second embedding all count. If
+none exists, the split is structure signalling a property the code does not have
+— and that is worse than its absence, because the next reader sees `pages/` and
+assumes the decoupling is done.
+
+**Worked counter-example — the N-PQMS ISM port** (see
+`decisions/0005-no-page-host-layer-in-this-application.md`). Seven routes, no
+nested sub-routes, one layout route. **One** `useParams` in the whole
+application; both redirects already in the route table where this file wants
+them. But **six of seven screens call `useNavigate`**, and there is no Storybook,
+no test suite and no second consumer. Seven host files would have delivered
+nothing, so the convention is deferred there rather than applied.
+
+**Scale is the variable, and it is worth naming.** This convention's provenance
+is `kus-pqms`, a **124-SFC** application. That is the size at which route-concern
+leakage is a real cost and the indirection pays for itself. At seven routes it is
+overhead. The rule is not wrong; it had an unstated floor.
 
 ## Route metadata is typed, and the type is closed
 The prior repository does this and it is the single most valuable routing

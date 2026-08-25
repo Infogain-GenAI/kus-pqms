@@ -574,7 +574,16 @@ are the easy half.
 >   which makes this the strongest proof available that nothing changed
 > - the adherence count is unchanged and non-zero
 > - `tokens:check` passes
-> - test count identical
+> - ~~test count identical~~ — **VACUOUS. There are no tests.** Zero test files,
+>   no runner, no coverage. This criterion is satisfied by 0 = 0 and proves
+>   nothing; it passed for the actual split without exercising one line of code.
+
+⚠️ **A structural move here is riskier than the acceptance list above implies.**
+That list assumes two instruments, and **this project has neither**: a
+characterization test suite (none exists) and byte-identical fidelity captures
+(the harness does not run — see Step 8). What actually carried the split was
+**unchanged bundle hashes**, which is a narrower guarantee than either and works
+only because a pure move should not change output bytes at all.
 
 **Done when:** three packages exist, and the gate count is the same number it
 was before.
@@ -595,6 +604,78 @@ byte-identical.
 ---
 
 ## Step 8 — Token conversion (Phase 3.1)
+
+> 🔴 **PREREQUISITE — the static token check plus the computed-style gate.**
+> **Not the fidelity harness. A pixel gate's necessary tolerance exceeds the
+> signal it exists to detect.**
+>
+> Measured: environment drift between the machine that captured the baselines and
+> the current one was 0.66–2.1% of pixels on screens whose source never changed,
+> while a genuine source change showed 4.6%. A tolerance loose enough to pass the
+> noise also passes the regression. See 15-devsecops-and-ci-cd.md.
+>
+> The two gates that replace it:
+>
+> | Gate | Asserts | Covers |
+> |---|---|---|
+> | `scripts/check-token-equivalence.mjs` | the token's manifest value **equals** the literal it replaces | **tranche 1** — statically, no browser |
+> | `scripts/style-gate.mjs` | every whitelisted computed style unchanged, per element per route | **tranche 2** — and tranche 1 as a second check |
+>
+> **Step 8 therefore splits into two tranches, and the first needs no rendering
+> at all.** Run `node scripts/check-token-equivalence.mjs` for the current split.
+>
+> ---
+>
+> **The harness repair is sequenced AFTER Step 8**, and it has two preconditions
+> that must land first, because "byte-identical" is not a property it could
+> demonstrate without them:
+>
+> 1. **Self-host Inter.** `index.html` loads it from Google Fonts, so text
+>    metrics — and therefore every layout — depend on a network fetch succeeding
+>    and on which Inter revision is served.
+> 2. **Pin `timezoneId`** in the Playwright context. Dates are currently rendered
+>    with local-time getters over UTC anchors (see 18's application-defect
+>    register), so the same seed row renders a different date in IST and US-East.
+>    A capture taken in one zone can never match one taken in another.
+>
+> Until both hold, a perfect pixel comparison would still fail for reasons that
+> have nothing to do with the code under test.
+>
+> The four harness defects remain, recorded for whoever picks it up:
+>
+> **It is the only behavioural test this project has**, and it does not run.
+> Three verified defects plus one that is worse than all of them:
+>
+> 1. `PROTO_URL` is hardcoded to `file:///D:/...` — **no `D:` drive exists.**
+>    The prototype is present locally under `_bmad-output/`.
+> 2. `playwright@1.62.1` needs chromium revision **1234**; the cache has
+>    **1228**. `chromium.launch()` fails. Needs `npx playwright install`.
+> 3. `APP_URL` uses `127.0.0.1`, and `vite preview` binds **`[::1]` only** here.
+>    Every app-side capture fails.
+> 4. **The harness has no verdict at all** — no comparison, no assertion, and
+>    each screen is wrapped in `try/catch` that prints `✗` and **still exits 0**.
+>    A CI job calling it goes green with every capture missing.
+>
+> **Why the Step 6 substitute does not carry over.** The workspace split was
+> accepted on **unchanged bundle hashes** — legitimate there, because a pure move
+> should not change output bytes, so identical hashes proved identical rendering.
+>
+> **Step 8 inverts that.** Converting `padding: '20px'` to
+> `padding: 'var(--space-5)'` **changes source bytes on purpose**, so the bundle
+> hash MUST change while the pixels must not. The hash carries no information
+> about the only property that matters. **This is exactly and only the case a
+> screenshot comparison can check**, and it is the step where every conversion is
+> a chance to move a pixel.
+>
+> Repair means four things: install the browsers, make `PROTO_URL` relative, use
+> `localhost` (or bind preview to `0.0.0.0`), and **add a real comparison that
+> exits non-zero**. Then demonstrate the captures are reproducible across two
+> consecutive runs *before* trusting "byte-identical" as a gate — fixed
+> `waitForTimeout`s, `networkidle` and font rasterisation are all noise sources,
+> and determinism was never verified because the harness never ran.
+>
+> Tracked with an owner in
+> `standards/18-project-context-and-implementation-status.md`.
 
 Decision 1 is settled — the vendored system is the value source — so this is
 execution, not deliberation.

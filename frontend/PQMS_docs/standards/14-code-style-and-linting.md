@@ -9,6 +9,36 @@ ESLint, Prettier, export conventions, barrel-file patterns, and naming
 conventions for this React app.
 
 ## ESLint: flat config only
+
+> ⚠️ **NEITHER OF THE TWO FACTS BELOW IS TRUE OF THIS REPOSITORY, and they were
+> never derived from it.** Same provenance defect as this file's Prettier values,
+> withdrawn in `decisions/0002-prettier-configuration-follows-the-repository.md`:
+> lifted from `kus-pqms` — the prior **Vue** repository — and given a provenance
+> line that made them read as checked.
+>
+> | This file said | Reality, measured 2026-08-25 |
+> |---|---|
+> | `eslint.config.js` at the workspace root | **No such file.** The only ESLint config is `eslint.adherence.config.mjs`, which runs the vendored design-system ruleset |
+> | ESLint `^10.7.0` or later | **9.39.5** |
+> | The five-position composition chain | **Does not exist.** No `js.configs.recommended`, no `tseslint`, no `eslint-plugin-react-hooks`, no `eslint-plugin-jsx-a11y`, no `eslint-config-prettier` — none are dependencies |
+>
+> **The flat-config rule itself stands**, and so does "never create or reference
+> `.eslintrc.*`": the one config that exists *is* flat config. What is withdrawn
+> is the claim that the file, the version and the chain are present.
+>
+> **This is a real gap, not a documentation error.** There is no general-purpose
+> lint here at all — no `no-unused-vars`, no rules-of-hooks, no accessibility
+> rules. `tsc --noEmit` covers types and unused locals; nothing covers the rest.
+> The a11y half is the sharpest edge, because 11-accessibility-standards.md's
+> severities describe a plugin that is not installed.
+>
+> **Adopting the chain is not a documentation fix.** It would raise findings
+> across a codebase whose acceptance test is pixel-fidelity to a prototype, so it
+> arrives with 30-restructuring-an-existing-react-project.md's Phase 1 mechanism
+> — baseline the count, ratchet it down — exactly like the adherence gates.
+> Tracked as an open placeholder in
+> 18-project-context-and-implementation-status.md. **Owner: Frontend Lead.**
+
 One config: `eslint.config.js` at the workspace root, ESLint `^10.7.0` or
 later.
 **Never create or reference `.eslintrc.*`** — this repo is flat-config

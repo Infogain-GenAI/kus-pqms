@@ -20,8 +20,33 @@ const APP_URL = 'http://127.0.0.1:5173'
 
 // The SE prototype's admin screen is unreachable through its own nav; regenerate a copy
 // whose constructor boots straight into screen:'admin' (the only change).
+//
+// ⚠️ THIS WRITES INTO A TRACKED DIRECTORY, AND IT HAS TO.
+// EXPORT_DIR is `_bmad-output/planning-artifacts/ux/design-source/exports/...`, which
+// is tracked and belongs to the UX design source — another component's artefact.
+// 33-polyglot-monorepo-integration.md's boundary rule says not to write there.
+//
+// A temp directory is NOT an option: the `.dc.html` resolves its own runtime
+// (`support.js`, `_ds/`) by RELATIVE path and is served over :8123 from EXPORT_DIR,
+// so a copy anywhere else loads a blank page. The boot copy must sit beside its
+// assets. This was tried and reverted rather than left as a plausible-looking fix.
+//
+// ⚠️ AND IT ALREADY HAPPENED. `_boot-admin.dc.html` is not a hypothetical future
+// commit — it was committed in `fa25e69` and is tracked today. **`.gitignore` does
+// not affect an already-tracked file**, so the entry added alongside this comment
+// prevents a recurrence and does NOT untrack the existing one. Closing it fully
+// needs `git rm --cached` on that path, which is a deliberate staged change and is
+// left for whoever picks this up.
+//
+// What is closed here:
+//   1. `.gitignore` carries `_boot-admin.dc.html`, so a fresh generation on any
+//      other checkout cannot be swept in by `git add -A`.
+//   2. The `existsSync` guard is removed. It also caused a subtler bug: a
+//      re-vendored prototype would keep serving a STALE boot copy, silently
+//      comparing the app against the previous design revision — which, given the
+//      file is tracked, is exactly what would happen on every clone today.
 const bootAdmin = resolve(EXPORT_DIR, '_boot-admin.dc.html')
-if (!existsSync(bootAdmin)) {
+{
   const src = readFileSync(resolve(EXPORT_DIR, 'ISM + QIR SE Role - P-C.dc.html'), 'utf8')
   writeFileSync(bootAdmin, src.replace("screen: props.startScreen || 'home',", "screen: 'admin',"))
 }

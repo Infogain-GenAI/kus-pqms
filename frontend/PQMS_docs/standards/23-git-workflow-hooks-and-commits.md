@@ -228,7 +228,7 @@ being solved are properties of the repository:
 
 | Problem | Still true? |
 |---|---|
-| One `core.hooksPath` for a multi-component repo | **yes** — four submodules share it |
+| One `core.hooksPath` for a multi-component repo | **yes** — all four component directories share it. (An earlier revision said "four submodules". They are ordinary directories in ONE repository — 33-polyglot-monorepo-integration.md owns the withdrawal.) |
 | `commit-msg`'s argument is relative to the git root | **yes** — resolve to absolute before any `cd` |
 | A push range that cannot be resolved must **fail open** | **yes** |
 | Staged-file scoping | **yes**, and now hand-written rather than provided |
@@ -257,10 +257,36 @@ Husky and Lefthook both provide staged-file filtering. A raw hook does not, so
    enabled is a directory of inert files.
 2. **The scripts are executable** (`git update-index --chmod=+x`). A
    non-executable hook is skipped silently on Unix.
-3. **Submodule behaviour.** `core.hooksPath` is per-repository, and a submodule
-   has its own `.git` file. **Whether a commit made inside `frontend/` fires
-   the root hooks is a question to test, not assume** — and if it does not, the
-   frontend has no local gate at all and everything falls to CI.
+3. **ANSWERED 2026-08-25 — a commit inside `frontend/` DOES fire the root
+   hooks.** An earlier revision called this "a question to test, not assume", on
+   the premise that `frontend/` was a submodule with its own `.git`. **It is
+   not** (33-polyglot-monorepo-integration.md owns that withdrawal), so there is
+   one repository, one `core.hooksPath`, and one set of hooks.
+
+   Tested rather than reasoned: a file staged in `frontend/` with a deliberately
+   invalid commit message was **rejected** — the root router ran
+   `frontend/scripts/pre-commit.sh` and validated the message against
+   `frontend/commit-msg.rules`. Because a working hook *blocks*, the test left
+   nothing behind.
+
+   **The live risk is item 1 above, not this one.** `core.hooksPath` still does
+   not clone, and with no CI anywhere an unbootstrapped clone has **zero**
+   enforcement of any kind.
+
+   **A bootstrap now exists:** `frontend/scripts/setup-hooks.mjs`, wired as a
+   `prepare` script so `pnpm install` runs it, with `pnpm run hooks:check` to
+   verify and a documented one-liner in `frontend/README.md` for anyone who has
+   not installed. It is idempotent, verifies hook executability from the **index**
+   mode (`100755` — the working-tree bit is meaningless where `core.filemode` is
+   false), and refuses to overwrite a `core.hooksPath` already set to something
+   else.
+
+   **It does not fully close, and the residue is repository-level.**
+   `core.hooksPath` is a single value for the whole repository, so a bootstrap
+   living in `frontend/` reaches only people who install there — someone working
+   solely in `backend/` still gets nothing. Closing that needs a root-level
+   mechanism, which is the repo owner's to choose. Tracked as an open placeholder
+   in 18-project-context-and-implementation-status.md.
 
 ### `commit-msg.rules` — per component, and that is deliberate
 

@@ -85,6 +85,65 @@ before any Tier 1 or Tier 2 file. If anything in a Tier 1/2 file conflicts
 with this file, this file wins. If two Tier 1/2 files conflict with each
 other, stop and flag it to Yogesh — do not guess which one is correct.
 
+### ⚠️ READ THIS FIRST — this corpus was authored for a different repository
+
+**These standards were written for a React portal that does not exist yet, and
+they are being reconciled against one that does.** Until every row of the table
+below is dispositioned, **"Confirmed stack" below is not confirmed** — it is a
+target inherited from another project.
+
+That matters more here than anywhere else in the corpus, because this is Tier 0
+and this file wins every tie. A stack list that is aspirational but *labelled*
+confirmed will silently outrank the repository on every question it touches.
+**This file already records that exact failure happening to its own `ES2020`
+value**, where two Tier 1 files were right and Tier 0's stale value won.
+
+#### The divergence table
+
+| Corpus asserts | Reality here | Disposition |
+|---|---|---|
+| React 19+, React Router v8, Vite 7+ | React **18.3**, `react-router-dom` **6.30**, Vite **5.4** | **architect decision required** |
+| Tailwind CSS with a `@theme` block | **none** — inline style objects + CSS custom properties | **architect decision required** |
+| Vitest + React Testing Library; coverage 90/90/90/80 | **no test framework at all** — 0 tests, no runner, no coverage | **repo is behind and will adopt** |
+| TanStack Query + Zustand | **no state library** — one React context over a seed array | **architect decision required** |
+| Node 24 pinned via `.nvmrc` | no `.nvmrc`; Node 24.19.0 in use, unpinned | **repo is behind and will adopt** |
+| Turborepo | **not used** — pnpm workspaces only | **architect decision required** |
+
+**Why each disposition, stated so it can be argued with:**
+
+- **React/Router/Vite versions — architect decision.** Not simply "behind":
+  React Router v8 removes the `react-router-dom` package entirely, so this is a
+  breaking migration against a codebase whose acceptance test is
+  pixel-fidelity to a prototype. Whether to upgrade, and when, is a scheduling
+  and risk judgement nobody has made.
+- **Tailwind — architect decision.** The app styles with the design system's own
+  CSS custom properties, which ADR-0003 establishes as the token *value* source.
+  Adopting Tailwind means rewriting every component's styling with the fidelity
+  captures as the only check — and that check is currently broken (see 18).
+  There is a real argument on both sides and no decision on record.
+- **Testing — repo is behind.** There is no argument for zero tests, and 10 and
+  26 already own the target. The direction is settled; only sequencing is open.
+- **State libraries — architect decision.** Already tracked as open decision 2
+  in `../steps-for-new-repo.md`, owned by the architect, and blocked on a
+  backend existing at all.
+- **`.nvmrc` — repo is behind.** 15 requires an exact `major.minor.patch` pin;
+  the running version already satisfies the intended floor. Adding it is
+  mechanical.
+- **Turborepo — architect decision.** One app and two packages may not justify
+  it. Adopting or dropping it from the corpus is a deliberate choice, not an
+  oversight to correct.
+
+**The whole table is ONE open placeholder, not six.** Splitting it into separate
+per-row placeholders is what produced the current state: each row looks small
+on its own, and collectively they mean the corpus describes a different project.
+See 18-project-context-and-implementation-status.md's register — **owner:
+architect.**
+
+**Rows dispositioned "architect decision required" are NOT settled by this
+file's authority in the meantime.** Where such a row conflicts with the
+repository, follow the repository, record the conflict, and do not resolve it by
+citing Tier 0 — that is precisely what Tier 0 is currently wrong about.
+
 ### Path convention
 **Every path in these standards is relative to the pnpm workspace root** —
 the directory holding `pnpm-workspace.yaml`, `turbo.json` and
@@ -94,10 +153,21 @@ written:
 - `packages/ui-library`
 - `packages/design-tokens`
 
-**In this repository the workspace root is `pqms-portal/`**, one level
-below the git root, because the monorepo will eventually also contain
-backend code. So `apps/portal/vite.config.ts` here resolves to
-`pqms-portal/apps/portal/vite.config.ts` on disk.
+**CORRECTED 2026-08-25 — in this repository the workspace root is
+`frontend/`**, one level below the git root. So `apps/portal/vite.config.ts`
+resolves to `frontend/apps/portal/vite.config.ts` on disk.
+
+An earlier revision said `pqms-portal/`. That was the *prior* repository's
+directory name, carried forward without being re-derived — the same provenance
+defect ADR-0002 records against this file's Prettier values. There is no
+`pqms-portal/` directory anywhere in this repository.
+
+Two further details of the real root, because the rule above names files that
+do not all exist here: `frontend/` holds `pnpm-workspace.yaml` and
+`tsconfig.base.json`, and **there is no `turbo.json`** — Turborepo is not used
+(see the divergence table below). The three packages named above are real as of
+the Phase 2 split: `apps/portal`, `packages/ui-library`, `packages/design-tokens`.
+18-project-context-and-implementation-status.md records the structure.
 
 **Two places where the git-root prefix must be written out, because the
 tool reads from the git root and not from the workspace root:**
@@ -126,6 +196,13 @@ Where a path could be read as either, say which root it is relative to.
 That is cheaper than a prefix nobody applies consistently.
 
 ### Confirmed stack (do not deviate without explicit sign-off)
+
+> ⚠️ **Six entries in this list are not confirmed for this repository.** See the
+> divergence table at the top of this file before treating any of the following
+> as settled: the React/Router/Vite versions, Tailwind, the test stack, the state
+> libraries, `.nvmrc`, and Turborepo. The rest of the list — icons, i18n library,
+> auth protocol, the ESLint-flat-config-only rule, the Redux prohibition — is
+> unaffected and stands.
 - Monorepo tooling: Turborepo + pnpm
 - Target framework: React 19+ (migrating from Vue 3 — migration in
   progress, not yet scaffolded as of this writing)
@@ -648,7 +725,7 @@ KUS-PQMS/
 ├─ _bmad/ _bmad-output/   BMAD harness — NOT MoAI-ADK
 ├─ .claude/
 ├─ .githooks/             plain git hooks via core.hooksPath — NOT Husky, NOT Lefthook
-├─ automation/ backend/ frontend/ infrastructure/    git submodules
+├─ automation/ backend/ frontend/ infrastructure/    ORDINARY DIRECTORIES
 ├─ docs/ issues/ scripts/
 ├─ .gitattributes         already present
 └─ .gitignore  README.md
@@ -659,16 +736,42 @@ KUS-PQMS/
 | 2 | Lefthook | **`.githooks/`** — plain hooks, `core.hooksPath` | 23's Lefthook section is superseded in turn |
 | 8 | MoAI-ADK, `/moai plan\|run\|sync` | **BMAD** — PRD → architecture → epics/stories → story → dev-story → code-review | 32 is rewritten for BMAD |
 | — | `.gitlab-ci.yml` at root | **no CI configuration at the root at all** | 15's platform is unresolved — see below |
-| — | one repository | **four git submodules** | 33 gains a submodule section |
+| — | ~~one repository~~ | ~~**four git submodules**~~ | **WITHDRAWN — see below. This row was wrong; it IS one repository** |
 
 **Corrections 1, 3, 4, 5, 6 and 7 are unaffected** — they came from
 `frontend/package.json` and `STACK.md`-class facts, not from the harness or
 hook tooling.
 
-#### The lesson, and it is the same one twice
+#### WITHDRAWN 2026-08-25 — the submodule row above was wrong
+
+**`backend/`, `frontend/`, `automation/` and `infrastructure/` are NOT git
+submodules. They are four ordinary directories in one git repository.**
+
+Measured, not read: `git submodule status` is empty, there is no `.gitmodules`,
+no `frontend/.git` exists, and the index contains no gitlink (mode `160000`)
+entries. `RESTRUCTURE-BASELINE.md` carries the commands and their output.
+
+**33-polyglot-monorepo-integration.md owns the full withdrawal** — what it
+changes back, and the one thing that gets *worse* rather than better. Not
+restated here; read it there.
+
+The single consequence that belongs in Tier 0, because it changes a rule rather
+than a fact: **the component boundary is real but is not enforced by git.** In
+one repository a glob that escapes its directory reaches every other component
+immediately. The boundary is upheld by review and by each tool's own path
+scoping, and by nothing structural.
+
+**This correction is recorded here rather than only in 33 because of the
+precedence rule this file already states about itself**: *"A stale value in
+Tier 0 outranks every file that has it right."* 33 was corrected first, and
+leaving the same falsehood in Tier 0 would have meant the wrong claim winning
+every tie — the exact failure this file records against its own `ES2020` value.
+
+#### The lesson, and it is the same one three times now
 The template documentation described a *template*, not this repository. The
 prior audit made the same class of error in the other direction — assuming the
-prior team's written guidelines described their code.
+prior team's written guidelines described their code. **And the submodule claim
+above was asserted about a repository nobody had run one command against.**
 
 **`00`'s source precedence needs one more line: a document about a repository
 ranks below the repository.** Read the tree before trusting the description of
@@ -677,7 +780,7 @@ the tree, every time. Both errors cost a full revision.
 #### Three things now unresolved rather than resolved
 
 - **[PLACEHOLDER — the CI platform.** No `.gitlab-ci.yml`, no
-  `.github/workflows/` at the root. Either CI lives inside each submodule, or it
+  `.github/workflows/` at the root, and none inside any component directory. Either it
   is not stood up yet. 15-devsecops-and-ci-cd.md currently carries a GitHub
   Actions body and a superseding GitLab section, and **neither is confirmed.**
   **Trigger:** Phase 0 baseline. **Owner:** Frontend Lead.]**
@@ -717,8 +820,8 @@ fixing it now is far cheaper than after the formatting baseline.
 
 **`commit-msg.rules` is per-component**, and each component's differs. That is
 not Conventional Commits enforced by `commitlint` — it is a bespoke convention
-per submodule. 23-git-workflow-hooks-and-commits.md treats the frontend's file
-as authoritative for the frontend and reaches into no other.
+per component directory. 23-git-workflow-hooks-and-commits.md treats the
+frontend's file as authoritative for the frontend and reaches into no other.
 
 ---
 
@@ -3653,6 +3756,38 @@ Root (pathless root route)
     /*  (catch-all)                  → NotFoundPage                [EB]
 ```
 
+#### Divergence — the N-PQMS ISM port's actual routes, 2026-08-25
+
+The tree above is the target. **The shipped application differs, and the
+differences are deliberate rather than drift.** Recorded so the gap is visible;
+**no route was changed to match this file**, because route paths are behavioural
+and scope is governed elsewhere.
+
+| This file specifies | The application has | Why |
+|---|---|---|
+| `/overview` | `/dashboard` | naming only; same screen |
+| `/issue-management`, `/issue-management/:id`, `/issue-management/new` | `/issues`, `/issues/:id`, `/issues/new` | naming only; same three screens, same shapes |
+| `/issues` → redirect to `/issue-management` | *(no redirect — `/issues` is canonical here)* | the back-compat alias is inverted, so it is unnecessary |
+| `/qir` → `QirManagementPage` | **no route** — nav item rendered and disabled | **out of scope**, per `frontend/README.md` |
+| `/tsb` → `TsbManagementPage` | **no route** — nav item rendered and disabled | **out of scope**, per `frontend/README.md` |
+| `AdminLayout` with no children | `/admin` under the single layout route | one layout exists, not four |
+| `/notifications` | `/notifications` | ✅ matches |
+| `/` → redirect, `/*` → catch-all | both present | ✅ matches |
+
+**QIR and TSB are the substantive rows, and they are not omissions.** The
+README's guardrails name them explicitly as out of scope alongside issue
+scoring/severity, EWS/GQIS ingestion and cross-org sharing. The prototype shows
+the nav items, so the port renders them **disabled** — which is fidelity to the
+design, not an unfinished route. **The README governs scope; this file governs
+route shape.** Where they meet, scope wins, and a route this corpus names does
+not become in-scope by being named here.
+
+**The naming rows are cosmetic and are not worth a rename.** `/issues` versus
+`/issue-management` changes every link, every `useNavigate` call and every
+bookmark, in a port whose acceptance test is pixel-fidelity — for no behavioural
+gain. If the names are ever unified, that is a deliberate migration with the
+back-compat redirect this file already specifies, not a tidy-up.
+
 `AdminLayout` appears in the tree with no children rather than being
 omitted, because leaving it out would force whoever adds the first
 admin screen to infer where it goes — and the likely wrong guess is
@@ -3989,6 +4124,40 @@ rendered anywhere, including in Storybook, without a router.
 Provenance: `kus-pqms` used exactly this split — one thin host component
 per route target in `pages/`, real screens under
 `components/<Module>/<Feature>/`.
+
+#### The precondition — hosts alone do not deliver the benefit
+
+**The split delivers its stated benefit only in combination with a
+callback-props refactor. Adopt both, or neither. Adding hosts alone is
+ceremony.**
+
+The justification above is *testable*: "the feature component can be rendered
+anywhere, without a router." A host does not by itself make that true. If the
+screen still calls `useNavigate` for its own in-screen actions — a row click, an
+"Open" button, a post-submit redirect — **it still depends on the router, and the
+host has bought nothing.** Making it true means lifting those calls into the host
+and passing them down as callback props (`onSelectIssue`, `onCreated`), which is
+a **content refactor of every screen**, not a folder move.
+
+So the check before applying this convention is not "do we have `pages/`" but:
+**would the screens actually be router-free afterwards, and is there a consumer
+that benefits?** A test suite, Storybook, or a second embedding all count. If
+none exists, the split is structure signalling a property the code does not have
+— and that is worse than its absence, because the next reader sees `pages/` and
+assumes the decoupling is done.
+
+**Worked counter-example — the N-PQMS ISM port** (see
+`decisions/0005-no-page-host-layer-in-this-application.md`). Seven routes, no
+nested sub-routes, one layout route. **One** `useParams` in the whole
+application; both redirects already in the route table where this file wants
+them. But **six of seven screens call `useNavigate`**, and there is no Storybook,
+no test suite and no second consumer. Seven host files would have delivered
+nothing, so the convention is deferred there rather than applied.
+
+**Scale is the variable, and it is worth naming.** This convention's provenance
+is `kus-pqms`, a **124-SFC** application. That is the size at which route-concern
+leakage is a real cost and the indirection pays for itself. At seven routes it is
+overhead. The rule is not wrong; it had an unstated floor.
 
 ### Route metadata is typed, and the type is closed
 The prior repository does this and it is the single most valuable routing
@@ -6874,6 +7043,36 @@ ESLint, Prettier, export conventions, barrel-file patterns, and naming
 conventions for this React app.
 
 ### ESLint: flat config only
+
+> ⚠️ **NEITHER OF THE TWO FACTS BELOW IS TRUE OF THIS REPOSITORY, and they were
+> never derived from it.** Same provenance defect as this file's Prettier values,
+> withdrawn in `decisions/0002-prettier-configuration-follows-the-repository.md`:
+> lifted from `kus-pqms` — the prior **Vue** repository — and given a provenance
+> line that made them read as checked.
+>
+> | This file said | Reality, measured 2026-08-25 |
+> |---|---|
+> | `eslint.config.js` at the workspace root | **No such file.** The only ESLint config is `eslint.adherence.config.mjs`, which runs the vendored design-system ruleset |
+> | ESLint `^10.7.0` or later | **9.39.5** |
+> | The five-position composition chain | **Does not exist.** No `js.configs.recommended`, no `tseslint`, no `eslint-plugin-react-hooks`, no `eslint-plugin-jsx-a11y`, no `eslint-config-prettier` — none are dependencies |
+>
+> **The flat-config rule itself stands**, and so does "never create or reference
+> `.eslintrc.*`": the one config that exists *is* flat config. What is withdrawn
+> is the claim that the file, the version and the chain are present.
+>
+> **This is a real gap, not a documentation error.** There is no general-purpose
+> lint here at all — no `no-unused-vars`, no rules-of-hooks, no accessibility
+> rules. `tsc --noEmit` covers types and unused locals; nothing covers the rest.
+> The a11y half is the sharpest edge, because 11-accessibility-standards.md's
+> severities describe a plugin that is not installed.
+>
+> **Adopting the chain is not a documentation fix.** It would raise findings
+> across a codebase whose acceptance test is pixel-fidelity to a prototype, so it
+> arrives with 30-restructuring-an-existing-react-project.md's Phase 1 mechanism
+> — baseline the count, ratchet it down — exactly like the adherence gates.
+> Tracked as an open placeholder in
+> 18-project-context-and-implementation-status.md. **Owner: Frontend Lead.**
+
 One config: `eslint.config.js` at the workspace root, ESLint `^10.7.0` or
 later.
 **Never create or reference `.eslintrc.*`** — this repo is flat-config
@@ -7739,6 +7938,137 @@ Whether the Sonar check joins that list is the placeholder above.
 Nothing inside the repo can verify these settings, so if it matters,
 someone opens the settings page and checks — this file is the record of
 what they should find, not evidence that they will.
+
+### A gate whose "clean" is indistinguishable from its "dead" needs a positive control
+
+**The rule.** Any gate whose passing result looks identical to the result it
+gives when it has stopped checking anything **requires a positive control**: a
+deliberate violation fed to it, with the check **failing if the violation is not
+reported**.
+
+This applies to every allow-list, ignore-list and path-scoped check — lint
+globs, import restrictions, coverage path configuration, Sonar source roots,
+formatter ignore files, CSS scrape paths. All of them share the property that
+**a pattern matching nothing does not error; it reports zero.**
+
+#### The worked example, and why no count could have caught it
+
+`frontend/scripts/check-import-rule.mjs`. The design-system import restriction
+forbids reaching into component internals instead of the barrel. Its violation
+count was **0 before** the Phase 2 workspace split — because the codebase was
+clean.
+
+After the split, components moved from `src/components/**` to
+`packages/ui-library`, and every consumer specifier changed from
+`@/components/...` to `@pqms/ui-library`. **The rule's patterns matched nothing,
+so it would have reported 0 after the split too** — because it was checking
+nothing.
+
+**0 and 0. Identical from outside. No threshold, ratchet or trend line can
+separate those two states**, because the number is the same and it is the
+*right* number in one case. This is not a monitoring gap that a better metric
+fixes; it is a property of the measurement.
+
+So the check does not measure the codebase. It measures **the gate**: it feeds
+the live configuration three deliberately-violating import shapes and fails if
+any goes unreported, plus one correct barrel import that must **not** be flagged
+— because a rule that over-fires pushes people back to the deep paths it exists
+to prevent.
+
+```
+v import-rule: package deep-path (post-split specifier) — reported
+v import-rule: in-app alias twin — reported
+v import-rule: bare vendored pattern — reported
+v import-rule: barrel import — correctly allowed
+```
+
+#### The same idea applied to globs
+
+`frontend/scripts/ds-gate.mjs` carries a **zero-file guard**: if ESLint matches
+no files under the configured roots, it fails instead of reporting a count.
+Without it the Phase 2 split would have taken the values family from 467 to 0 —
+and because that gate *ratchets downward automatically*, *it would have written
+the 0 in as an improvement.* **A ratchet without a positive control converts a
+broken gate into recorded progress.**
+
+#### Where to put one
+
+A positive control belongs **in the gate's own tier**, not in a test suite: it
+runs wherever the gate runs. These two run in `pre-push` and in `build`. When CI
+exists they run there, and they are among the few checks worth running on
+**every** pipeline rather than path-filtered — a gate that silently died is not
+scoped to the files that killed it.
+
+**This generalises past linting.** 30-restructuring-an-existing-react-project.md's
+definition of done already requires that every Phase 1 gate "fails on a
+deliberately-introduced violation". This section is that requirement stated as a
+standing rule rather than a one-time acceptance step, because the failure it
+prevents arrives long after the gate was accepted.
+
+### A gate whose necessary tolerance exceeds its signal is structurally blind
+
+**The rule.** A gate whose necessary tolerance exceeds the signal it exists to
+detect **is not a weak gate — it is structurally blind.** Choose the mechanism
+that asserts the invariant, not the one that looks most thorough.
+
+This is a different failure from the positive-control rule above. There, the gate
+was silently checking nothing. Here the gate runs perfectly, reports honestly, and
+**still cannot separate a regression from ambient noise**, because the two overlap
+in the only quantity it measures. No amount of care in operating it helps.
+
+#### The worked example — screenshots versus computed styles
+
+A pixel comparison *appears* to be the strongest possible fidelity check: it sees
+literally everything the user sees. Measured on the N-PQMS ISM port, it is
+**weaker than a computed-style assertion** for the change it most needs to catch.
+
+The numbers (`../../RESTRUCTURE-BASELINE.md` addendum):
+
+| Source | Pixel difference |
+|---|---|
+| Screens whose source never changed, captured on a different machine | **0.66 – 2.14%** |
+| A screen with a genuine source change | **4.61%** |
+
+A tolerance must sit above the first band to avoid failing on every machine that
+is not the one that captured the baselines. **At that tolerance a 1px padding
+change in a text-dense table does not clear the bar** — it moves a few hundred
+pixels in a 1,152,000-pixel frame, well inside the environment noise. The gate
+returns green on exactly the regression it was installed to find.
+
+Two further properties made it worse here, and both generalise:
+
+- **The drift is structural, not colour.** It persists at a loose per-pixel colour
+  threshold (0.94% at `threshold: 0.5`), so tuning the colour tolerance does not
+  reach it. Text sits at different coordinates.
+- **Failure output is a heatmap.** Even when it fires correctly it reports *that*
+  something moved, not *what*. Triage is manual.
+
+**The computed-style assertion has neither problem.** `padding-top: 20px → 16px`
+is exact, names the element and the property, and is **identical on every
+machine**, because that property resolves without consulting layout or text
+metrics. It is a narrower instrument that is strictly better at the job.
+
+#### The general test to apply before building a gate
+
+Ask, in this order:
+
+1. **What is the invariant?** For a token substitution: *this value is unchanged*.
+2. **What asserts it most directly?** Compare the values. Not the rendering of the
+   values, and not a photograph of the rendering.
+3. **What is the noise floor of the instrument, in the same units as the signal?**
+   If the noise floor is at or above the signal, **stop** — the gate is blind and
+   more effort spent on it is wasted.
+
+Step 3 is the one that gets skipped, and skipping it is how a project ends up with
+a thorough-looking gate that has never once caught anything.
+
+**A narrow check that asserts the invariant beats a broad check that observes its
+consequences.** Breadth is not sensitivity, and the two are routinely confused
+because breadth is the one that is easy to see.
+
+**This applies well beyond screenshots.** A flaky end-to-end test whose retry
+budget exceeds its failure rate, a performance budget wider than the regression it
+guards, a coverage threshold below the current number — all the same shape.
 
 ### Guard an optional gate, and make the skip visible
 The prior repository's SonarQube workflow is **separate from the main quality
@@ -9697,6 +10027,436 @@ and it acts on being invoked.** The placeholder was right that it was a hazard
 and wrong about the mechanism — which is an argument for naming hazards by their
 cause rather than by the scenario you first imagine for them.
 
+### Phase 2 workspace split — completed 2026-08-25
+
+**Reference, not standard.** Dated snapshot; the method is "every number below
+was produced by running the gate". Where it disagrees with a tier file, the tier
+file wins.
+
+#### The structure that now exists
+
+```
+frontend/                      pnpm workspace root (not a package)
+├─ apps/portal/                @pqms/portal
+├─ packages/ui-library/        @pqms/ui-library
+├─ packages/design-tokens/     @pqms/design-tokens
+├─ tsconfig.base.json
+└─ scripts/                    workspace-level gates
+```
+
+ADR 0001's split map was followed exactly, including its judgement call that
+`chrome.tsx` stays in the app. **`frontend/` is now the workspace root and is no
+longer itself a package** — which is also the corrected answer to
+00-core-rules.md's Path convention, whose earlier `pqms-portal/` was the prior
+repository's directory name carried forward without re-derivation.
+
+#### Before and after — the acceptance evidence
+
+| Measure | Before | After |
+|---|---:|---:|
+| `values` (raw px / hex / font literals) | 467 | **467** |
+| `numeric` (hard-coded dimensions) | 348 | **348** |
+| `imports` (restricted imports) | 0 | **0** |
+| tokens verified | 156 | **156** |
+| `var()` refs / distinct names / unresolved | 1829 / 119 / 0 | **1829 / 119 / 0** |
+| JS bundle | `index-BDNeyRad.js` | **`index-BDNeyRad.js`** |
+| CSS bundle | `index-fURKnrD4.css` | **`index-fURKnrD4.css`** |
+
+**Counts unchanged AND non-zero**, which is the acceptance criterion. A drop to
+zero would have been the failure, not the success.
+
+**The bundle hashes are identical.** Vite content-hashes output filenames, so
+identical hashes mean byte-identical bundles. See the fidelity section below for
+why that substituted for the screenshot comparison here, and why it cannot
+substitute again at Step 8.
+
+#### The gate the counts could not vouch for
+
+The `imports` family was 0 before the split, and would have been 0 after it
+while checking nothing — its patterns match `components/**`, and the code now
+imports `@pqms/ui-library`. **Two identical numbers, one meaning "clean" and one
+meaning "dead".**
+
+Closed with a third alias twin in `eslint.adherence.config.mjs` **and** a
+positive control, `scripts/check-import-rule.mjs`, which feeds the live
+configuration deliberately-violating imports and fails if they are not reported.
+15-devsecops-and-ci-cd.md now carries this as a standing rule.
+
+#### Two mid-course corrections, both worth keeping
+
+- **`packages/ui-library` lost its CSS-module type declarations.**
+  `vite-env.d.ts` moved to `apps/portal` with the app, and eight components then
+  failed `tsc --noEmit` on `*.module.css`. One ambient declaration file had
+  covered every file; three tsc programs need three. Fixed by adding one to the
+  package.
+- **Vite aliases mapping package NAMES to their `index.ts` FILES broke subpath
+  exports.** `@pqms/design-tokens/styles.css` resolved to
+  `.../src/index.ts/styles.css` and the build failed with ENOENT — **an alias to
+  a file cannot have children.** The aliases were removed entirely: pnpm symlinks
+  each workspace package, and their `package.json` `exports` handle both the root
+  entry and subpaths. **The reasoning is kept as a comment in
+  `apps/portal/vite.config.ts`**, because deleting an alias looks like a
+  regression to anyone who assumes workspace packages require one.
+
+### There is no test framework, and that has consequences
+
+**Measured: zero test files, no runner, no coverage, no configuration.**
+`playwright` is a devDependency used only by the two screenshot capture scripts;
+there is no `@playwright/test`, no Vitest, no React Testing Library, no MSW.
+
+**What this makes vacuous:**
+
+- **10-testing-standards.md describes nothing that exists.** Its coverage
+  thresholds, the mirrored `src/tests/` tree, the RTL query priority, the MSW
+  handlers and the axe assertions all govern a suite nobody has written. The file
+  is a target and should be read as one.
+- **The coverage ratchet has a floor of 0 and nothing to ratchet.**
+- **Any acceptance criterion phrased "test count identical before and after" is
+  satisfied by 0 = 0 and proves nothing.**
+  30-restructuring-an-existing-react-project.md states exactly that for Phase 2,
+  and `../steps-for-new-repo.md` Step 6 repeats it. It passed for the workspace
+  split without exercising a single line of code.
+
+**So a structural move in this repository is a higher-risk operation than the
+runbook implies.** The runbook's confidence rests on two instruments — a
+characterization suite and byte-identical fidelity captures — and **neither
+exists today.** What actually carried Step 6 was the unchanged bundle hashes,
+which is a narrower guarantee than either.
+
+**[PLACEHOLDER — the test framework.** Vitest + React Testing Library per 10,
+with a coverage ratchet seeded at 0. Until it exists this project has no
+behavioural test of any kind. **Trigger:** before Step 8 token conversion, the
+first phase that changes rendered output by design. **Owner:** Frontend Lead.]**
+
+### The fidelity harness is broken, and it is the only behavioural test
+
+`FIDELITY-REPORT.md` records a passing comparison dated 2026-08-22. **The harness
+that produced it does not run on current hardware.** Three independent defects,
+each verified:
+
+1. **The prototype path is hardcoded to a drive that does not exist.**
+   `scripts/fidelity-capture.mjs` sets `PROTO_URL` to
+   `file:///D:/workspace-II/...`; there is no `D:` drive. The prototype *does*
+   exist locally under `_bmad-output/`, so this is a one-line path defect that
+   happens to be machine-specific and committed.
+2. **The Playwright browser revision is wrong.** `playwright@1.62.1` requires
+   chromium revision **1234**; the cache holds **1228**, so `chromium.launch()`
+   fails outright. Needs `npx playwright install`.
+3. **`APP_URL` targets an address the server does not listen on.** The harness
+   uses `http://127.0.0.1:4173`, and `vite preview` binds **`[::1]` only** on
+   this machine — a TCP probe returns `ECONNREFUSED` on `127.0.0.1` while
+   `localhost` and `::1` connect. Every app-side capture would fail.
+
+**A fourth problem is worse than those three: the harness has no verdict.**
+Neither capture script contains any comparison, assertion or non-zero exit.
+`fidelity-capture.mjs` wraps each screen in `try/catch`, prints `✗` on failure,
+and **exits 0 regardless**. A CI job calling it would go green with every capture
+missing. The 2026-08-22 comparison was made by a person looking at images.
+
+#### Why unchanged bundle hashes worked at Step 6 and CANNOT work at Step 8
+
+Step 6 was a **pure move**: no source byte was meant to change meaning, so
+byte-identical bundles proved byte-identical rendering. That was a legitimate —
+and in fact stronger — substitute for a screenshot diff.
+
+**Step 8 is the opposite case by construction.** Token conversion rewrites
+`padding: '20px'` to `padding: 'var(--space-5)'`. **The source bytes change on
+purpose, so the bundle hash MUST change, while the rendered pixels must not.**
+The hash therefore carries no information about the only property that matters,
+and this is precisely the case where nothing but a screenshot comparison will do.
+
+**[PLACEHOLDER — repair the fidelity harness.** Four pieces: run
+`npx playwright install`; make `PROTO_URL` relative; use `localhost` or bind
+preview to `0.0.0.0`; and **add a real comparison with a non-zero exit**.
+Capture determinism across two consecutive runs must also be demonstrated before
+"byte-identical" is relied on as a gate — fixed `waitForTimeout`s, `networkidle`
+and font rasterisation are all sources of noise, and this was never verified
+because the harness does not run. **Trigger:** prerequisite of Step 8, not
+optional. **Owner:** Frontend Lead.]**
+
+**`FIDELITY-REPORT.md` itself is deliberately not patched.**
+31-documentation-standards-and-decision-records.md classes it as `analysis/` —
+regenerated, never hand-edited. It is stale in two known ways: it states
+`.fidelity/` is gitignored (it is **tracked** — 91 files, 11.3 MB) and it cites
+the 8-status canonical set (the code implements **seven**, per the 2026-08-23
+directive that post-dates the report by one day). **It needs regeneration, which
+is blocked on the harness repair above.**
+
+### The corpus was authored for a different repository — one placeholder, not six
+
+00-core-rules.md now opens with a divergence table: six entries in its "Confirmed
+stack" are not confirmed for this repository. **That table is tracked here as a
+single open row rather than six**, because splitting it is what allowed the
+current state — each row looks minor alone, and together they mean Tier 0
+describes a different project.
+
+**[PLACEHOLDER — reconcile the confirmed stack.** See 00-core-rules.md's
+divergence table for the six rows and their dispositions. Two are
+"repo is behind and will adopt" (a test framework, `.nvmrc`); **four require an
+architect decision** — the React/Router/Vite versions, Tailwind, the state
+libraries, and Turborepo. None may be resolved by citing Tier 0, because Tier 0
+is what is currently wrong. **Trigger:** before any phase that would adopt one of
+them — Step 8 for Tailwind, Step 10 for the state libraries. **Owner:
+architect.]**
+
+**[PLACEHOLDER — general-purpose ESLint.** 14-code-style-and-linting.md mandates
+`eslint.config.js` at the workspace root with a five-position chain and ESLint
+`^10.7.0`. None of it exists: ESLint is **9.39.5** and the only configuration is
+`eslint.adherence.config.mjs`, the vendored design-system runner. **There is no
+general lint at all** — no `no-unused-vars`, no rules-of-hooks, no accessibility
+rules, which also means 11-accessibility-standards.md's severities describe a
+plugin that is not installed. Adoption arrives with 30's Phase 1 mechanism —
+baseline the count, ratchet down — not as a documentation fix. **Trigger:** the
+gates follow-up epic. **Owner:** Frontend Lead.]**
+
+**[PLACEHOLDER — a repository-wide hooks bootstrap.**
+`frontend/scripts/setup-hooks.mjs` covers anyone who installs in `frontend/`.
+`core.hooksPath` is a single repository-level value, so someone working only in
+`backend/` still gets no hooks, and with no CI that clone has zero enforcement.
+Needs a root `package.json`, a documented clone step, or a checked-in setup
+script the root README makes unavoidable. **Trigger:** the next component to add
+real hook checks. **Owner:** repo owner — it cannot be decided inside
+`frontend/`.]**
+
+### Step 7 structural assessment — 2026-08-25
+
+**Reference, not standard.** Method: 01 and 07 read in full, then measured
+against `apps/portal/src` file by file. Where this disagrees with a tier file,
+the tier file wins.
+
+**Outcome: one deletion, zero moves.** Step 6 had already done the structural
+work; what remained in Step 7's description was either already satisfied,
+forbidden by 01's own anti-scaffolding rule, or a content edit rather than a move.
+
+#### What already conforms — recorded because positive evidence stops re-litigation
+
+These five were checked against 01 and found **already correct**. They are listed
+so the next pass does not re-open settled structure looking for work.
+
+| Requirement | Evidence |
+|---|---|
+| **`components/shared/` only for 2+-feature components** (01) | No `shared/` folder exists, and **zero cross-feature component imports** — `LinkIssuesSection` and `ModelCodeYearPicker` are used only by `CreateIssueScreen`, `PriorityTab` only by `IssueWorkspaceScreen`. Correctly absent rather than missing |
+| **Feature folders stay flat until ~15 files or 2+ sub-concerns** (01) | `features/issues/` holds **6** files; every other feature holds 1. Flat is the correct state, not a deferral |
+| **Tab folders are thin wrappers; real UI in a sibling folder** (01) | Satisfied in substance — `PriorityTab.tsx` is a sibling module imported by `IssueWorkspaceScreen`, not duplicated into a tab folder |
+| **`chrome.tsx` stays in the app** (ADR 0001) | Confirmed still correct. It imports `useNavigate`, and 01's package-ownership rule forbids router dependencies in `ui-library`. No second consumer exists |
+| **`ui-library` categories; nothing at `components/` root** (01) | Six category folders, **zero files at root**. 01 records that the prior library failed exactly here (`BaseDataTable`/`BaseModal` uncategorised); this port did not |
+
+#### What was assessed and deliberately not applied
+
+| Requirement | Disposition |
+|---|---|
+| **`pages/` route hosts** (07) | **Deferred — ADR-0005.** 07's benefit is testable and unreachable by adding hosts alone: six of seven screens call `useNavigate` for in-screen actions, so a host leaves them router-dependent. Reachable via a callback-props refactor across six screens, which has **no beneficiary today** (no Storybook, no tests, no second consumer). 07 now carries the precondition |
+| **Feature-scoped `services/`** (01) | **Not applied.** No services exist. `data/store.tsx` is deliberately the whole data layer and encodes three domain invariants; splitting it by feature fights its design. Unblocks at Step 10, when a backend exists |
+| **Feature-scoped `hooks/`** (01) | **Not applied.** Zero custom hooks in the application. 01's own rule governs: *"a folder is not created before something lives in it"* |
+
+#### Deleted
+
+`frontend/public/` — empty, unreferenced, and **already dead before this pass**:
+Step 6 moved the Vite root to `apps/portal`, so Vite's default `publicDir`
+resolves to `apps/portal/public`, which does not exist. Verified unreferenced
+against `index.html`, `vite.config.ts` and all three `src` roots (no
+absolute-root asset paths anywhere), and a dev-server load produced **no new
+non-200 responses**. Git never tracked it — empty directories cannot be — so the
+deletion appears in no diff.
+
+That closes 01's *"a folder is not created before something lives in it"* and
+30 Phase 2's inherited-empty-directory rule. **No empty directories remain
+anywhere in `frontend/`.**
+
+#### Acceptance — all four checks plus both positive controls
+
+| Check | Result |
+|---|---|
+| Bundle hashes | **`index-BDNeyRad.js`, `index-fURKnrD4.css`** — identical |
+| `values` / `numeric` / `imports` | **467 / 348 / 0** — unchanged |
+| tokens / css-vars | **156** / **1829 refs, 119 names, 0 unresolved** |
+| `tsc --noEmit` | **exit 0** across all three packages |
+| `check-import-rule.mjs` | 3 violating shapes reported, barrel allowed |
+| `ds-gate` zero-file guard | fails on a missing target *and* on an existing-but-non-matching one |
+
+**[PLACEHOLDER — extract declarative screen configuration to `config/`.**
+01's `config/` rule fits: `AdminScreen` alone holds `JOBS`, `KPIS`, `SOURCES`,
+`AUDIT`, `CLASS_TREE`, `CLASS_COUNTS`, `MODULE_TINT` and `FREQ_OPTS` inline, and
+`IssueListScreen` holds `PAGE_SIZES` and `DEFAULT_COLS`. Not done in Step 7
+because **it edits file contents**, and that phase was moves-and-renames only.
+
+**An open design question comes with it, and it should be answered before the
+extraction rather than during:** much of that data is **prototype-shaped display
+data**, not configuration — `JOBS`, `SOURCES`, `AUDIT` and `CLASS_TREE` are
+sample rows the prototype displays, closer in kind to `data/seed.ts` than to
+`config/issue-columns.config.ts`. Splitting on the wrong axis produces a
+`config/` folder that is really a second seed file. `PAGE_SIZES`, `DEFAULT_COLS`
+and `MODULE_TINT` are unambiguously configuration; the rest needs a decision.
+
+**Trigger:** after the fidelity harness is repaired — moving display constants
+can move pixels, and there is currently no check that would catch it.
+**Owner:** Frontend Lead.]**
+
+#### Two places this application is a counter-example to the corpus
+
+- **07's `pages/` convention had an unstated floor.** Recorded in 07 with this
+  app as the worked example, and in ADR-0005. Its provenance is `kus-pqms`, a
+  124-SFC application — the size at which route-concern leakage is a real cost.
+- **07's route tree names modules that are out of scope here.** `/qir` and
+  `/tsb` are absent by design, with the nav items rendered **disabled** for
+  fidelity to the prototype; `frontend/README.md`'s guardrails govern scope.
+  `/overview` versus `/dashboard` and `/issue-management` versus `/issues` are
+  naming only. **No route was changed** — route paths are behavioural. The
+  divergence table is in 07.
+
+### The pixel harness is replaced, not repaired — 2026-08-25
+
+**Reference, not standard.** Dated; method is "every number was produced by
+running the gate". Where this disagrees with a tier file, the tier file wins.
+
+**This supersedes the "repair the fidelity harness" placeholder above.** The
+repair is now sequenced *after* Step 8, with two preconditions of its own.
+
+#### Why replaced
+
+A pixel comparison was measured rather than assumed, and it is **structurally
+blind** to the change Step 8 makes — its necessary tolerance exceeds its signal.
+Environment drift on unchanged screens was **0.66–2.14%**; a genuine source change
+was **4.61%**. Any threshold that passes the first fails to catch the second.
+15-devsecops-and-ci-cd.md carries the general rule.
+
+**One good finding came out of running it:** capture on this machine is
+**perfectly deterministic — 0.0000% across all nine screens, byte-identical run
+to run.** The instrument was never the problem. The baselines were.
+
+#### The two gates that replaced it
+
+| Gate | Asserts | Cross-machine |
+|---|---|---|
+| `scripts/check-token-equivalence.mjs` | a `'<literal>' → var(--token)` substitution preserves the value exactly, per the manifest | **Yes** — compares two strings, renders nothing |
+| `scripts/style-gate.mjs` — styles | every whitelisted computed style unchanged, per element per route | **Yes** — every whitelisted property resolves without consulting layout |
+| `scripts/style-gate.mjs` — geometry | rounded `getBoundingClientRect()` unchanged | **NO — same-machine only** |
+
+**The two halves of the style gate are diffed separately and must stay that way.**
+`getComputedStyle` returns *used* values for `width`/`height`/`top`/`left`, which
+depend on layout and therefore on text metrics. Admitting even one of those to the
+whitelist would make the styles half machine-dependent **while still looking
+cross-machine** — rebuilding the exact problem the replacement escapes. The
+exclusion list is documented in the script and is the load-bearing part of it.
+
+Baseline: `.style-baseline/`, 6 routes, **1,441 elements**. Regenerable in seconds
+with `--write` — the property the deleted captures lacked.
+
+**Positive control, per 15:** perturbing `chrome.tsx` `gap: 10 → 14` produced
+`row-gap: 10px -> 14px` naming the element, on all six routes, plus 30 geometry
+consequences. Reverted; the gate returns clean and the bundle hash returned to
+`index-BDNeyRad.js`.
+
+#### The 91 baselines are superseded as a gate — and RETAINED on disk
+
+**The parameters that produced them were never recorded, so they could not be
+reproduced or trusted.** Evidence, not inference:
+
+- **Seven distinct viewports** across 91 files: 1600×1000 (38), 1280×900 (21),
+  1920×1080 (21), 1280×1000 (3), 1920×1000 (3), and **1600×2926 and 1600×2922 —
+  the same screen, 4px apart**, which is two runs of one capture that disagreed.
+- **53 files are `dev-*`/`dc-*` names matching no committed code path**, including
+  `dev-dashboard-r9` and `dev-dashboard-recheck` — ad-hoc runs whose inputs exist
+  nowhere.
+- No record of browser revision, timezone, font state or app commit for any of
+  them.
+
+**A baseline whose capture conditions are unknown cannot be a gate.** A diff
+against it is uninterpretable: there is no way to tell a regression from a
+different viewport.
+
+**They are nonetheless RETAINED on disk.** Deletion was carried out on 2026-08-25
+and **reversed on 2026-08-26**; all 91 files are restored and tracked.
+
+The distinction that matters: **unusable as a gate is not the same as
+worthless.** They are the only visual record of what this application looked like
+on 2026-08-22, they are the reference the human "Aligned" verdict in
+`FIDELITY-REPORT.md` was reached against, and once the harness is repaired they
+may be worth a one-off eyeball comparison — even though they can never be a
+pass/fail input.
+
+**The cost of keeping them is 11.3 MB of tracked binaries, plus the risk that
+someone mistakes them for a live baseline.** That second risk is the reason this
+section stays where it is: **nothing reads `.fidelity/` any more.**
+`.style-baseline/` is what the gates use.
+
+**[PLACEHOLDER — decide the fate of `.fidelity/`.** Keep as a dated visual
+archive, or delete once the harness repair produces a reproducible replacement.
+**Trigger:** the harness repair, sequenced after Step 8. **Owner:** Frontend
+Lead.]**
+
+### Application defect — dates shift by a day with the developer's timezone
+
+**This is a user-facing defect, not a screenshot problem**, and it is recorded
+separately for that reason.
+
+`apps/portal/src/data/util.ts` — `fmtMDY` and `fmtHM` call `getMonth()`,
+`getDate()`, `getFullYear()`, `getHours()` and `getMinutes()`. Those are
+**local-time getters**, applied to **UTC-anchored ISO strings** from the seed.
+
+Measured with the frozen seed anchor `2026-07-09T02:00:00Z`:
+
+| Timezone | `fmtMDY` renders |
+|---|---|
+| UTC | `07/09/2026` |
+| Asia/Kolkata (+5:30) | `07/09/2026` |
+| **America/New_York (−4)** | **`07/08/2026`** |
+
+**The date column is wrong for users**, not merely unstable for captures. An issue
+raised late on the 9th UTC displays as the 8th to a US-East viewer, which is a
+reporting error in a quality-management system where dates carry process meaning.
+
+It is also why pinning `timezoneId` is a precondition of any future screenshot
+comparison: without it, two correct machines produce two different renderings.
+
+**[PLACEHOLDER — timezone-correct date rendering.** `fmtMDY`/`fmtHM` must use UTC
+getters, or `Intl.DateTimeFormat` with an explicit `timeZone`, per
+21-logging-formatting-and-client-diagnostics.md's rule that no component formats a
+date inline. **Do not fix this in a structural phase — it changes rendered output
+and belongs in its own change with its own verification.** **Trigger:** its own
+change, after the style gate exists to verify it. **Owner:** Frontend Lead.]**
+
+### Two hygiene items closed
+
+- **`FIDELITY-REPORT.md:3` claimed `.fidelity/` was gitignored.** Nothing ignored
+  it; all 91 files were tracked. Corrected in place — a one-line factual fix, not
+  a regeneration, so 31's regenerate-don't-patch rule for `analysis/` documents is
+  not engaged. The report's other staleness (the 8-status set) still requires
+  regeneration and is unchanged.
+- **`dc-compare.mjs` wrote into the tracked UX design-source export — and the
+  write ALREADY HAPPENED.** See D17 in the baseline addendum.
+  `_boot-admin.dc.html` was committed in `fa25e69` and is tracked today, so this
+  was never a future risk; it is an existing condition.
+
+  **`.gitignore` does not untrack an already-tracked file**, so the entry added to
+  the root `.gitignore` prevents a recurrence elsewhere and does **not** close the
+  existing one. Fully closing it needs `git rm --cached` on that path — a
+  deliberate staged change, not made here.
+
+  Also closed: the `existsSync` guard is removed. Because the file is tracked,
+  that guard meant **every clone would serve the committed boot copy forever**,
+  silently comparing the app against whichever design revision produced it.
+
+  **Relocating to a temp directory was tried and reverted**: the `.dc.html`
+  resolves `support.js`/`_ds/` by relative path and must sit beside them to load.
+
+  **[PLACEHOLDER — untrack `_boot-admin.dc.html`.** `git rm --cached` it, leaving
+  the `.gitignore` entry to keep it out. **Trigger:** the harness repair, which is
+  sequenced after Step 8. **Owner:** Frontend Lead.]**
+
+### Dead code found while building the gates
+
+**`IssueCard` is exported from the `ui-library` barrel and imported by nothing.**
+It is tree-shaken out of the bundle: editing `padding: 16 → 20` produced an
+**identical bundle hash**, and it appears zero times in `dist`.
+
+Recorded as D16. The consequence beyond one component: **"bundle hash unchanged"
+is blind to any change in code that does not reach the bundle.** That does not
+weaken Step 6's conclusion — moving unreachable code changes nothing by
+definition — but it is a second reason the hash is not a general substitute for a
+behavioural check, alongside the already-recorded one that Step 8 changes source
+bytes deliberately.
+
 ---
 
 ## 19 — Onboarding and Dev Workflow
@@ -10732,7 +11492,7 @@ being solved are properties of the repository:
 
 | Problem | Still true? |
 |---|---|
-| One `core.hooksPath` for a multi-component repo | **yes** — four submodules share it |
+| One `core.hooksPath` for a multi-component repo | **yes** — all four component directories share it. (An earlier revision said "four submodules". They are ordinary directories in ONE repository — 33-polyglot-monorepo-integration.md owns the withdrawal.) |
 | `commit-msg`'s argument is relative to the git root | **yes** — resolve to absolute before any `cd` |
 | A push range that cannot be resolved must **fail open** | **yes** |
 | Staged-file scoping | **yes**, and now hand-written rather than provided |
@@ -10761,10 +11521,36 @@ Husky and Lefthook both provide staged-file filtering. A raw hook does not, so
    enabled is a directory of inert files.
 2. **The scripts are executable** (`git update-index --chmod=+x`). A
    non-executable hook is skipped silently on Unix.
-3. **Submodule behaviour.** `core.hooksPath` is per-repository, and a submodule
-   has its own `.git` file. **Whether a commit made inside `frontend/` fires
-   the root hooks is a question to test, not assume** — and if it does not, the
-   frontend has no local gate at all and everything falls to CI.
+3. **ANSWERED 2026-08-25 — a commit inside `frontend/` DOES fire the root
+   hooks.** An earlier revision called this "a question to test, not assume", on
+   the premise that `frontend/` was a submodule with its own `.git`. **It is
+   not** (33-polyglot-monorepo-integration.md owns that withdrawal), so there is
+   one repository, one `core.hooksPath`, and one set of hooks.
+
+   Tested rather than reasoned: a file staged in `frontend/` with a deliberately
+   invalid commit message was **rejected** — the root router ran
+   `frontend/scripts/pre-commit.sh` and validated the message against
+   `frontend/commit-msg.rules`. Because a working hook *blocks*, the test left
+   nothing behind.
+
+   **The live risk is item 1 above, not this one.** `core.hooksPath` still does
+   not clone, and with no CI anywhere an unbootstrapped clone has **zero**
+   enforcement of any kind.
+
+   **A bootstrap now exists:** `frontend/scripts/setup-hooks.mjs`, wired as a
+   `prepare` script so `pnpm install` runs it, with `pnpm run hooks:check` to
+   verify and a documented one-liner in `frontend/README.md` for anyone who has
+   not installed. It is idempotent, verifies hook executability from the **index**
+   mode (`100755` — the working-tree bit is meaningless where `core.filemode` is
+   false), and refuses to overwrite a `core.hooksPath` already set to something
+   else.
+
+   **It does not fully close, and the residue is repository-level.**
+   `core.hooksPath` is a single value for the whole repository, so a bootstrap
+   living in `frontend/` reaches only people who install there — someone working
+   solely in `backend/` still gets nothing. Closing that needs a root-level
+   mechanism, which is the repo owner's to choose. Tracked as an open placeholder
+   in 18-project-context-and-implementation-status.md.
 
 #### `commit-msg.rules` — per component, and that is deliberate
 
@@ -12496,15 +13282,52 @@ Assumes 00-core-rules.md; where the two conflict, 00 wins.
 workspace and stops there. In the target repository the workspace is one of
 three components:
 
+**The tree this file used to draw was the client's `project-template-java`
+template, not this repository.** It showed `infra/`, `.moai/`, `lefthook.yml`
+and `.gitlab-ci.yml`; **none of those exist here.** Observed 2026-08-25:
+
 ```
-project-template-java/
-├─ backend/    Spring Boot 4.0.6 · Java 21 · Gradle · ECS Fargate
-├─ frontend/   React 19 · Vite 8 · pnpm 11 · S3 + CloudFront    <- this corpus
-├─ infra/      AWS CDK (TypeScript) · provisions what both deploy onto
-├─ docs/       the client's source of truth for versions and setup
-├─ .claude/ .moai/   the MoAI-ADK harness
-└─ scripts/ lefthook.yml .gitlab-ci.yml .gitlab-ci-templates/
+KUS-PQMS/                        ONE git repository — not four submodules
+├─ backend/          EMPTY of source — see below
+├─ frontend/         React 18.3 · Vite 5 · pnpm 11        <- this corpus
+│  ├─ apps/portal/               @pqms/portal
+│  ├─ packages/ui-library/       @pqms/ui-library
+│  ├─ packages/design-tokens/    @pqms/design-tokens
+│  ├─ pnpm-workspace.yaml        frontend/ IS the workspace root
+│  ├─ tsconfig.base.json
+│  └─ scripts/                   workspace-level gates
+├─ automation/       EMPTY of source
+├─ infrastructure/   EMPTY of source — and NOT named `infra/`
+├─ .githooks/        plain git hooks via core.hooksPath — no Husky, no Lefthook
+├─ _bmad/ _bmad-output/   BMAD harness — NOT MoAI-ADK
+├─ .claude/  docs/  issues/  scripts/
+└─ .gitattributes  .git-blame-ignore-revs  .gitignore  README.md
 ```
+
+**Four differences that change what this file can assume**, beyond the naming:
+
+- **No `.gitlab-ci.yml`, no `.github/`, no CI of any kind** — at the root or
+  inside any component. 15-devsecops-and-ci-cd.md's platform is an open
+  placeholder in 00-core-rules.md, not a settled fact.
+- **No `lefthook.yml`.** Hooks are `.githooks/` plus per-component scripts.
+- **No `.moai/`.** The harness is BMAD.
+- **`infrastructure/`, not `infra/`.** Every path this file states for
+  infra-owned requirements uses the wrong directory name; they are the same
+  concern under a different name.
+
+**Three of the four components contain no source code at all.** `backend/`,
+`automation/` and `infrastructure/` hold **exactly five files each** — a
+`.gitignore`, a `README.md`, a `commit-msg.rules`, and two hook scripts that
+`echo` and `exit 0`. There is no Spring Boot application, no CDK project and no
+test suite anywhere in this repository.
+
+**That is stronger than "not built yet", and it changes how to read this file.**
+Everything below about the API contract, the backend port mismatch and the
+infra-owned requirements describes a boundary with **nothing on the other side
+of it**. Those sections are a specification to build against, not a description
+of an integration that exists. Where this file previously cited `docs/STACK.md`
+for backend versions and ports, it was citing the client's *template*
+documentation about a service this repository does not contain.
 
 Three of this corpus's rules cannot be satisfied inside `frontend/` at all —
 the Content-Security-Policy, the cache headers, and the SPA deep-link rewrite
@@ -12776,7 +13599,7 @@ Which files use each term 20 defines. The definitions are authored in
 | SSO | 08, 18 | 2 |
 | IdP | 08, 33 | 2 |
 | ESM | 00, 02 | 2 |
-| RTL | 10, 30 | 2 |
+| RTL | 10, 18, 30 | 3 |
 | MSW | 00, 05, 10, 18, 26 | 5 |
 | JSX | 02, 06, 11, 21 | 4 |
 | CSF3 | 24 | 1 |
@@ -12806,13 +13629,13 @@ For each file, which other files cite its filename at least once.
 | 12 | 03, 06, 07, 09, 13, 14, 15, 18, 33 | 9 |
 | 13 | 05, 08, 12, 15, 18, 20, 21, 25, 33 | 9 |
 | 14 | 00, 01, 02, 03, 05, 06, 10, 11, 12, 15, 18, 23, 30, 31 | 14 |
-| 15 | 00, 10, 13, 18, 20, 24, 26 | 7 |
+| 15 | 00, 10, 13, 18, 20, 24, 26, 33 | 8 |
 | 16 | 12, 13, 15, 24, 27, 33 | 6 |
 | 17 | 00, 01, 02, 03, 07, 08, 11, 18, 20 | 9 |
-| 18 | 00, 01, 06, 08, 11, 12, 13, 14, 15, 17, 20, 29, 30, 31, 33 | 15 |
+| 18 | 00, 01, 06, 08, 11, 12, 13, 14, 15, 17, 20, 23, 29, 30, 31, 33 | 16 |
 | 19 | 05, 23, 30, 33 | 4 |
 | 20 | 05, 10, 18, 19, 23 | 5 |
-| 21 | 00, 13, 15, 19, 25, 26 | 6 |
+| 21 | 00, 13, 15, 18, 19, 25, 26 | 7 |
 | 22 | 03, 09, 16, 26, 33 | 5 |
 | 23 | 00, 14, 18, 20, 30, 32, 33 | 7 |
 | 24 | 00, 15, 20 | 3 |
@@ -12824,7 +13647,7 @@ For each file, which other files cite its filename at least once.
 | 30 | 00, 01, 04, 14, 15, 18, 19, 23, 32 | 9 |
 | 31 | 00, 18, 32 | 3 |
 | 32 | 19, 23, 30 | 3 |
-| 33 | 18, 23 | 2 |
+| 33 | 00, 18, 23 | 3 |
 
 ### `Base*` component-name mentions per file
 
