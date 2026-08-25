@@ -2,5 +2,62 @@
 # table padding are authored deliberately. Letting Prettier reflow this
 # markdown destroys the tables and rewrites every line, which turns
 # `git blame` into a single useless commit for the whole file.
+# 14-code-style-and-linting.md states the same rule: "Prettier ignores **/*.md".
 PQMS_docs/**
 **/*.md
+
+# ---------------------------------------------------------------------------
+# VENDORED BYTE-COPIES AND GENERATED FILES — never reformat.
+#
+# These are not style exemptions. They are files this project does not own:
+# byte-copies of the design system's shipped output, and generated artefacts
+# whose producer decides their formatting. Reformatting any of them breaks the
+# thing that verifies them.
+#
+# Measured, not assumed: `prettier --check` reports that EVERY path below would
+# be rewritten today. Without these lines, one `prettier --write .` silently
+# corrupts the vendored adherence ruleset and every design-system byte-copy, and
+# tokens:check / the generated-file drift gate would then fail against files
+# nobody knowingly edited.
+_adherence.oxlintrc.json
+design-system-manifest.json
+src/styles/design-system/**
+src/tokens/tokens.generated.ts
+
+# Build output, dependencies, lockfiles, binary captures.
+dist/**
+node_modules/**
+pnpm-lock.yaml
+.fidelity/**
+
+# ---------------------------------------------------------------------------
+# DEFERRED DECISION — the formatting baseline is NOT adopted yet.
+#
+# Why there is no `format:check` gate: 42 files under src/ currently differ from
+# this project's own .prettierrc, so a blocking gate cannot be green on
+# unmodified source — and Phase 1's acceptance criterion is exactly that
+# (30-restructuring-an-existing-react-project.md, Phase 1: "every gate green on
+# untouched code", "zero files under frontend/src in the diff").
+#
+# A CONFLICT TO RESOLVE BEFORE ANY SWEEP, recorded here because it is invisible
+# otherwise: 14-code-style-and-linting.md mandates printWidth 100, semi true,
+# singleQuote false. This project's .prettierrc is printWidth 120, semi false,
+# singleQuote true — and THE CODE MATCHES THE LOCAL FILE, not the tier file.
+# 14's values carry the provenance "carried forward verbatim from kus-pqms",
+# the prior Vue repository. So adopting 14 literally rewrites every line of
+# every file to a style this codebase has never used. That is a question against
+# the standard (30: "a convention the existing project follows consistently and
+# well, that this corpus contradicts -> raise it as a question against the
+# standard"), not a mechanical fix.
+#
+#   Trigger: the Prettier formatting-baseline commit (30 Phase 1.2), which must
+#            be its own commit changing nothing else, with its SHA appended to
+#            /.git-blame-ignore-revs in the commit immediately after.
+#   Blocked on: resolving the 14-vs-.prettierrc conflict above.
+#   Owner: Frontend Lead.
+#
+# Until then `prettier` is a declared devDependency (so the tool is real rather
+# than implied) and nothing invokes it automatically. .prettierrc is KEPT
+# deliberately: deleting it would make editor format-on-save fall back to
+# Prettier's DEFAULTS (80 columns, semicolons, double quotes), which is a far
+# more destructive rewrite than the config that is there.
