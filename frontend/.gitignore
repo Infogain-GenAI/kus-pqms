@@ -6,3 +6,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Live pixel baselines and diffs (regenerable per machine; see 18).
+.pixel-baseline/

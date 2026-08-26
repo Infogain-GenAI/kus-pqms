@@ -25,7 +25,12 @@
     "tokens:drift": "node scripts/check-tokens-drift.mjs",
     "docs:standards": "node scripts/build-standards-doc.mjs",
     "docs:standards:check": "node scripts/build-standards-doc.mjs --check",
-    "hooks:check": "node scripts/setup-hooks.mjs --check"
+    "hooks:check": "node scripts/setup-hooks.mjs --check",
+    "fidelity:baseline": "node scripts/fidelity-gate.mjs --write",
+    "fidelity:check": "node scripts/fidelity-gate.mjs --check",
+    "style:diff": "node scripts/style-gate.mjs --check",
+    "style:diff:baseline": "node scripts/style-gate.mjs --write",
+    "tokens:equiv": "node scripts/check-token-equivalence.mjs"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
@@ -34,7 +39,9 @@
     "@vitejs/plugin-react": "^4.3.3",
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
-    "playwright": "^1.62.1",
+    "pixelmatch": "^7.2.0",
+    "playwright": "1.62.1",
+    "pngjs": "^7.0.0",
     "prettier": "^3.9.6",
     "typescript": "^5.6.3",
     "vite": "^5.4.10"
