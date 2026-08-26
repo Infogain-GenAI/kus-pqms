@@ -137,7 +137,7 @@ const thStyle: CSSProperties = {
 
 const inputStyle: CSSProperties = {
   width: '100%',
-  height: 40,
+  height: 'var(--row-height-compact)',
   boxSizing: 'border-box',
   border: '1px solid #DDE3E9',
   borderRadius: 'var(--radius-lg)',
@@ -151,8 +151,8 @@ const inputStyle: CSSProperties = {
 /** Numbered-chip section header (26px Kia-Midnight square + title/subtitle). */
 function SectionHead({ n, title, sub, right }: { n: number; title: string; sub: string; right?: ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px solid #F0F2F5' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)', padding: '18px 20px', borderBottom: '1px solid #F0F2F5' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
         <span style={{ width: 26, height: 26, borderRadius: 'var(--radius-lg)', background: 'var(--kia-midnight)', color: 'var(--neutral-0)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: 'var(--fw-bold) 13px/1 var(--font-display)', flex: 'none' }}>{n}</span>
         <div>
           <div style={{ font: 'var(--fw-bold) 15.5px/1.3 var(--font-body)', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{title}</div>
@@ -169,7 +169,7 @@ function DaysInput({ value, onChange, style }: { value: string; onChange: (v: st
   return (
     <div style={{ position: 'relative', ...style }}>
       <input type="number" value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
-      <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', font: 'var(--fw-regular) 12px/1 var(--font-body)', color: 'var(--text-disabled)' }}>days</span>
+      <span style={{ position: 'absolute', right: 'var(--space-3)', top: '50%', transform: 'translateY(-50%)', font: 'var(--fw-regular) 12px/1 var(--font-body)', color: 'var(--text-disabled)' }}>days</span>
     </div>
   )
 }
@@ -220,7 +220,7 @@ export function AdminScreen() {
       <PageCrumb trail={[{ label: 'Admin' }, { label: 'Issue Administration' }]} />
 
       {/* page header + last configuration update */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 'var(--space-5)', marginBottom: 22 }}>
         <div>
           <h1 style={{ margin: '0 0 5px', font: 'var(--fw-bold) 28px/1.15 var(--font-display)', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Issue Administration</h1>
           <p style={{ margin: 0, font: 'var(--fw-regular) 13.5px/1.4 var(--font-body)', color: 'var(--text-secondary)' }}>Manage ISM module operations, configurations, and system controls.</p>
@@ -285,7 +285,7 @@ export function AdminScreen() {
                   <td style={{ padding: '14px 16px', font: 'var(--fw-regular) 12.5px/1.3 var(--font-mono)', color: 'var(--text-secondary)' }}>{j.dur}</td>
                   <td style={{ padding: '14px 16px', font: 'var(--fw-regular) 12.5px/1.3 var(--font-body)', color: 'var(--text-secondary)' }}>{j.by}</td>
                   <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
                       <Button iconLeft={<Icon icon={Play} size={13} />} style={{ height: 34, padding: '0 13px', borderRadius: 'var(--radius-lg)', font: 'var(--fw-semibold) 12.5px/1 var(--font-body)' }}>
                         Run now
                       </Button>
@@ -304,8 +304,8 @@ export function AdminScreen() {
       {/* SECTION 2 — Issue reminder configuration */}
       <SectionCard pad={false} style={{ marginBottom: 18 }}>
         <SectionHead n={2} title="Issue reminder configuration" sub="Configure notification thresholds for aging and overdue actions." />
-        <div style={{ padding: 20, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
+        <div style={{ padding: 'var(--space-5)', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 'var(--space-4)' }}>
+          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
               <IconChip icon={ClockAlert} tint="var(--warning-50)" color="var(--warning-500)" size={30} iconSize={16} />
               <div style={{ font: 'var(--fw-semibold) 13.5px/1.3 var(--font-body)', color: 'var(--text-primary)' }}>Issue aging reminder</div>
@@ -315,7 +315,7 @@ export function AdminScreen() {
             <ULabel style={{ letterSpacing: '0.05em' }}>Critical threshold</ULabel>
             <DaysInput value={agingCrit} onChange={setAgingCrit} />
           </div>
-          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
+          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 9, marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <IconChip icon={FileClock} tint="var(--accent-50)" color="var(--accent-600)" size={30} iconSize={16} />
@@ -328,7 +328,7 @@ export function AdminScreen() {
             <ULabel style={{ letterSpacing: '0.05em' }}>Notification frequency</ULabel>
             <FreqSelect value={qirFreq} onChange={setQirFreq} />
           </div>
-          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
+          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 9, marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <IconChip icon={Gavel} tint="#EDE9FB" color="#7C5CDB" size={30} iconSize={16} />
@@ -343,7 +343,7 @@ export function AdminScreen() {
           </div>
         </div>
         <div style={{ padding: '0 var(--space-5) var(--space-5)', display: 'flex', justifyContent: 'flex-end' }}>
-          <Button iconLeft={<Icon icon={Check} size={16} />} style={{ height: 40, padding: '0 18px', borderRadius: 'var(--radius-lg)' }}>
+          <Button iconLeft={<Icon icon={Check} size={16} />} style={{ height: 'var(--row-height-compact)', padding: '0 18px', borderRadius: 'var(--radius-lg)' }}>
             Save reminder settings
           </Button>
         </div>
@@ -434,7 +434,7 @@ export function AdminScreen() {
           }
         />
         <div style={{ padding: '18px 20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'var(--space-3)', marginBottom: 18 }}>
             {CLASS_COUNTS.map((k) => (
               <div key={k.label} style={{ display: 'flex', alignItems: 'center', gap: 11, border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: '12px 14px' }}>
                 <IconChip icon={k.icon} tint={k.tint} color={k.color} size={34} iconSize={17} />
@@ -446,16 +446,16 @@ export function AdminScreen() {
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 'var(--space-4)', alignItems: 'start' }}>
             {/* left: classification tree */}
             <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '11px 13px', borderBottom: '1px solid #F0F2F5', background: 'var(--bg-app)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)', padding: '11px 13px', borderBottom: '1px solid #F0F2F5', background: 'var(--bg-app)' }}>
                 <ULabel style={{ letterSpacing: '0.05em', marginBottom: 0 }}>Classification tree</ULabel>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <IconButton variant="default" aria-label="Expand all" title="Expand all" style={{ width: 28, height: 28, color: 'var(--text-muted)' }} onClick={() => setExpanded(Object.fromEntries(CLASS_TREE.map((t) => [t.name, true])))}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                  <IconButton variant="default" aria-label="Expand all" title="Expand all" style={{ width: 28, height: 'var(--control-sm)', color: 'var(--text-muted)' }} onClick={() => setExpanded(Object.fromEntries(CLASS_TREE.map((t) => [t.name, true])))}>
                     <Icon icon={UnfoldVertical} size={14} />
                   </IconButton>
-                  <IconButton variant="default" aria-label="Collapse all" title="Collapse all" style={{ width: 28, height: 28, color: 'var(--text-muted)' }} onClick={() => setExpanded({})}>
+                  <IconButton variant="default" aria-label="Collapse all" title="Collapse all" style={{ width: 28, height: 'var(--control-sm)', color: 'var(--text-muted)' }} onClick={() => setExpanded({})}>
                     <Icon icon={FoldVertical} size={14} />
                   </IconButton>
                 </div>
@@ -464,7 +464,7 @@ export function AdminScreen() {
                 {CLASS_TREE.map((sys) => (
                   <div key={sys.name}>
                     <div onClick={() => toggleNode(sys.name)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px 8px 12px', borderRadius: 'var(--radius-lg)', cursor: 'pointer' }}>
-                      <span style={{ width: 20, height: 20, flex: 'none', color: 'var(--text-disabled)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ width: 'var(--icon-md)', height: 'var(--icon-md)', flex: 'none', color: 'var(--text-disabled)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Icon icon={expanded[sys.name] ? ChevronDown : ChevronRight} size={15} />
                       </span>
                       <IconChip icon={Layers} tint="#2A6FDB14" color="var(--info-500)" size={24} iconSize={14} />
@@ -474,7 +474,7 @@ export function AdminScreen() {
                     {expanded[sys.name] &&
                       sys.subs.map((sub) => (
                         <div key={sub.name} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px 8px 32px', borderRadius: 'var(--radius-lg)' }}>
-                          <span style={{ width: 20, flex: 'none' }} />
+                          <span style={{ width: 'var(--icon-md)', flex: 'none' }} />
                           <IconChip icon={Box} tint="#7C5CDB14" color="#7C5CDB" size={24} iconSize={14} />
                           <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', font: 'var(--fw-semibold) 13px/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{sub.name}</span>
                           <span style={{ flex: 'none', font: 'var(--fw-regular) 11px/1 var(--font-body)', color: 'var(--text-disabled)' }}>{sub.count}</span>
@@ -486,7 +486,7 @@ export function AdminScreen() {
             </div>
 
             {/* right: empty state (no selection) */}
-            <div style={{ border: 'var(--border-width) dashed var(--neutral-200)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-12) var(--space-6)', textAlign: 'center', color: 'var(--text-disabled)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div style={{ border: 'var(--border-width) dashed var(--neutral-200)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-12) var(--space-6)', textAlign: 'center', color: 'var(--text-disabled)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
               <Icon icon={MousePointerClick} size={24} />
               <div style={{ font: 'var(--fw-semibold) 13.5px/1.3 var(--font-body)', color: 'var(--text-secondary)' }}>Select a classification item</div>
               <div style={{ maxWidth: 320, font: 'var(--fw-regular) 12.5px/1.45 var(--font-body)' }}>Choose any System, Sub-system, Component or Symptom from the tree to view details and configuration options.</div>
@@ -498,7 +498,7 @@ export function AdminScreen() {
             <ULabel style={{ letterSpacing: '0.05em', marginBottom: 10 }}>Recent classification changes · audit history</ULabel>
             <div style={{ border: '1px solid #F0F2F5', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
               {CLASS_AUDIT.map((a) => (
-                <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 15px', borderBottom: '1px solid #F6F8FA' }}>
+                <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '11px 15px', borderBottom: '1px solid #F6F8FA' }}>
                   <span style={{ width: 92, flex: 'none', font: 'var(--fw-bold) 11.5px/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{a.action}</span>
                   <TagChip tint="#F0F2F5" color="var(--text-muted)">
                     {a.type}

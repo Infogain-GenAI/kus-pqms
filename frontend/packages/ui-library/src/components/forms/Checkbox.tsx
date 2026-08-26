@@ -22,7 +22,7 @@ export function Checkbox({ label, checked = false, indeterminate = false, disabl
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 8,
+        gap: 'var(--space-2)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         color: disabled ? 'var(--text-disabled)' : 'var(--text-primary)',
         ...style,

@@ -26,9 +26,9 @@ value**, where two Tier 1 files were right and Tier 0's stale value won.
 
 | Corpus asserts | Reality here | Disposition |
 |---|---|---|
-| React 19+, React Router v8, Vite 7+ | React **18.3**, `react-router-dom` **6.30**, Vite **5.4** | **architect decision required** |
+| React 19+, React Router v8, Vite 7+ | React **18.3**, `react-router-dom` **6.30**, Vite **5.4** | **architect decision required** — and see the measured consequence below |
 | Tailwind CSS with a `@theme` block | **none** — inline style objects + CSS custom properties | **architect decision required** |
-| Vitest + React Testing Library; coverage 90/90/90/80 | **no test framework at all** — 0 tests, no runner, no coverage | **repo is behind and will adopt** |
+| Vitest + React Testing Library; coverage 90/90/90/80 | **adopted 2026-08-26 — but on Vitest 2, not 4**, because Vite 5.4 bounds it | **partly closed**; the version ceiling is the Vite row above |
 | TanStack Query + Zustand | **no state library** — one React context over a seed array | **architect decision required** |
 | Node 24 pinned via `.nvmrc` | no `.nvmrc`; Node 24.19.0 in use, unpinned | **repo is behind and will adopt** |
 | Turborepo | **not used** — pnpm workspaces only | **architect decision required** |
@@ -56,6 +56,33 @@ value**, where two Tier 1 files were right and Tier 0's stale value won.
 - **Turborepo — architect decision.** One app and two packages may not justify
   it. Adopting or dropping it from the corpus is a deliberate choice, not an
   oversight to correct.
+
+### The first MEASURED consequence — the Vite row is not abstract
+
+**Vite 5.4 bounds this project to Vitest 2. Vitest 4 requires Vite 6+ and does not
+run here** — verified, not inferred: installing it fails at startup with
+`ERR_PACKAGE_PATH_NOT_EXPORTED` on `vite/module-runner`.
+
+This is worth stating in the table's own evidence rather than a commit message,
+because it converts the React/Router/Vite row from a question about *versions*
+into a question with a **priced consequence**:
+
+| | |
+|---|---|
+| **Staying on Vite 5.4** | the test framework is pinned **two majors behind**, and every future dev-dependency inherits the same ceiling |
+| **Upgrading Vite** | unlocks the current Vitest major — and drags in the React 19 / Router v8 migration, since the corpus specifies them together |
+
+**The architect deciding that row should see this.** It is the first case where
+the divergence has cost something concrete rather than merely differing from a
+document, and it will not be the last: **a version ceiling propagates to every
+tool that depends on it.**
+
+**And it means 10-testing-standards.md assumes a Vitest this project cannot
+run.** Its guidance is not wrong, but anything in it that depends on Vitest 3+
+behaviour — reporter options, the `coverage.thresholds` shape, workspace config
+syntax — must be checked against v2 before being applied. The suite adopted on
+2026-08-26 runs on **Vitest 2** for this reason, recorded in
+18-project-context-and-implementation-status.md.
 
 **The whole table is ONE open placeholder, not six.** Splitting it into separate
 per-row placeholders is what produced the current state: each row looks small

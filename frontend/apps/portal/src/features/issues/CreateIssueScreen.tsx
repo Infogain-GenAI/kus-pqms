@@ -140,7 +140,7 @@ export function CreateIssueScreen() {
               <ULabel>Symptom *</ULabel>
               <Select aria-label="Symptom" value={symId} placeholder={compId ? 'Search symptom…' : 'Select a component first'} disabled={!compId || !!pendingSymptom} options={symptoms.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => setSymId(e.target.value)} />
               {pendingSymptom && (
-                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                   <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }}>{pendingSymptom}</span>
                   <Badge tone="warning" size="sm">Pending Approval</Badge>
                 </div>
@@ -167,7 +167,7 @@ export function CreateIssueScreen() {
             </div>
             <div>
               <ULabel>Issue source *</ULabel>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 {SOURCE_KEYS.map((k) => {
                   const active = source === k
                   const Meta = SOURCE[k]

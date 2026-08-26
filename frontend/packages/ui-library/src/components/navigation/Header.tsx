@@ -22,7 +22,7 @@ export function Header({ title, left, right, children, style, ...rest }: HeaderP
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 16,
+        gap: 'var(--space-4)',
         padding: '0 var(--space-6)',
         background: 'var(--surface-card)',
         borderBottom: 'var(--border-width) solid var(--border-subtle)',
@@ -30,7 +30,7 @@ export function Header({ title, left, right, children, style, ...rest }: HeaderP
       }}
       {...rest}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', minWidth: 0 }}>
         {left}
         {title && (
           <h1

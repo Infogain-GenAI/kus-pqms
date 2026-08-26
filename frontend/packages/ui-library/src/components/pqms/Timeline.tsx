@@ -47,7 +47,7 @@ export function Timeline({ items = [], style, ...rest }: TimelineProps) {
             key={i}
             style={{
               display: 'flex',
-              gap: 12,
+              gap: 'var(--space-3)',
             }}
           >
             <div
@@ -60,8 +60,8 @@ export function Timeline({ items = [], style, ...rest }: TimelineProps) {
             >
               <span
                 style={{
-                  width: 12,
-                  height: 12,
+                  width: 'var(--icon-xs)',
+                  height: 'var(--icon-xs)',
                   borderRadius: '50%',
                   background: 'var(--surface-card)',
                   border: `2.5px solid ${dot}`,
@@ -75,7 +75,7 @@ export function Timeline({ items = [], style, ...rest }: TimelineProps) {
                     width: 2,
                     flex: 1,
                     background: 'var(--border-subtle)',
-                    minHeight: 20,
+                    minHeight: 'var(--icon-md)',
                   }}
                 />
               )}

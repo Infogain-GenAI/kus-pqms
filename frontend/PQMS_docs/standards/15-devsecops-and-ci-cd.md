@@ -847,3 +847,58 @@ comparison against an independent artefact tells you the *relationship* to
 something external is preserved. **A changed delta after a value-preserving
 conversion means something went wrong**, and it is detectable even if the app's
 own baseline was regenerated at the wrong moment.
+
+## A ratchet across a changing denominator is not a ratchet
+
+**The rule.** A ratchet only means something while **the measured set is fixed**.
+Every widening of the denominator resets what the number represents, so a floor
+carried across a widening is comparing two different quantities.
+
+**The discipline that saves it: widen the denominator in a change that does
+nothing else.** The re-seed is then visible and attributable — one commit whose
+entire content is "the scope grew, here is the new baseline" — rather than buried
+in a change that also adds tests, where a reviewer cannot tell an improvement
+from a rescoping.
+
+### Why this is not obvious, and the worked example
+
+Coverage is the case where it bites, because the number moves in both directions
+at once. Measured on this project:
+
+| | Data layer only | Data layer + one screen |
+|---|---:|---:|
+| Statements | 76.83% | **82.45%** ⬆ |
+| Branches | 85.38% | **69.46%** ⬇ |
+| Functions | 90.90% | **51.19%** ⬇ |
+
+**Adding a well-tested file made two metrics fall by thirty and forty points.**
+Nothing regressed. The denominator grew from 130 branches to 298 and from 22
+functions to 84, and the untested remainder of the newly-included file entered
+the calculation.
+
+A reviewer seeing `functions: 90.90 → 51.19` in a change that also added nine
+tests has no way to tell whether the tests are bad or the scope grew. **In a
+separate change, the same diff is unambiguous.**
+
+The gate itself should say this where it will be read. Here the coverage
+configuration names the included paths, states that widening WILL fail the gate,
+and says the remedy is to re-measure and re-seed in the same change — so the
+person who hits the failure finds the explanation at the point of failure rather
+than in a standard.
+
+### State the end goal, so the interim is not mistaken for the target
+
+**A floor over a subset is a floor over a subset, and the document that records
+it must say which subset.** Otherwise the number is read as a project figure and
+the first honest widening looks like a regression.
+
+For this project the end goal is explicit: the denominator is eventually **all of
+`apps/portal/src` and `packages/ui-library/src`**, reached by successive
+widening. Each step is a scope change with its own re-seed, and
+18-project-context-and-implementation-status.md records which subset each floor
+covers at the time it was set.
+
+**This generalises past coverage.** Any ratcheted metric over an enumerable set
+has the property — lint counts scoped to a path glob, bundle budgets over an
+entry list, performance budgets over a route set. **Whenever the set can grow,
+the growth is its own change.**

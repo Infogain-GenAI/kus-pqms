@@ -44,7 +44,7 @@ export function Pagination({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 16,
+        gap: 'var(--space-4)',
         ...style,
       }}
       {...rest}
@@ -61,7 +61,7 @@ export function Pagination({
           {to} of {total.toLocaleString()}
         </span>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
         <PageBtn disabled={page <= 1} onClick={() => go(page - 1)} aria-label="Previous page">
           <Icon icon={ChevronLeft} size={16} strokeWidth={2} />
         </PageBtn>
@@ -98,8 +98,8 @@ function PageBtn({ children, active, disabled, style, className, ...rest }: Page
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        minWidth: 32,
-        height: 32,
+        minWidth: 'var(--icon-xl)',
+        height: 'var(--icon-xl)',
         padding: '0 var(--space-2)',
         display: 'inline-flex',
         alignItems: 'center',

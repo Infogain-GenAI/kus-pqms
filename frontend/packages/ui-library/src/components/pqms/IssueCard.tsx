@@ -44,8 +44,8 @@ export function IssueCard({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
-        padding: 16,
+        gap: 'var(--space-3)',
+        padding: 'var(--space-4)',
         background: 'var(--surface-card)',
         border: `1px solid ${selected ? 'var(--accent-300)' : 'var(--border-subtle)'}`,
         borderLeft: `3px solid ${selected ? 'var(--accent-500)' : 'transparent'}`,
@@ -62,7 +62,7 @@ export function IssueCard({
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
-          gap: 12,
+          gap: 'var(--space-3)',
         }}
       >
         <div
@@ -74,7 +74,7 @@ export function IssueCard({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: 'var(--space-2)',
               marginBottom: 4,
             }}
           >
@@ -116,7 +116,7 @@ export function IssueCard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 12,
+          gap: 'var(--space-3)',
         }}
       >
         {/* Severity display omitted: the DS source rendered a "Severity" caption + SeverityBar
@@ -126,14 +126,14 @@ export function IssueCard({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 4,
+            gap: 'var(--space-1)',
           }}
         />
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
+            gap: 'var(--space-3)',
           }}
         >
           {age && (

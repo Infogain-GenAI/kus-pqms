@@ -102,9 +102,9 @@ value**, where two Tier 1 files were right and Tier 0's stale value won.
 
 | Corpus asserts | Reality here | Disposition |
 |---|---|---|
-| React 19+, React Router v8, Vite 7+ | React **18.3**, `react-router-dom` **6.30**, Vite **5.4** | **architect decision required** |
+| React 19+, React Router v8, Vite 7+ | React **18.3**, `react-router-dom` **6.30**, Vite **5.4** | **architect decision required** — and see the measured consequence below |
 | Tailwind CSS with a `@theme` block | **none** — inline style objects + CSS custom properties | **architect decision required** |
-| Vitest + React Testing Library; coverage 90/90/90/80 | **no test framework at all** — 0 tests, no runner, no coverage | **repo is behind and will adopt** |
+| Vitest + React Testing Library; coverage 90/90/90/80 | **adopted 2026-08-26 — but on Vitest 2, not 4**, because Vite 5.4 bounds it | **partly closed**; the version ceiling is the Vite row above |
 | TanStack Query + Zustand | **no state library** — one React context over a seed array | **architect decision required** |
 | Node 24 pinned via `.nvmrc` | no `.nvmrc`; Node 24.19.0 in use, unpinned | **repo is behind and will adopt** |
 | Turborepo | **not used** — pnpm workspaces only | **architect decision required** |
@@ -132,6 +132,33 @@ value**, where two Tier 1 files were right and Tier 0's stale value won.
 - **Turborepo — architect decision.** One app and two packages may not justify
   it. Adopting or dropping it from the corpus is a deliberate choice, not an
   oversight to correct.
+
+#### The first MEASURED consequence — the Vite row is not abstract
+
+**Vite 5.4 bounds this project to Vitest 2. Vitest 4 requires Vite 6+ and does not
+run here** — verified, not inferred: installing it fails at startup with
+`ERR_PACKAGE_PATH_NOT_EXPORTED` on `vite/module-runner`.
+
+This is worth stating in the table's own evidence rather than a commit message,
+because it converts the React/Router/Vite row from a question about *versions*
+into a question with a **priced consequence**:
+
+| | |
+|---|---|
+| **Staying on Vite 5.4** | the test framework is pinned **two majors behind**, and every future dev-dependency inherits the same ceiling |
+| **Upgrading Vite** | unlocks the current Vitest major — and drags in the React 19 / Router v8 migration, since the corpus specifies them together |
+
+**The architect deciding that row should see this.** It is the first case where
+the divergence has cost something concrete rather than merely differing from a
+document, and it will not be the last: **a version ceiling propagates to every
+tool that depends on it.**
+
+**And it means 10-testing-standards.md assumes a Vitest this project cannot
+run.** Its guidance is not wrong, but anything in it that depends on Vitest 3+
+behaviour — reporter options, the `coverage.thresholds` shape, workspace config
+syntax — must be checked against v2 before being applied. The suite adopted on
+2026-08-26 runs on **Vitest 2** for this reason, recorded in
+18-project-context-and-implementation-status.md.
 
 **The whole table is ONE open placeholder, not six.** Splitting it into separate
 per-row placeholders is what produced the current state: each row looks small
@@ -8336,6 +8363,61 @@ something external is preserved. **A changed delta after a value-preserving
 conversion means something went wrong**, and it is detectable even if the app's
 own baseline was regenerated at the wrong moment.
 
+### A ratchet across a changing denominator is not a ratchet
+
+**The rule.** A ratchet only means something while **the measured set is fixed**.
+Every widening of the denominator resets what the number represents, so a floor
+carried across a widening is comparing two different quantities.
+
+**The discipline that saves it: widen the denominator in a change that does
+nothing else.** The re-seed is then visible and attributable — one commit whose
+entire content is "the scope grew, here is the new baseline" — rather than buried
+in a change that also adds tests, where a reviewer cannot tell an improvement
+from a rescoping.
+
+#### Why this is not obvious, and the worked example
+
+Coverage is the case where it bites, because the number moves in both directions
+at once. Measured on this project:
+
+| | Data layer only | Data layer + one screen |
+|---|---:|---:|
+| Statements | 76.83% | **82.45%** ⬆ |
+| Branches | 85.38% | **69.46%** ⬇ |
+| Functions | 90.90% | **51.19%** ⬇ |
+
+**Adding a well-tested file made two metrics fall by thirty and forty points.**
+Nothing regressed. The denominator grew from 130 branches to 298 and from 22
+functions to 84, and the untested remainder of the newly-included file entered
+the calculation.
+
+A reviewer seeing `functions: 90.90 → 51.19` in a change that also added nine
+tests has no way to tell whether the tests are bad or the scope grew. **In a
+separate change, the same diff is unambiguous.**
+
+The gate itself should say this where it will be read. Here the coverage
+configuration names the included paths, states that widening WILL fail the gate,
+and says the remedy is to re-measure and re-seed in the same change — so the
+person who hits the failure finds the explanation at the point of failure rather
+than in a standard.
+
+#### State the end goal, so the interim is not mistaken for the target
+
+**A floor over a subset is a floor over a subset, and the document that records
+it must say which subset.** Otherwise the number is read as a project figure and
+the first honest widening looks like a regression.
+
+For this project the end goal is explicit: the denominator is eventually **all of
+`apps/portal/src` and `packages/ui-library/src`**, reached by successive
+widening. Each step is a scope change with its own re-seed, and
+18-project-context-and-implementation-status.md records which subset each floor
+covers at the time it was set.
+
+**This generalises past coverage.** Any ratcheted metric over an enumerable set
+has the property — lint counts scoped to a path glob, bundle budgets over an
+entry list, performance budgets over a route set. **Whenever the set can grow,
+the growth is its own change.**
+
 ---
 
 ## 16 — Code Review Checklist
@@ -10956,6 +11038,404 @@ string family.**
 unmatched cluster on `10px` (30), `7px` (16), `9px` (13), `2px` (11) and belong in
 the same decision packet as the string residue. **Trigger:** after the design-token
 decision returns, since the two residues overlap. **Owner:** Frontend Lead.]**
+
+### Numeric tranche converted, and the test framework adopted — 2026-08-26
+
+#### Numeric exact-match tranche — ceiling 348 → 207
+
+**141 conversions.** `gap: 8` → `var(--space-2)` (33×), `gap: 12` →
+`var(--space-3)` (23×), `height: 40` → `var(--row-height-compact)` (5×).
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | 0 |
+| numeric ceiling | **348 → 207** |
+| values ceiling | 333, untouched |
+| pixel gate | **10 screens, pixel-identical** |
+| prototype delta | **unchanged to the digit** |
+
+**Running total: 274 conversions. values 467 → 333, numeric 348 → 207.** Every
+batch pixel-identical; the prototype delta has never moved.
+
+#### The unitless-property guard, and why it exists
+
+React appends `px` to a bare number for most style properties **but not for its
+unitless list** — `lineHeight`, `fontWeight`, `opacity`, `zIndex`, `flex`,
+`flexGrow`, `order`, `columnCount`, `strokeWidth` and the rest. For those,
+`lineHeight: 20` renders as `line-height: 20` — **twenty times the font size, not
+twenty pixels.** Converting one to `var(--space-5)` would substitute a length for
+a multiplier and change the render dramatically.
+
+**The current adherence selector contains none of them, so this is not a live
+bug.** It is encoded as an explicit exclusion list in the codemod, with the
+reason, so that **widening the selector later cannot silently introduce one**. It
+**fails loudly** rather than skipping: a silent skip would let someone widen the
+selector, see no conversions, and conclude there was nothing to convert.
+
+Verified by positive control: marking `gap` unitless makes the codemod abort with
+155 named occurrences and exit 1.
+
+#### On the number → string change
+
+Converting `gap: 8` to `gap: 'var(--space-2)'` changes the value's **type**.
+React accepts both, so the render should be identical — **but that is an
+assumption, not a proof, and the static equivalence check cannot see it** because
+it compares values, not types.
+
+Two things settle it: **the pixel gate**, which confirmed all ten screens
+unchanged; and **`tsc --noEmit`**, which would catch any site where a style value
+is read back and used arithmetically. Both passed.
+
+### Test framework adopted — first slice, 2026-08-26
+
+**Vitest + React Testing Library per 10-testing-standards.md.** This closes the
+only row in 00's divergence table dispositioned *repo is behind* with no
+counter-argument.
+
+**47 tests, all passing, 3 files.** Characterisation tests, not specification
+tests: they pin CURRENT behaviour so a later phase can prove it did not change
+them — the store's equivalent of what the pixel gate does for rendering.
+
+#### Coverage, measured — and the proposed floor
+
+Over `apps/portal/src/data/**`:
+
+| Metric | Measured |
+|---|---:|
+| Statements | **76.83%** (408/531) |
+| Branches | **85.38%** (111/130) |
+| Functions | **90.90%** (20/22) |
+| Lines | **76.83%** (408/531) |
+
+**Proposed starting ratchet floor: 75 / 84 / 90 / 75** — the measured values
+rounded down, so the gate is green on the day it is switched on and can only move
+upward.
+
+**NO THRESHOLD IS SET YET, deliberately.** A gate at 0% enforces nothing, and
+10's 90/90/90/80 describes a repository that already has tests. The order is
+adopt → write → measure → set the floor at the measurement. That is the ratchet
+principle applied honestly rather than aspirationally, and it is the same
+discipline the adherence ceilings already use.
+
+#### What is pinned
+
+The three domain rules `steps-for-new-repo.md` Step 10 says must survive any
+rewrite, all previously untested:
+
+- **Links are reciprocal** — both sides written on link and unlink, no duplicates
+  on a repeat link.
+- **Propose → approve** — a proposal parks the target in side fields and does
+  **not** move the visible status; approve moves it and clears the fields;
+  reject clears without moving; a terminal status stamps `closedAt`.
+- **Every mutation appends an audit entry** — asserted per mutation, plus the
+  actor name and role on the entry.
+
+Plus the A/B/C thresholds at every boundary, the manual-override path, and the
+pure helpers in `util.ts`.
+
+**Positive control, per 15:** breaking reciprocity so only one side is written
+fails exactly `INVARIANT 1 > linkIssue writes both sides` and nothing else.
+Reverted; 47 pass.
+
+#### NOT wired into pre-push yet
+
+The suite takes ~5 s wall-clock, most of it jsdom environment setup (the tests
+themselves run in ~160 ms). 23's rule is that a hook slow enough to be resented
+gets bypassed with `--no-verify`. **Left out of the hook until the startup cost is
+addressed**, and recorded here rather than silently deferred.
+
+#### Two findings from writing the tests
+
+**1. `addComment` appends NO audit entry.** Every other mutation calls
+`appendAudit()`. `addComment` writes a comment row and, on an `@mention`, a
+notification — and nothing else. **A user-visible change to an issue's
+communication history leaves no audit trail.**
+
+Step 10 says "a state change without an audit entry is a bug", and the
+Communication tab is presented as immutable in the UI, which makes the omission
+harder to defend. **Whether a comment counts as an auditable state change is a
+DOMAIN question**, so it is pinned as current behaviour and recorded, not fixed —
+fixing it in the same change would destroy the evidence of what the behaviour was.
+
+**[PLACEHOLDER — should `addComment` append an audit entry?** Pinned as "does
+not" in `tests/store.test.tsx`. **Trigger:** the Step 9 data-access slice.
+**Owner:** architect, with the domain owner.]**
+
+**2. `approveProposal` with no proposal outstanding is a silent no-op.** It falls
+back to the current status rather than erroring. Pinned; whether it should throw
+is an open question of the same kind.
+
+#### One stack constraint discovered
+
+**Vitest 4 requires Vite 6+; this project is pinned to Vite 5.4**, so the suite
+runs on **Vitest 2**. A concrete instance of 00's divergence table having
+consequences beyond documentation: the corpus specifies Vite 7+, and the actual
+version bounds which test-framework major can be adopted. Recorded because it
+will recur with every dev-dependency added.
+
+### Step 7 row 4 — `config/` extraction is now UNBLOCKED
+
+The placeholder was triggered on the fidelity harness being repaired. **It is
+repaired and produces a real verdict**, so the blocker is cleared.
+
+**Not done, and it should wait behind the test framework.** It is a content
+change — moving `JOBS`, `KPIS`, `SOURCES`, `AUDIT`, `CLASS_TREE`, `CLASS_COUNTS`,
+`MODULE_TINT`, `FREQ_OPTS` out of `AdminScreen.tsx`, and `PAGE_SIZES` /
+`DEFAULT_COLS` out of `IssueListScreen.tsx`.
+
+**The open design question stands and should be answered before the extraction,
+not during it:** much of that data is **prototype-shaped display data**, not
+configuration. `JOBS`, `SOURCES`, `AUDIT` and `CLASS_TREE` are sample rows the
+prototype displays — closer in kind to `data/seed.ts` than to
+`config/issue-columns.config.ts`. Splitting on the wrong axis produces a `config/`
+folder that is really a second seed file. `PAGE_SIZES`, `DEFAULT_COLS` and
+`MODULE_TINT` are unambiguously configuration; the rest needs a decision.
+
+### Coverage floors set, and the denominator pinned — 2026-08-26
+
+**Floors seeded at the MEASURED values, not a round number below them:**
+
+| Metric | Floor |
+|---|---:|
+| statements | **76.83%** |
+| branches | **85.38%** |
+| functions | **90.90%** |
+| lines | **76.83%** |
+
+Seeding at 75 would have donated 1.83 points of future regression for nothing.
+The ratchet exists so the floor can sit flush against the actual.
+
+**Managed by `scripts/coverage-gate.mjs`, the same mechanism as the adherence
+ceilings** — a committed number, automatic when it rises, a tracked hand-edit
+when it falls. 15's rule is not suspended for coverage; 10 records the prior
+repository's split floors drifting down for months to 79.82% functions under a
+static threshold. Both directions tested: forcing the floor to 90 exits 1;
+lowering it to 50 ratchets back to 76.83 and rewrites the file.
+
+#### ⚠️ THE DENOMINATOR IS THE DATA LAYER ONLY
+
+`vitest.config.ts` includes **`apps/portal/src/data/**` and nothing else** — 8
+files, 531 statements. Outside the measurement:
+
+- `apps/portal/src/{app,features}/**` — **11** screen and shell components
+- `packages/ui-library/src/**` — **30** components
+- `packages/design-tokens/src/**` — generated and byte-copied
+
+**So 76.83% is a data-layer figure, not a project figure.** Measured across the
+whole app it would be a small fraction of that, because 41 untested component
+files would enter the denominator.
+
+**Widening the glob WILL fail the gate, and that is not the fault of whoever
+widens it.** The scope, the consequence and the remedy — re-measure and re-seed
+in the same change — are recorded in `vitest.config.ts` next to the glob, so the
+person who hits it finds the explanation where they are looking.
+
+The scope is `data/**` because that is where the invariants live that Step 10
+says must survive any rewrite. Component coverage is a later slice.
+
+#### Wired into pre-push — and the hook is now at the limit
+
+**Measured end to end: 89 s for the whole hook.** That is **already past** the
+~80 s suite 23's bypass rule was written against.
+
+Recorded rather than smoothed over, because the number is the point of that rule:
+
+| | |
+|---|---|
+| typecheck + 3 ratchets + selftest | ~40 s |
+| `vitest run --coverage` | ~16 s |
+| **measured individually** | **~56 s** |
+| **actual hook wall-clock** | **89 s** |
+
+**The gap is per-check process startup** — every line spawns `npx`/`pnpm` afresh,
+roughly a third of the total. **Measuring checks individually understates the
+hook by about 50%**, which is worth knowing before adding anything else to it.
+
+**The first thing to move out if this grows again** is the coverage run: plain
+`vitest run` is ~13 s, and the ratchet could live in `build`/CI. Not taken now
+because the ratchet is new and its value is being somewhere people cannot skip.
+
+**A correction to an earlier note in this file:** the suite was recorded as
+"~5 s". That was Vitest's self-reported Duration, which excludes process startup.
+Real wall-clock is ~13 s plain, ~16 s instrumented.
+
+### Application defects consolidated — 2026-08-26
+
+Four defects were scattered across this register, which is mostly about
+documentation and tooling status. **That is where defects go to be forgotten.**
+
+They are now in **`PQMS_docs/APPLICATION-DEFECTS.md`** — self-contained, with
+reproduction steps and owners:
+
+| # | Defect | Owner | Fix proposed? |
+|---|---|---|---|
+| D-1 | dates shift a day by timezone (`util.ts`) | Frontend Lead | **yes** |
+| D-2 | `addComment` writes no audit entry | architect + domain | no — domain question |
+| D-3 | `approveProposal` no-ops silently | architect + domain | no — domain question |
+| D-4 | `/admin` has no route guard | architect | no — blocked on the auth model |
+
+**The rule that governs all four:** fixing any of them changes rendered or stored
+behaviour, so each belongs in its **own change with its own verification** —
+never folded into a conformance slice or a token batch. The token work depends on
+the pixel gate staying at threshold zero, and a legitimate behavioural fix would
+be indistinguishable from a conversion that broke something.
+
+**Two are pinned by tests asserting the CURRENT, defective behaviour.** Those
+tests are expected to fail when the defect is fixed; that failure is the signal,
+and the expectations move in the same change.
+
+### Screen tests, the a11y sweep, and D-5 — 2026-08-26
+
+**105 tests across 7 files.** Coverage denominator widened twice in this session;
+each widening re-seeded the floors, per 15's ratchet-denominator rule.
+
+| Stage | Denominator | Statements | Branches | Functions |
+|---|---|---:|---:|---:|
+| data layer only | 8 files | 76.83% | 85.38% | 90.90% |
+| + IssueListScreen | 9 files | 82.45% | 69.46% | 51.19% |
+| **+ 2 screens + all of ui-library** | **~50 files** | **76.35%** | **58.42%** | **42.92%** |
+
+**Falling numbers here are scope growth, not regression** — the denominator went
+from 531 statements to 3,992. Each re-seed was visible because the widening was
+the change.
+
+**Still a floor over a subset.** Outside it: `apps/portal/src/app/**`,
+`features/{admin,dashboard,notifications}/**`, and `packages/design-tokens`.
+The end goal is all of `apps/portal/src` and `packages/ui-library/src`.
+
+#### What the screen tests pinned
+
+**IssueWorkspaceScreen (8 tests)** — the propose→approve flow through the UI,
+previously pinned only at the store layer. The store tests prove the reducer is
+right; they say nothing about whether the screen wires it correctly or **who can
+see the approval affordance**. Now pinned: an SE sees "Change status" and does
+**not** see Approve/Reject; override roles do; the affordance disables once a
+proposal exists.
+
+Also pinned: **tab state is local, not routed** — 07 records this as a deliberate
+divergence, so if the tabs ever become routes the test says what changed rather
+than the change being invisible.
+
+**CreateIssueScreen (7 tests)** — the other draft/commit form. Typing does not
+touch the store; Clear discards; model code gates the dependent selects; the
+seven-source chip vocabulary is pinned as a set, because adding or renaming one
+is a domain change.
+
+#### The accessibility sweep — 31 of 32 components, one test file
+
+10 specifies axe in the test run. The obvious reading is a test per component;
+that is 30 places to forget, and the one forgotten is the component added last.
+**The sweep enumerates the barrel instead**, so a component added tomorrow is
+checked tomorrow with no test written for it.
+
+**Result: 31/32 rendered and checked, ZERO violations.** The one skip is
+`SourceBadge`, which needs more than minimal props — recorded by the sweep itself
+rather than silently passed, because a sweep that quietly skips components reads
+as full coverage.
+
+**What it cannot see, stated so the number is not over-read:** each component is
+rendered in ONE default state. A violation that appears only when a menu opens, a
+row is selected, or an error state renders is out of reach. It is a floor, not a
+guarantee.
+
+**Positive control, per 15:** removing `aria-label` from `IconButton` fails the
+sweep naming that component and the `button-name` rule. Reverted; 34 pass.
+
+**Compatibility checked before use:** `vitest-axe@0.1.0` peers `vitest >=0.16.0`,
+so it runs on the Vitest 2 this project is pinned to. **This one is NOT another
+instance of the Vite 5 ceiling** — worth stating, because the previous
+test-tooling choice was.
+
+#### D-5 recorded
+
+The pagination-reset defect is now `PQMS_docs/APPLICATION-DEFECTS.md` D-5, with a
+proposed fix — it is unambiguous, unlike D-2 and D-3. **Three call sites already
+reset the page and three do not**, which is what makes it read as intentional and
+survive review. `pageClamped` masks it: the user lands on the wrong results
+rather than an error, which is why it has never been reported.
+
+**The characterisation test already exists to flip.** The fix becomes "invert two
+assertions and state why" — reviewable in a way a behavioural fix with no prior
+test never is.
+
+### Step 11 / pass 4 — first screen description — 2026-08-26
+
+**One screen of seven: the Issue List.** Written from the prototype per 29's ten
+questions, then reconciled against the implementation and against
+`component-specs/INVENTORY.md`.
+
+New files: `PQMS_docs/screen-descriptions/issue-list.md`,
+`PQMS_docs/component-specs/RECONCILIATION-issue-list.md`.
+
+#### The delta count — what pass 4 exists to produce
+
+> **For the Issue List, pass 4 confirmed 9 components, added 2, could not confirm
+> 2, and reshaped 1.** 64% confirmed in both existence and shape.
+
+**How much to trust the remaining CANDIDATE rows:**
+
+- **Existence is reliable** — 11 of 14 implied components have a row.
+- **The misses are the predicted kind** — a KPI tile and a result-count band, both
+  layout-adjacent and named by no requirement. `INVENTORY.md` predicted exactly
+  this, which is evidence its method is sound where its output was incomplete.
+- **Shape is the risk, and 1 in 14 is not small.**
+
+**The confidence ratings do not predict correctness.** `LinkedCountCell` is rated
+**Medium** and is the one that is wrong; `BaseAttentionBanner` is rated **High**
+and could not be confirmed. **Rows should be rated by whether a PROTOTYPE reading
+confirmed them, not by how firmly the BRD asserts them.**
+
+Extrapolating from one screen — a weak base — predicts roughly **10–15 missed
+components and 5–7 shape disagreements** across the app.
+
+#### The shape disagreement, which is a requirements question
+
+`LinkedCountCell` is specified as *"count chip, or an em dash at zero; opens
+ISM-LNK"* — **numeric**. The prototype shows **"Standalone"** with the tooltip
+*"Standalone issue. Click to view history."* — **categorical**, whose zero-state
+is a named state rather than a dash, and whose action is history rather than link
+management.
+
+**A build specifying the BRD's shape would produce a cell that cannot display
+"Standalone".** Per `INVENTORY.md` this is a `00` case 4 — stop, do not pick.
+
+**[PLACEHOLDER — is the Relationship cell a link count or a relationship
+category?** **Owner:** architect with the domain owner. **Trigger:** before
+`BaseDataTable`'s cell API is specified.]**
+
+#### Three implementation divergences found
+
+| # | Prototype | App | Verdict |
+|---|---|---|---|
+| 1 | KPI "Resolved" | "Closed" | app is probably right — the *live* prototype says CLOSED; this export is stale |
+| 2 | Relationship column visible | not in defaults | stale export; the live prototype agrees with the app |
+| 3 | **"Showing 7 of 33 issues"** | **"Showing 7 of 7 issues"** | ⚠️ **app diverges, and it matters** |
+
+**Divergence 3 is the substantive one.** The prototype counts the narrowed set
+against the **unnarrowed total** — "there are 33 issues, you are seeing 7". The
+app counts the scoped set against **itself**, which tells the user nothing. Under
+00's source precedence the prototype governs copy, so the app is wrong. It is one
+string with a real consequence: a user who has narrowed cannot tell whether they
+are seeing everything.
+
+**Related to but distinct from D-5.** Both concern the user's sense of position in
+a result set; D-5 is the page index, this is the denominator. Both are one-line
+changes in the same band and should be fixed together.
+
+#### Two findings about the METHOD, not the screen
+
+**1. Naming the artefact read is load-bearing, not bookkeeping.** Two of the three
+divergences dissolve once you know this was the *flattened 2026-08-16 export*
+rather than the live `.dc.html`, which `FIDELITY-REPORT.md` round 4 already
+recorded as disagreeing. A reader comparing against the export alone would file
+two bugs that have already been decided. **29's question 1 earns its place.**
+
+**2. The two-empty-states question is unanswerable from this prototype, and that
+is the answer.** Neither empty state appears. They are not the same screen: a user
+with no data needs orientation and a "New issue" action; a user whose filters
+exclude everything needs recovery and a "Clear filters" action — and offering
+"New issue" there is actively wrong. Recorded as UNSPECIFIED with an owner rather
+than resolved by analogy.
 
 ---
 
@@ -14130,7 +14610,7 @@ Which files use each term 20 defines. The definitions are authored in
 | SPA | 05, 08, 11, 12, 13, 15, 33 | 7 |
 | MSAL | 04, 07, 08, 13, 16, 18, 21 | 7 |
 | XSS | 00, 08, 13, 18 | 4 |
-| DOM | 01, 02, 03, 06, 11, 12, 13 | 7 |
+| DOM | 01, 02, 03, 06, 11, 12, 13, 18 | 8 |
 | ICU | 00, 09 | 2 |
 | BEM | 06 | 1 |
 | SSO | 08, 18 | 2 |
@@ -14161,7 +14641,7 @@ For each file, which other files cite its filename at least once.
 | 07 | 01, 03, 05, 08, 10, 11, 12, 17, 18, 19, 27, 32, 33 | 13 |
 | 08 | 00, 01, 03, 04, 05, 07, 11, 13, 15, 17, 18, 19 | 12 |
 | 09 | 02, 14, 18 | 3 |
-| 10 | 01, 02, 04, 05, 06, 11, 15, 18, 20, 24, 26, 30, 32 | 13 |
+| 10 | 00, 01, 02, 04, 05, 06, 11, 15, 18, 20, 24, 26, 30, 32 | 14 |
 | 11 | 00, 01, 03, 06, 07, 10, 14, 18, 20 | 9 |
 | 12 | 03, 06, 07, 09, 13, 14, 15, 18, 33 | 9 |
 | 13 | 05, 08, 12, 15, 18, 20, 21, 25, 33 | 9 |
@@ -14206,7 +14686,7 @@ mentions must not be assembled into one.
 | 12 | BaseDataTable, BaseDateRangePicker, BaseIcon, BaseMarkdownEditor, BaseSkeleton, BaseSwitch, BaseToast, BaseTooltip | 8 |
 | 13 | BaseCommentCard, BaseMarkdownEditor | 2 |
 | 14 | BaseButton, BaseMarkdownEditor | 2 |
-| 18 | BaseButton, BaseCheckbox, BaseDataTable, BaseModal, BaseSelect, BaseStatusPill, BaseSwitch, BaseTabs, BaseTextarea, BaseTooltip | 10 |
+| 18 | BaseAttentionBanner, BaseButton, BaseCheckbox, BaseDataTable, BaseModal, BaseSelect, BaseStatusPill, BaseSwitch, BaseTabs, BaseTextarea, BaseTooltip | 11 |
 | 20 | BaseSelect, BaseTooltip | 2 |
 | 22 | BaseToast | 1 |
 | 24 | BaseButton | 1 |

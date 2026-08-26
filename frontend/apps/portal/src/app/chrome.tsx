@@ -98,7 +98,7 @@ export function IconChip({ icon, tint = 'var(--accent-50)', color = 'var(--accen
 /** Card header: icon chip + title (+ optional subtitle) + right slot. */
 export function CardHead({ icon, tint, color, title, subtitle, right }: { icon?: LucideIcon; tint?: string; color?: string; title: ReactNode; subtitle?: ReactNode; right?: ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: subtitle ? 'flex-start' : 'center', gap: 12, marginBottom: 'var(--space-4)' }}>
+    <div style={{ display: 'flex', alignItems: subtitle ? 'flex-start' : 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
       {icon && <IconChip icon={icon} tint={tint} color={color} />}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ font: 'var(--fw-semibold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)' }}>{title}</div>
@@ -113,7 +113,7 @@ export function CardHead({ icon, tint, color, title, subtitle, right }: { icon?:
 export function MetaChip({ icon, children }: { icon?: LucideIcon; children: ReactNode }) {
   return (
     <span
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, padding: '0 10px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', color: 'var(--text-secondary)', font: 'var(--fw-medium) var(--fs-caption)/1 var(--font-body)', whiteSpace: 'nowrap' }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--control-sm)', padding: '0 10px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', color: 'var(--text-secondary)', font: 'var(--fw-medium) var(--fs-caption)/1 var(--font-body)', whiteSpace: 'nowrap' }}
     >
       {icon && <Icon icon={icon} size={13} />}
       {children}
@@ -141,7 +141,7 @@ export function ToggleGroup({ options, value, onChange, variant = 'light', size 
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 4,
+        gap: 'var(--space-1)',
         padding: variant === 'light' ? 4 : 0,
         background: variant === 'light' ? 'var(--neutral-50)' : 'transparent',
         border: variant === 'light' ? 'var(--border-width) solid var(--border-subtle)' : 'none',
@@ -163,7 +163,7 @@ export function ToggleGroup({ options, value, onChange, variant = 'light', size 
               height: h,
               padding: '0 14px',
               border: 'none',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-lg)',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               background: active ? (variant === 'dark' ? 'var(--kia-midnight)' : 'var(--surface-card)') : 'transparent',

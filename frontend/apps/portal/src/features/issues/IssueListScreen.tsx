@@ -71,7 +71,7 @@ const EMPTY_FILTERS: FilterDraft = { modelCode: '', modelYear: '', system: '', s
 const DEFAULT_SORT: DataTableSort = { key: 'issueDate', dir: 'desc' }
 
 const drawerLabel = { font: 'var(--fw-bold) 11px/1.35 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)' } as const
-const fieldRow = { display: 'grid', gridTemplateColumns: '116px 1fr', gap: 16, alignItems: 'center', padding: 'var(--space-2) 0' } as const
+const fieldRow = { display: 'grid', gridTemplateColumns: '116px 1fr', gap: 'var(--space-4)', alignItems: 'center', padding: 'var(--space-2) 0' } as const
 
 function SegRow({ options, value, onChange }: { options: { v: string; l: string }[]; value: string; onChange: (v: string) => void }) {
   return (
@@ -94,7 +94,7 @@ function Drawer({ icon, title, subtitle, onClose, footer, children }: { icon: Lu
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(5,20,31,.34)' }} />
       <div role="dialog" aria-label={title} style={{ position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 121, width: 452, maxWidth: '94vw', background: 'var(--surface-card)', boxShadow: '-14px 0 44px rgba(5,20,31,.20)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 22px', borderBottom: '1px solid #F0F2F5', flex: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)', padding: '18px 22px', borderBottom: '1px solid #F0F2F5', flex: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
             <IconChip icon={icon} tint="#F1F4F7" color="var(--kia-midnight)" size={34} iconSize={18} />
             <div>
@@ -107,7 +107,7 @@ function Drawer({ icon, title, subtitle, onClose, footer, children }: { icon: Lu
           </button>
         </div>
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '4px 22px 18px' }}>{children}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 22px', borderTop: '1px solid #F0F2F5', flex: 'none', background: 'var(--bg-app)' }}>{footer}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '14px 22px', borderTop: '1px solid #F0F2F5', flex: 'none', background: 'var(--bg-app)' }}>{footer}</div>
       </div>
     </>
   )
@@ -342,10 +342,10 @@ export function IssueListScreen() {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
               <IconChip icon={k.icon} tint={k.tint} color={k.tone === 'var(--text-primary)' ? 'var(--accent-600)' : k.tone} size={36} iconSize={17} />
               {k.pct && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 var(--space-2)', borderRadius: 'var(--radius-pill)', background: k.tint, color: k.tone === 'var(--text-primary)' ? 'var(--accent-700)' : k.tone, font: 'var(--fw-bold) 11px/1 var(--font-body)' }}>{k.pct}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', height: 'var(--icon-md)', padding: '0 var(--space-2)', borderRadius: 'var(--radius-pill)', background: k.tint, color: k.tone === 'var(--text-primary)' ? 'var(--accent-700)' : k.tone, font: 'var(--fw-bold) 11px/1 var(--font-body)' }}>{k.pct}</span>
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
               <span style={{ font: 'var(--fw-bold) var(--fs-h2)/1 var(--font-display)', color: k.tone }}>{k.count}</span>
               <span style={{ font: 'var(--fw-bold) 10.5px/1.2 var(--font-body)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{k.label}</span>
             </div>
@@ -416,7 +416,7 @@ export function IssueListScreen() {
             />
             {/* Footer band — inside the table card, like the prototype */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: 'var(--border-width) solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
                 <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
                   Showing <b style={{ color: 'var(--text-primary)' }}>{(pageClamped - 1) * pageSize + 1}–{Math.min(pageClamped * pageSize, filtered.length)}</b> of {filtered.length} issues
                 </span>

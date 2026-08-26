@@ -47,7 +47,7 @@ export function Toast({ tone = 'info', title, message, onClose, style, ...rest }
       style={{
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 12,
+        gap: 'var(--space-3)',
         width: 360,
         maxWidth: '90vw',
         padding: '12px 14px',

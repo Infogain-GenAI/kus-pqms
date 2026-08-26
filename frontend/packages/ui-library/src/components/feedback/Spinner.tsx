@@ -21,7 +21,7 @@ export function Spinner({ size = 20, thickness = 2.5, color = 'var(--accent-500)
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 8,
+        gap: 'var(--space-2)',
         ...style,
       }}
       {...rest}

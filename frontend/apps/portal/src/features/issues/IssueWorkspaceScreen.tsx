@@ -121,7 +121,7 @@ export function IssueWorkspaceScreen() {
               {issue.isEws && <TagChip tint="var(--danger-50)" color="var(--danger-600)">EWS flagged</TagChip>}
             </div>
             <h1 style={{ margin: '0 0 var(--space-3)', font: 'var(--fw-bold) 24px/1.2 var(--font-display)', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{issue.title}</h1>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
               <MetaChip icon={Car}>{modelCodeLabel(issue)}</MetaChip>
               {issue.system && <MetaChip icon={Settings2}>{issue.system}{issue.component ? ` / ${issue.component}` : issue.subSystem ? ` / ${issue.subSystem}` : ''}</MetaChip>}
               <MetaChip icon={FileText}>{SOURCE[issue.source].label}</MetaChip>
@@ -136,7 +136,7 @@ export function IssueWorkspaceScreen() {
                 <span style={{ display: 'block', font: 'var(--fw-regular) var(--fs-caption)/1.2 var(--font-body)', color: 'var(--text-muted)' }}>Owner · {issue.ownerRole}</span>
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
               <Button variant="secondary" size="sm" disabled={!canEditIssue} iconLeft={<Icon icon={PenSquare} size={14} />} onClick={() => setModal('edit')}>Edit issue</Button>
               <Button variant="secondary" size="sm" disabled={!!issue.proposedStatus} iconLeft={<Icon icon={ArrowLeftRight} size={14} />} onClick={() => setModal('status')}>Change status</Button>
               <Button variant="secondary" size="sm" disabled={!canQir} iconLeft={<Icon icon={ClipboardPlus} size={14} />} onClick={() => setModal('qir')}>Create QIR</Button>
@@ -225,7 +225,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
             <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr' }}>
               <span style={{ padding: '12px 14px', font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-primary)' }}>{(issue.modelCodes ?? [issue.modelCode]).join(', ')}</span>
               <span style={{ padding: '9px 14px', borderLeft: 'var(--border-width) solid var(--border-subtle)' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', height: 24, padding: '0 10px', borderRadius: 'var(--radius-md)', background: 'var(--neutral-50)', font: 'var(--fw-semibold) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-primary)' }}>{issue.modelYear}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', height: 'var(--icon-lg)', padding: '0 10px', borderRadius: 'var(--radius-md)', background: 'var(--neutral-50)', font: 'var(--fw-semibold) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-primary)' }}>{issue.modelYear}</span>
               </span>
             </div>
           </div>
@@ -251,7 +251,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
           {issue.dtcCodes?.length ? (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {issue.dtcCodes.map((d) => (
-                <span key={d} style={{ display: 'inline-flex', alignItems: 'center', height: 24, padding: '0 10px', borderRadius: 'var(--radius-md)', background: 'var(--neutral-100)', font: 'var(--fw-semibold) var(--fs-caption)/1 var(--font-mono)', color: 'var(--text-primary)' }}>{d}</span>
+                <span key={d} style={{ display: 'inline-flex', alignItems: 'center', height: 'var(--icon-lg)', padding: '0 10px', borderRadius: 'var(--radius-md)', background: 'var(--neutral-100)', font: 'var(--fw-semibold) var(--fs-caption)/1 var(--font-mono)', color: 'var(--text-primary)' }}>{d}</span>
               ))}
             </div>
           ) : (
@@ -266,7 +266,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
             subtitle="Origin signals for this issue — add or edit source channels and evidence"
             right={
               srcEditing ? (
-                <span style={{ display: 'inline-flex', gap: 8 }}>
+                <span style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
                   <Button variant="secondary" size="sm" onClick={() => setSrcEditing(false)}>Cancel</Button>
                   <Button size="sm" iconLeft={<Icon icon={Check} size={14} />} onClick={() => { if (srcDraft !== issue.source) store.updateIssue(issue.id, { source: srcDraft }, actor); setSrcEditing(false) }}>Save sources</Button>
                 </span>
@@ -294,7 +294,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
                       <span style={{ display: 'block', font: 'var(--fw-semibold) var(--fs-body-sm)/1.2 var(--font-body)', color: 'var(--text-primary)' }}>{SOURCE[k].label}</span>
                       <span style={{ display: 'block', marginTop: 2, font: 'var(--fw-regular) var(--fs-caption)/1.2 var(--font-body)', color: 'var(--text-muted)' }}>{SRC_SUB[k]}</span>
                     </span>
-                    <span aria-hidden style={{ width: 16, height: 16, flex: 'none', borderRadius: 4, border: `1.5px solid ${active ? 'var(--kia-midnight)' : 'var(--neutral-300)'}`, background: active ? 'var(--kia-midnight)' : 'var(--surface-card)', color: 'var(--neutral-0)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span aria-hidden style={{ width: 'var(--icon-sm)', height: 'var(--icon-sm)', flex: 'none', borderRadius: 'var(--radius-sm)', border: `1.5px solid ${active ? 'var(--kia-midnight)' : 'var(--neutral-300)'}`, background: active ? 'var(--kia-midnight)' : 'var(--surface-card)', color: 'var(--neutral-0)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                       {active && <Icon icon={Check} size={11} />}
                     </span>
                   </button>
@@ -306,7 +306,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
               <button
                 onClick={() => setSrcOpen((v) => !v)}
                 aria-expanded={srcOpen}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', border: 'none', background: 'var(--surface-card)', padding: '12px 14px', cursor: 'pointer', textAlign: 'left' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', width: '100%', border: 'none', background: 'var(--surface-card)', padding: '12px 14px', cursor: 'pointer', textAlign: 'left' }}
               >
                 <Icon icon={SOURCE[issue.source].icon} size={15} style={{ color: 'var(--text-secondary)' }} />
                 <span style={{ flex: 1, font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', color: 'var(--text-primary)' }}>{SOURCE[issue.source].label}</span>
@@ -324,7 +324,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
               )}
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
               <MetaChip icon={SOURCE[issue.source].icon}>{SOURCE[issue.source].label}</MetaChip>
               <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>No source channels recorded for this issue yet. Select <b style={{ color: 'var(--text-secondary)' }}>Add / edit sources</b> to capture where it originated.</span>
             </div>
@@ -336,17 +336,17 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
       <SectionCard>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <ULabel style={{ marginBottom: 0 }}>Related linked issue</ULabel>
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, padding: '0 6px', borderRadius: 'var(--radius-pill)', background: 'var(--success-50)', color: 'var(--success-600)', font: 'var(--fw-bold) 11px/1 var(--font-body)' }}>{linked.length}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 'var(--icon-md)', height: 'var(--icon-md)', padding: '0 6px', borderRadius: 'var(--radius-pill)', background: 'var(--success-50)', color: 'var(--success-600)', font: 'var(--fw-bold) 11px/1 var(--font-body)' }}>{linked.length}</span>
         </div>
         <button onClick={onManageLinks} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--accent-700)', marginBottom: 12 }}>
           Manage Related Issues
         </button>
         {linked.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }}>
             <Icon icon={Link} size={14} /> No related issues linked
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             {linked.map((lid) => {
               const li = store.getIssue(lid)
               return (
@@ -406,9 +406,9 @@ function InvestigationTab({ issueId, canEdit }: { issueId: string; canEdit: bool
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {activities.map((a, idx) => (
-                  <div key={a.id} style={{ display: 'flex', gap: 12, padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)' }}>
+                  <div key={a.id} style={{ display: 'flex', gap: 'var(--space-3)', padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                         <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{a.type}</span>
                         {a.attachments?.length ? <TagChip>{a.attachments.length} file{a.attachments.length > 1 ? 's' : ''}</TagChip> : null}
                       </div>
@@ -506,7 +506,7 @@ function ResolutionTab({ issue, onChangeStatus, onCreateQir, canQir }: { issue: 
         />
         {issue.dispositionOutcome ? (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 8 }}>
               <Badge tone="success">{issue.dispositionOutcome}</Badge>
               <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>Recorded — immutable after approval.</span>
             </div>
@@ -573,7 +573,7 @@ function CommunicationTab({ comments, onPost }: { comments: import('@/data/types
       <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '6px 8px', background: 'var(--neutral-25)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}>
           {[BoldIcon, ItalicIcon, ListIcon, ListOrdered, Link2, Paperclip].map((I, i) => (
-            <span key={i} aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, color: 'var(--text-muted)' }}>
+            <span key={i} aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 'var(--control-sm)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)' }}>
               <Icon icon={I} size={14} />
             </span>
           ))}
@@ -586,7 +586,7 @@ function CommunicationTab({ comments, onPost }: { comments: import('@/data/types
           style={{ display: 'block', width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none', resize: 'vertical', padding: '12px 14px', font: 'var(--fw-regular) var(--fs-body-md)/1.5 var(--font-body)', color: 'var(--text-primary)', background: 'var(--surface-card)' }}
         />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
         <Icon icon={ShieldCheck} size={13} style={{ color: 'var(--text-muted)' }} />
         <span style={{ font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>Messages are immutable once posted.</span>
         <span style={{ flex: 1 }} />
@@ -679,17 +679,17 @@ function HistoryTab({ issueId }: { issueId: string }) {
       )}
       {groups.map(([day, list]) => (
         <div key={day} style={{ marginBottom: 'var(--space-4)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 6 }}>
             <span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{day}</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 'var(--radius-pill)', background: 'var(--neutral-100)', color: 'var(--text-secondary)', font: 'var(--fw-bold) 10px/1 var(--font-body)' }}>{list.length}</span>
           </div>
           {list.map((e) => {
             const cls = classify(e.action)
             return (
-              <div key={e.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0' }}>
+              <div key={e.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: '10px 0' }}>
                 <IconChip icon={iconFor(e.action)} tint={cls === 'LIFECYCLE' ? 'var(--success-50)' : 'var(--neutral-100)'} color={cls === 'LIFECYCLE' ? 'var(--success-600)' : 'var(--neutral-600)'} size={34} iconSize={15} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                     <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{e.action}</span>
                     <TagChip tint={cls === 'LIFECYCLE' ? 'var(--success-50)' : '#EEEBFB'} color={cls === 'LIFECYCLE' ? 'var(--success-600)' : '#6B4EDB'}>{cls}</TagChip>
                   </div>
@@ -831,7 +831,7 @@ function ManageLinksModal({ open, issue, onClose }: { open: boolean; issue: Issu
       {draft.length === 0 ? (
         <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>This issue has no related Parent/Child issues.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
           {draft.map((lid) => {
             const li = store.getIssue(lid)
             return (
@@ -848,7 +848,7 @@ function ManageLinksModal({ open, issue, onClose }: { open: boolean; issue: Issu
       {candidates.length === 0 ? (
         <p style={{ margin: 0, font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>No classification-matched candidates.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {candidates.map((c) => (
             <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) var(--space-3)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
               <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{c.id}</span>

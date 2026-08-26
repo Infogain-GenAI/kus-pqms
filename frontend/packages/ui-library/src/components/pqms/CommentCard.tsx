@@ -24,15 +24,15 @@ export function CommentCard({ author, role, time, children, internal = false, st
     <div
       style={{
         display: 'flex',
-        gap: 12,
+        gap: 'var(--space-3)',
         ...style,
       }}
       {...rest}
     >
       <span
         style={{
-          width: 32,
-          height: 32,
+          width: 'var(--icon-xl)',
+          height: 'var(--icon-xl)',
           borderRadius: '50%',
           background: 'var(--kia-midnight-70)',
           color: 'var(--neutral-0)',
@@ -55,7 +55,7 @@ export function CommentCard({ author, role, time, children, internal = false, st
           style={{
             display: 'flex',
             alignItems: 'baseline',
-            gap: 8,
+            gap: 'var(--space-2)',
             flexWrap: 'wrap',
           }}
         >

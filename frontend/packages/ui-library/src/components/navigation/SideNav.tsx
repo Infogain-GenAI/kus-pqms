@@ -107,7 +107,7 @@ export function SideNav({
       {footer && (
         <div
           style={{
-            padding: 8,
+            padding: 'var(--space-2)',
             borderTop: 'var(--border-width) solid rgba(255,255,255,0.08)',
             flex: 'none',
           }}
@@ -138,9 +138,9 @@ function NavItem({ item, active, collapsed, onSelect }: NavItemProps) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        gap: 'var(--space-3)',
         width: '100%',
-        height: 40,
+        height: 'var(--row-height-compact)',
         padding: collapsed ? 0 : '0 var(--space-3)',
         justifyContent: collapsed ? 'center' : 'flex-start',
         border: 'none',
@@ -163,8 +163,8 @@ function NavItem({ item, active, collapsed, onSelect }: NavItemProps) {
           style={{
             position: 'absolute',
             left: 0,
-            top: 8,
-            bottom: 8,
+            top: 'var(--space-2)',
+            bottom: 'var(--space-2)',
             width: 3,
             borderRadius: '0 2px 2px 0',
             background: 'var(--accent-300)',

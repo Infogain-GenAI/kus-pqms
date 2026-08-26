@@ -36,7 +36,7 @@ export function ApprovalBar({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 16,
+        gap: 'var(--space-4)',
         padding: '14px 16px',
         background: 'var(--warning-50)',
         border: '1px solid #F4E2C0',
@@ -45,11 +45,11 @@ export function ApprovalBar({
       }}
       {...rest}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
         <span
           style={{
             width: 36,
-            height: 36,
+            height: 'var(--control-md)',
             borderRadius: '50%',
             background: 'var(--warning-500)',
             color: 'var(--neutral-0)',
@@ -82,7 +82,7 @@ export function ApprovalBar({
           </div>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flex: 'none' }}>
         {onDelegate && (
           <Button variant="ghost" size="sm" onClick={onDelegate}>
             Delegate

@@ -101,7 +101,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 336px', gap: 'var(--space-5)', alignItems: 'start' }}>
       {/* ---- matrix ---- */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
         {PRI_MATRIX.map((sec) => (
           <SectionCard key={sec.key}>
             <CardHead
@@ -113,12 +113,12 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                 </Button>
               }
             />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginTop: 4 }}>
               {sec.items.map((it) => {
                 const hasSel = draft.selIdx[it.key] != null
                 return (
                   <div key={it.key}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 7 }}>
                       <ULabel>{it.label}</ULabel>
                       {hasSel && (
                         <button
@@ -141,7 +141,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                         </button>
                       )}
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                       {it.options.map((op, opIdx) => {
                         const sel = draft.selIdx[it.key] === opIdx
                         return (
@@ -181,7 +181,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
       </div>
 
       {/* ---- score + final priority rail ---- */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, position: 'sticky', top: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', position: 'sticky', top: 0 }}>
         <SectionCard>
           <CardHead icon={Gauge} title="Priority score" />
 
@@ -192,7 +192,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 minWidth: 44,
-                height: 44,
+                height: 'var(--control-lg)',
                 padding: '0 var(--space-3)',
                 borderRadius: 11,
                 background: band.tint,
@@ -212,7 +212,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
               </div>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700 }}>
                 {total}
-                <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-muted)' }}> / {PRIORITY_SCORE_CAP} pts</span>
+                <span style={{ fontSize: 'var(--fs-body-sm)', fontWeight: 400, color: 'var(--text-muted)' }}> / {PRIORITY_SCORE_CAP} pts</span>
               </div>
             </div>
           </div>
@@ -220,7 +220,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
           <div style={{ position: 'relative', height: 6, borderRadius: 99, background: 'var(--neutral-100)', margin: '14px 0 6px' }}>
             <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, borderRadius: 99, background: band.color }} />
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: 'var(--fs-caption)', color: 'var(--text-secondary)' }}>
             {settled ? 'Issue Priority' : 'Calculated priority'}: <strong>Priority {calc}</strong> · {band.band}
           </div>
 
@@ -230,7 +230,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
               style={{
                 marginTop: 12,
                 padding: '9px 11px',
-                borderRadius: 8,
+                borderRadius: 'var(--radius-lg)',
                 background: 'var(--warning-50)',
                 color: 'var(--warning-600)',
                 fontSize: 12.5,
@@ -256,7 +256,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
               ) : undefined
             }
           />
-          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 4 }}>
             {(['A', 'B', 'C'] as PriorityLetter[]).map((l) => {
               const on = finalLetter === l
               return (
@@ -274,7 +274,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                     borderRadius: 9,
                     cursor: 'pointer',
                     fontFamily: 'var(--font-body)',
-                    fontSize: 13,
+                    fontSize: 'var(--fs-body-sm)',
                     fontWeight: 600,
                     border: `1.5px solid ${on ? PRIORITY_BANDS[l].color : '#DDE3E9'}`,
                     background: on ? PRIORITY_BANDS[l].tint : 'var(--surface-card)',
@@ -307,14 +307,14 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
+                    width: 'var(--icon-xl)',
+                    height: 'var(--icon-xl)',
+                    borderRadius: 'var(--radius-lg)',
                     background: PRIORITY_BANDS[r.letter].tint,
                     color: PRIORITY_BANDS[r.letter].color,
                     fontFamily: 'var(--font-display)',
                     fontWeight: 700,
-                    fontSize: 14,
+                    fontSize: 'var(--fs-body-md)',
                     flex: 'none',
                   }}
                 >
@@ -322,7 +322,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                 </span>
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 600 }}>Score {r.score}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{r.desc}</div>
+                  <div style={{ fontSize: 'var(--fs-caption)', color: 'var(--text-secondary)' }}>{r.desc}</div>
                 </div>
               </div>
             ))}

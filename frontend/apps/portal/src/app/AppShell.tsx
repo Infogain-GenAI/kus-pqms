@@ -63,7 +63,7 @@ export function AppShell() {
       <header
         style={{ position: 'sticky', top: 0, zIndex: 40, height: 'var(--header-height)', flex: 'none', background: 'var(--surface-card)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}
       >
-      <div style={{ maxWidth: 1800, height: '100%', margin: '0 auto', padding: '0 var(--space-10)', display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div style={{ maxWidth: 1800, height: '100%', margin: '0 auto', padding: '0 var(--space-10)', display: 'flex', alignItems: 'center', gap: 'var(--space-5)' }}>
         <button aria-label="Kia PQMS home" onClick={() => nav('/dashboard')} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'inline-flex' }}>
           <Logo tone="dark" height={22} />
         </button>
@@ -101,7 +101,7 @@ export function AppShell() {
             <Icon icon={Bell} size={19} />
           </IconButton>
           {unreadCount > 0 && (
-            <span aria-hidden style={{ position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, padding: '0 var(--space-1)', borderRadius: 'var(--radius-pill)', background: 'var(--status-escalated)', border: '1.5px solid var(--surface-card)', color: 'var(--neutral-0)', font: 'var(--fw-bold) 9.5px/13px var(--font-body)', textAlign: 'center', pointerEvents: 'none' }}>
+            <span aria-hidden style={{ position: 'absolute', top: 2, right: 2, minWidth: 'var(--icon-sm)', height: 'var(--icon-sm)', padding: '0 var(--space-1)', borderRadius: 'var(--radius-pill)', background: 'var(--status-escalated)', border: '1.5px solid var(--surface-card)', color: 'var(--neutral-0)', font: 'var(--fw-bold) 9.5px/13px var(--font-body)', textAlign: 'center', pointerEvents: 'none' }}>
               {unreadCount}
             </span>
           )}
@@ -111,7 +111,7 @@ export function AppShell() {
               {/* Notification panel — layout/type per the prototype's header dropdown (380w, 5 rows, View-all footer). */}
               <div style={{ position: 'absolute', top: 46, right: 0, zIndex: 100, width: 380, background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #F0F2F5' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                     <span style={{ font: 'var(--fw-bold) 14px/1 var(--font-body)', color: 'var(--text-primary)' }}>Notifications</span>
                     {unreadCount > 0 && (
                       <span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', color: 'var(--neutral-0)', background: 'var(--status-escalated)', borderRadius: 20, padding: '2px 7px' }}>{unreadCount} new</span>
@@ -134,7 +134,7 @@ export function AppShell() {
                         <span style={{ flex: 1, minWidth: 0 }}>
                           <span style={{ display: 'block', font: 'var(--fw-bold) 9px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: m.color }}>{n.category}</span>
                           <span style={{ display: 'block', font: 'var(--fw-semibold) 12.5px/1.35 var(--font-body)', color: 'var(--text-primary)', marginTop: 2 }}>{n.title}</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 4 }}>
                             {n.recordId && <span style={{ font: 'var(--fw-semibold) 10.5px/1 var(--font-mono)', color: 'var(--accent-700)' }}>{n.recordId}</span>}
                             <span style={{ font: 'var(--fw-regular) 10.5px/1 var(--font-body)', color: 'var(--text-disabled)' }}>{fmtMDY(n.createdAt)}</span>
                           </span>
@@ -170,13 +170,13 @@ export function AppShell() {
             </span>
           </button>
           {roleMenu && (
-            <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 260, background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', padding: 6, zIndex: 60 }}>
+            <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 'var(--sidenav-width)', background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', padding: 6, zIndex: 60 }}>
               <div style={{ padding: '8px 10px 6px', font: 'var(--fw-semibold) 10.5px/1 var(--font-body)', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Switch role (demo)</div>
               {ROLES.map((r) => (
                 <button
                   key={r.key}
                   onClick={() => { setRole(r.key); setRoleMenu(false); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer', font: `${r.key === role ? 'var(--fw-semibold)' : 'var(--fw-regular)'} var(--fs-body-sm)/1.2 var(--font-body)`, color: 'var(--text-primary)' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', width: '100%', border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer', font: `${r.key === role ? 'var(--fw-semibold)' : 'var(--fw-regular)'} var(--fs-body-sm)/1.2 var(--font-body)`, color: 'var(--text-primary)' }}
                 >
                   <span style={{ width: 14, display: 'inline-flex' }}>{r.key === role && <Icon icon={Check} size={13} />}</span>
                   {r.label}

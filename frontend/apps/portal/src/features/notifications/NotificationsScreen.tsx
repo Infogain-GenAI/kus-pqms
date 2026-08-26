@@ -71,7 +71,7 @@ export function NotificationsScreen() {
                   <span style={{ font: 'var(--fw-semibold) var(--fs-body-md)/1.2 var(--font-body)', color: 'var(--text-primary)' }}>{n.title}</span>
                 </div>
                 {n.body && <div style={{ color: 'var(--text-secondary)' }}>{n.body}</div>}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 4 }}>
                   {n.recordId && <span style={{ font: 'var(--fw-semibold) var(--fs-caption)/1 var(--font-mono)', color: 'var(--accent-700)' }}>{n.recordId}</span>}
                   <span style={{ font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>{fmtDateTime(n.createdAt)}</span>
                 </div>

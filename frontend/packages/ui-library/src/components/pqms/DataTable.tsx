@@ -133,7 +133,7 @@ export function DataTable<T = Record<string, unknown>>({
                       : undefined
                   }
                   style={{
-                    height: 40,
+                    height: 'var(--row-height-compact)',
                     padding: '0 var(--space-4)',
                     textAlign: c.align || 'left',
                     width: c.width,
@@ -150,7 +150,7 @@ export function DataTable<T = Record<string, unknown>>({
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 4,
+                      gap: 'var(--space-1)',
                       justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start',
                     }}
                   >
@@ -274,8 +274,8 @@ function HeaderCheckbox({ checked, indeterminate, onChange }: HeaderCheckboxProp
         style={{
           position: 'absolute',
           opacity: 0,
-          width: 16,
-          height: 16,
+          width: 'var(--icon-sm)',
+          height: 'var(--icon-sm)',
           margin: 0,
           cursor: 'pointer',
         }}
@@ -284,8 +284,8 @@ function HeaderCheckbox({ checked, indeterminate, onChange }: HeaderCheckboxProp
         aria-hidden={true}
         className={styles.box}
         style={{
-          width: 16,
-          height: 16,
+          width: 'var(--icon-sm)',
+          height: 'var(--icon-sm)',
           borderRadius: 'var(--radius-sm)',
           display: 'inline-flex',
           alignItems: 'center',

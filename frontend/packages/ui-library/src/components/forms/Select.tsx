@@ -68,7 +68,7 @@ export function Select({ label, helper, error, required = false, size = 'md', op
           {children}
         </select>
         <svg
-          style={{ position: 'absolute', right: 12, pointerEvents: 'none', color: 'var(--text-disabled)' }}
+          style={{ position: 'absolute', right: 'var(--space-3)', pointerEvents: 'none', color: 'var(--text-disabled)' }}
           width="16"
           height="16"
           viewBox="0 0 24 24"

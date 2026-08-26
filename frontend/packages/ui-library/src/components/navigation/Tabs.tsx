@@ -26,7 +26,7 @@ export function Tabs({ tabs = [], activeKey, onChange, style, ...rest }: TabsPro
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 4,
+        gap: 'var(--space-1)',
         borderBottom: 'var(--border-width) solid var(--border-subtle)',
         ...style,
       }}
@@ -61,7 +61,7 @@ function Tab({ tab, active, onChange }: TabProps) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 7,
-        height: 40,
+        height: 'var(--row-height-compact)',
         padding: '0 14px',
         border: 'none',
         background: 'transparent',
@@ -88,8 +88,8 @@ function Tab({ tab, active, onChange }: TabProps) {
       <span
         style={{
           position: 'absolute',
-          left: 8,
-          right: 8,
+          left: 'var(--space-2)',
+          right: 'var(--space-2)',
           bottom: -1,
           height: 2,
           borderRadius: '2px 2px 0 0',

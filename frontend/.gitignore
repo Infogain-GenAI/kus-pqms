@@ -9,3 +9,6 @@ coverage/
 
 # Live pixel baselines and diffs (regenerable per machine; see 18).
 .pixel-baseline/
+
+# Coverage output — regenerated on every run.
+.coverage/

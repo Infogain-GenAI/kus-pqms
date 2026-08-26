@@ -47,9 +47,9 @@ export function DashboardScreen() {
       <h1 style={{ margin: 0, font: 'var(--fw-bold) 30px/1.15 var(--font-display)', letterSpacing: 'var(--ls-h1)', color: 'var(--text-primary)' }}>
         Good morning, {user.name.split(' ')[0]}
       </h1>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '10px 0 var(--space-6)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', margin: '10px 0 var(--space-6)', flexWrap: 'wrap' }}>
         <span style={{ font: 'var(--fw-regular) var(--fs-body-md)/1 var(--font-body)', color: 'var(--text-secondary)' }}>Here is what needs your attention today</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 9px', borderRadius: 'var(--radius-md)', background: 'var(--neutral-100)', color: 'var(--text-secondary)', font: 'var(--fw-semibold) var(--fs-caption)/1 var(--font-body)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--icon-lg)', padding: '0 9px', borderRadius: 'var(--radius-md)', background: 'var(--neutral-100)', color: 'var(--text-secondary)', font: 'var(--fw-semibold) var(--fs-caption)/1 var(--font-body)' }}>
           <Icon icon={IdCard} size={13} /> {user.roleLabel}
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>
@@ -64,7 +64,7 @@ export function DashboardScreen() {
             icon={ClipboardList}
             title="Issue Management"
             right={
-              <button aria-label="Open Issue Management" onClick={() => nav('/issues')} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+              <button aria-label="Open Issue Management" onClick={() => nav('/issues')} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', padding: 'var(--space-1)' }}>
                 <Icon icon={ArrowUpRight} size={16} />
               </button>
             }
@@ -137,11 +137,11 @@ export function DashboardScreen() {
                 const isOver = overdue(i)
                 const bar = isOver ? 'var(--danger-500)' : i.proposedStatus ? 'var(--warning-500)' : 'var(--accent-500)'
                 return (
-                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)' }}>
+                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)' }}>
                     <span aria-hidden style={{ alignSelf: 'stretch', width: 3, borderRadius: 2, background: bar, flex: 'none' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: 'var(--fw-semibold) var(--fs-body-md)/1.3 var(--font-body)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.title}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 4 }}>
                         <Badge tone="accent" size="sm">ISSUE</Badge>
                         <span style={{ font: 'var(--fw-medium) var(--fs-caption)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{i.id}</span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>
@@ -175,7 +175,7 @@ export function DashboardScreen() {
               }
             />
             {recents.map((i, idx) => (
-              <button key={i.id} onClick={() => open(i)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', border: 'none', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)', background: 'transparent', cursor: 'pointer', padding: '11px 0' }}>
+              <button key={i.id} onClick={() => open(i)} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', width: '100%', textAlign: 'left', border: 'none', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)', background: 'transparent', cursor: 'pointer', padding: '11px 0' }}>
                 <Badge tone="accent" size="sm">ISSUE</Badge>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', font: 'var(--fw-semibold) var(--fs-caption)/1.2 var(--font-mono)', color: 'var(--text-muted)' }}>{i.id}</span>
@@ -224,12 +224,12 @@ export function DashboardScreen() {
                 { label: 'Closed', value: byStatus('closed'), color: 'var(--success-500)' },
               ].map((l, idx, arr) => (
                 <div key={l.label}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '11px 2px' }}>
                     <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: l.color, flex: 'none' }} />
                     <span style={{ flex: 1, font: 'var(--fw-semibold) 13px/1 var(--font-body)', color: 'var(--text-primary)' }}>{l.label}</span>
                     <span style={{ font: 'var(--fw-bold) 20px/1 var(--font-display)', color: l.color }}>{l.value}</span>
                   </div>
-                  {idx < arr.length - 1 && <div style={{ height: 12, marginLeft: 4, borderLeft: '2px dotted #DCE1E6' }} />}
+                  {idx < arr.length - 1 && <div style={{ height: 'var(--icon-xs)', marginLeft: 4, borderLeft: '2px dotted #DCE1E6' }} />}
                 </div>
               ))}
             </div>

@@ -4,11 +4,15 @@
 rules. Where it and a tier file disagree, **the tier file wins**
 (`standards/31-documentation-standards-and-decision-records.md`).
 
-**Written:** 2026-08-25. **Last revised:** 2026-08-25, **fourth revision** —
-against `RESTRUCTURE-BASELINE.md`, which MEASURED the repository rather than
-reading a description of it. It withdrew the submodule premise entirely,
-corrected the numeric count from 415 to 348, and established that no CI exists
-anywhere. Steps 0-3 and 5 are complete.
+**Written:** 2026-08-25. **Last revised:** 2026-08-26, **fifth revision** —
+against what was actually executed. Steps 0-3, 5, 6 and 7 are complete; Step 8 is
+partial and blocked on an external decision; and a **test framework** was adopted
+that this runbook never listed as a step. See STATUS.md for the one-page summary.
+
+**The fifth revision exists because the plan was overtaken.** Two things it did
+not anticipate: Step 7 turned out to be almost entirely already-done (Step 6 had
+absorbed it), and the single highest-value piece of work in the whole sequence —
+adopting a test framework — appears nowhere in the numbered steps.
 
 ---
 
@@ -20,6 +24,7 @@ anywhere. Steps 0-3 and 5 are complete.
 | 2 | the observed `KUS-PQMS` root tree | **BMAD** not MoAI; **`.githooks/`** not Lefthook; no root CI; ~~four submodules~~ **(wrong — see pass 4)** |
 | 3 | the `frontend/` walkthrough | **React 18.3 / Vite 5 / RR6** — not 19/8/8; no backend at all; the adherence and token gates; ADR 0001 |
 | 4 | **`RESTRUCTURE-BASELINE.md` — measured, not read** | **NOT submodules** — four ordinary directories in one repository; hooks **do** fire; **no CI anywhere**; the numeric count is **348**, not 415 |
+| 5 | **execution** | Steps 6 and 7 done; Step 8 **partial and blocked**; the pixel harness REPAIRED (it was declared unusable in error); a **test framework** adopted that was never a step |
 
 **Each pass corrected the one before it.** The lesson, now in
 `standards/00-core-rules.md`: **a document about a repository ranks below the
@@ -179,9 +184,10 @@ against the story. Neither reads `PQMS_docs/` unless told to.
 - [x] **3** — Baseline epic (Phase 0)
 - [ ] **4** — Four remaining decisions
 - [x] **5** — Enforcement epic (Phase 1) — **done 2026-08-25**; both gates repaired, plus a hooks bootstrap
-- [ ] **6** — Workspace split (Phase 2a) — **re-point tooling in the same commit**
-- [ ] **7** — Structure within the workspace (Phase 2b)
-- [ ] **8** — Token conversion (Phase 3.1)
+- [x] **6** — Workspace split (Phase 2a) — **done 2026-08-25**; bundle hashes identical, gate counts unchanged and non-zero
+- [x] **7** — Structure within the workspace (Phase 2b) — **done 2026-08-25**; one deletion, zero moves. Step 6 had already done the structural work (ADR-0005)
+- [~] **8** — Token conversion (Phase 3.1) — **PARTIAL AND BLOCKED.** 274 of ~815 converted; the remainder needs a design-system decision that is external
+- [x] **T** — **Test framework** — *not a numbered step, and it mattered more than several that were.* Vitest + RTL adopted 2026-08-26, 47 characterisation tests, coverage ratchet at 76.83/85.38/90.90/76.83
 - [ ] **9** — Conformance slices (Phases 3.2–3.4)
 - [ ] **10** — State and data layer (Phase 3.5) — *blocked on a backend existing*
 - [ ] **11** — Phase 4 — screen descriptions, inventory reconciliation, specs

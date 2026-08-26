@@ -30,20 +30,36 @@
     "fidelity:check": "node scripts/fidelity-gate.mjs --check",
     "style:diff": "node scripts/style-gate.mjs --check",
     "style:diff:baseline": "node scripts/style-gate.mjs --write",
-    "tokens:equiv": "node scripts/check-token-equivalence.mjs"
+    "tokens:equiv": "node scripts/check-token-equivalence.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "coverage:gate": "vitest run --coverage && node scripts/coverage-gate.mjs",
+    "coverage:seed": "vitest run --coverage && node scripts/coverage-gate.mjs --seed"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@typescript-eslint/parser": "^8.67.0",
     "@vitejs/plugin-react": "^4.3.3",
+    "@vitest/coverage-v8": "^2.1.9",
+    "axe-core": "^4.13.0",
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
+    "jsdom": "^30.0.1",
+    "lucide-react": "0.451.0",
     "pixelmatch": "^7.2.0",
     "playwright": "1.62.1",
     "pngjs": "^7.0.0",
     "prettier": "^3.9.6",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.30.6",
     "typescript": "^5.6.3",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^2.1.9",
+    "vitest-axe": "^0.1.0"
   }
 }
