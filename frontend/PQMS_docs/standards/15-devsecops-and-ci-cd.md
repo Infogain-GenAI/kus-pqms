@@ -528,37 +528,44 @@ was silently checking nothing. Here the gate runs perfectly, reports honestly, a
 **still cannot separate a regression from ambient noise**, because the two overlap
 in the only quantity it measures. No amount of care in operating it helps.
 
-### The worked example — screenshots versus computed styles
+### ⚠️ The worked example this section originally carried is WITHDRAWN
 
-A pixel comparison *appears* to be the strongest possible fidelity check: it sees
-literally everything the user sees. Measured on the N-PQMS ISM port, it is
-**weaker than a computed-style assertion** for the change it most needs to catch.
+An earlier revision illustrated this rule with the N-PQMS ISM fidelity harness,
+arguing that a pixel comparison needs a tolerance wider than the 1px change it
+must detect, and is therefore structurally blind.
 
-The numbers (`../../RESTRUCTURE-BASELINE.md` addendum):
+**The measurement did not support the claim.** The 0.66–2.14% cited was
+**cross-machine** drift — the current machine against baselines captured on
+another, with a different browser revision. It was an artefact of **baseline
+provenance**, not of pixel comparison as a method.
 
-| Source | Pixel difference |
-|---|---|
-| Screens whose source never changed, captured on a different machine | **0.66 – 2.14%** |
-| A screen with a genuine source change | **4.61%** |
+**Same-machine, same-browser, back-to-back capture measured 0.0000% across all
+nine screens — byte-identical.** With the machine and browser fixed, that gate
+needs **no tolerance at all**: threshold zero is correct and any non-zero diff is
+signal. It is now the project's fidelity gate.
+`18-project-context-and-implementation-status.md` carries the corrected record.
 
-A tolerance must sit above the first band to avoid failing on every machine that
-is not the one that captured the baselines. **At that tolerance a 1px padding
-change in a text-dense table does not clear the bar** — it moves a few hundred
-pixels in a 1,152,000-pixel frame, well inside the environment noise. The gate
-returns green on exactly the regression it was installed to find.
+**The rule above stands on its own and is not weakened by this.** What the
+episode adds is a caution about *applying* it:
 
-Two further properties made it worse here, and both generalise:
+> **Measure the noise floor under the conditions the gate will actually run in.**
+> Noise measured across environments says nothing about a gate that runs in one.
+> Attributing an artefact of the *baseline* to the *instrument* is how a sound
+> rule reaches a wrong conclusion — and the determinism result that disproved it
+> was already in hand when the claim was written.
 
-- **The drift is structural, not colour.** It persists at a loose per-pixel colour
-  threshold (0.94% at `threshold: 0.5`), so tuning the colour tolerance does not
-  reach it. Text sits at different coordinates.
-- **Failure output is a heatmap.** Even when it fires correctly it reports *that*
-  something moved, not *what*. Triage is manual.
+### A worked example that does hold — coverage thresholds
 
-**The computed-style assertion has neither problem.** `padding-top: 20px → 16px`
-is exact, names the element and the property, and is **identical on every
-machine**, because that property resolves without consulting layout or text
-metrics. It is a narrower instrument that is strictly better at the job.
+A coverage floor set *below* the current measured number cannot detect a
+regression that lands above the floor.
+10-testing-standards.md records the prior repository's version of this: split
+floors of 85/78/80/85 let branch and function coverage drift downward until a
+PR finally failed at **79.82% functions**. The gate ran on every PR for months
+and reported green while the thing it guarded got worse. Its tolerance — the gap
+between the floor and the actual — exceeded its signal.
+
+The remedy is the same shape in both cases: **set the threshold at the measured
+actual, and move it only in the direction that tightens.**
 
 ### The general test to apply before building a gate
 

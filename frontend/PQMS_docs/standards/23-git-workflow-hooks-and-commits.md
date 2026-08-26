@@ -306,3 +306,40 @@ nobody follows.
 `* text=auto eol=lf`. **`.git-blame-ignore-revs` does not appear to exist** —
 create it before the first bulk commit, at the **git root**, shared by all four
 components.
+
+## Run `git status` before every commit. Always. This one is not optional.
+
+**Twice in one working session, files were staged that nobody staged.** Once it
+was ~115 files; once 19. Both were caught by inspection, not by a tool.
+
+**The mechanism was searched for and NOT found.** Ruled out, each by direct test:
+
+| Suspect | Result |
+|---|---|
+| `git add` / `git stash` in any script under `scripts/` or `.githooks/` | **none** — the only textual hits are a comment and an error-message string |
+| A git alias | **none configured** |
+| A gate that writes then stages (`ds-gate.mjs` rewrites `.ds-ceilings.json` on a drop) | **does not stage** — verified by touching a file, running every writing gate, and re-checking the index |
+| `pnpm install` and its `prepare` hook | **does not stage** — verified |
+| Editor git integration | no `.vscode/settings.json`; no `autostash`/`smartCommit` config |
+
+**So the rule is procedural, because the cause is unknown:**
+
+> **Run `git status` immediately before every `git commit`, and read it.** Never
+> assume the index contains what you put there. If it contains anything you did
+> not stage, `git reset` and re-stage deliberately.
+
+### And the sharper hazard this produced
+
+**`git checkout -- <path>` restores from the INDEX, not from HEAD.**
+
+During this session that command was used to revert a test edit, and it silently
+restored *the staged version* — which happened to be correct only by luck. **Had
+the file not been accidentally staged, it would have reverted a day of
+uncommitted work.**
+
+> **Never use `git checkout -- <path>` to undo a local edit while uncommitted work
+> is in the tree.** Copy the file aside first and restore from that copy. The
+> command's behaviour depends on index state you may not know you have.
+
+Both rules exist because the index was not what it appeared to be. Until the
+staging cause is identified, treat the index as untrusted input.
