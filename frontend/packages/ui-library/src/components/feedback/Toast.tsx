@@ -52,7 +52,7 @@ export function Toast({ tone = 'info', title, message, onClose, style, ...rest }
         maxWidth: '90vw',
         padding: '12px 14px',
         background: 'var(--surface-card)',
-        border: '1px solid var(--border-subtle)',
+        border: 'var(--border-width) solid var(--border-subtle)',
         borderLeft: `3px solid ${map.color}`,
         borderRadius: 'var(--radius-lg)',
         boxShadow: 'var(--shadow-lg)',

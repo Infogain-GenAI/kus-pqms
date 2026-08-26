@@ -1336,47 +1336,96 @@ can move pixels, and there is currently no check that would catch it.
   naming only. **No route was changed** — route paths are behavioural. The
   divergence table is in 07.
 
-## The pixel harness is replaced, not repaired — 2026-08-25
+## The pixel harness — CORRECTED 2026-08-26
 
 **Reference, not standard.** Dated; method is "every number was produced by
 running the gate". Where this disagrees with a tier file, the tier file wins.
 
-**This supersedes the "repair the fidelity harness" placeholder above.** The
-repair is now sequenced *after* Step 8, with two preconditions of its own.
+> ### ⚠️ CORRECTION — the previous version of this section was wrong
+>
+> It stated that a pixel comparison is **structurally blind** to the change
+> Step 8 makes, because its necessary tolerance exceeds its signal, and concluded
+> that the harness should be replaced rather than repaired.
+>
+> **That conclusion does not follow from the measurement it cited.** The
+> 0.66–2.14% figure is **cross-machine** drift — the current machine against
+> baselines captured elsewhere, on a different browser revision. It is not a
+> property of pixel comparison as a method.
+>
+> **The method requires no tolerance at all here.** Same-machine, same-browser,
+> back-to-back capture measured **0.0000% across all nine screens — byte-identical,
+> every pixel.** With a fixed machine and a pinned browser revision, **threshold
+> zero is correct and any non-zero diff is signal.**
+>
+> The error was attributing an artefact of the *baselines* to the *instrument*.
+> The instrument was never the problem, which the determinism result had already
+> shown in the same session.
+>
+> **15-devsecops-and-ci-cd.md's structural-blindness rule stands** — it is sound
+> and generally useful. **Its worked example was this harness, and that example is
+> withdrawn there.**
 
-### Why replaced
+### The measurement, and the condition it depends on
 
-A pixel comparison was measured rather than assumed, and it is **structurally
-blind** to the change Step 8 makes — its necessary tolerance exceeds its signal.
-Environment drift on unchanged screens was **0.66–2.14%**; a genuine source change
-was **4.61%**. Any threshold that passes the first fails to catch the second.
-15-devsecops-and-ci-cd.md carries the general rule.
-
-**One good finding came out of running it:** capture on this machine is
-**perfectly deterministic — 0.0000% across all nine screens, byte-identical run
-to run.** The instrument was never the problem. The baselines were.
-
-### The two gates that replaced it
-
-| Gate | Asserts | Cross-machine |
+| Comparison | Drift | Meaning |
 |---|---|---|
-| `scripts/check-token-equivalence.mjs` | a `'<literal>' → var(--token)` substitution preserves the value exactly, per the manifest | **Yes** — compares two strings, renders nothing |
-| `scripts/style-gate.mjs` — styles | every whitelisted computed style unchanged, per element per route | **Yes** — every whitelisted property resolves without consulting layout |
-| `scripts/style-gate.mjs` — geometry | rounded `getBoundingClientRect()` unchanged | **NO — same-machine only** |
+| Same machine, same browser, back-to-back | **0.0000%** (9/9 byte-identical) | the instrument is exact |
+| This machine vs baselines captured elsewhere | 0.66–2.14% on unchanged screens | **baseline provenance**, not method noise |
+| A screen with a genuine source change | 4.61% | signal, well clear of same-machine noise |
 
-**The two halves of the style gate are diffed separately and must stay that way.**
+**THE CONDITION, and it is load-bearing: this holds because the browser revision
+and the machine are fixed.** Chromium's text shaping and rasterisation change
+between builds, so a revision bump moves pixels on screens nobody touched.
+
+Two consequences that must travel with any use of this gate:
+
+1. **The browser revision is pinned in `package.json`.** Revision drift then
+   becomes a loud install failure instead of silent pixel drift — the single
+   change that makes this gate durable, and the absence of which produced the
+   0.66–2.14% that cost a day to diagnose.
+2. **Every machine needs its own baseline until that pin is repo-wide and CI
+   runs in a fixed image.** A baseline is valid for the environment that produced
+   it and no other. That is a real limitation and it is not fatal: there is one
+   machine and no CI today.
+
+### The diagnostic layer beneath the gate
+
+**Three tools, and only two of them are gates.** The distinction matters and is
+recorded in each file per 14's rule that anything below full strength carries its
+reason and trigger where it lives.
+
+| Tool | Answers | Wired into | Cross-machine |
+|---|---|---|---|
+| `scripts/fidelity-gate.mjs` | **did anything change?** — exact pixel comparison, threshold **zero** | `build`, `pre-push` | machine + browser pinned |
+| `scripts/check-token-equivalence.mjs` | **does this substitution preserve the value?** — manifest lookup, no rendering | Step 8, per conversion | **Yes** — compares two strings |
+| `scripts/style-gate.mjs` | **which declaration changed?** | **nothing — run by hand** | styles yes, geometry no |
+
+**`style-gate.mjs` is a DIAGNOSTIC, not a gate, and is deliberately not wired
+in.** It is the layer beneath the pixel gate: the gate says *something moved*, this
+says *`row-gap: 10px -> 14px` on the breadcrumb row*. On a screen carrying forty
+token conversions that difference is the whole cost of triage.
+
+**It is not promoted because it is strictly narrower.** It sees only whitelisted
+properties on elements present in both snapshots, so it is blind to a changed SVG
+path, a swapped image, or a font that failed to load — all of which the pixel
+comparison catches. **Trigger to promote:** the pixel comparison proving
+unreliable in practice. **Owner:** Frontend Lead.
+
+**Its two halves are diffed separately and must stay that way.**
 `getComputedStyle` returns *used* values for `width`/`height`/`top`/`left`, which
-depend on layout and therefore on text metrics. Admitting even one of those to the
+depend on layout and therefore on text metrics. Admitting even one to the
 whitelist would make the styles half machine-dependent **while still looking
-cross-machine** — rebuilding the exact problem the replacement escapes. The
-exclusion list is documented in the script and is the load-bearing part of it.
+cross-machine**. Audited 2026-08-26: **31 properties whitelisted, zero
+layout-dependent.** One caveat recorded in the file — a percentage padding or
+margin resolves against the containing block's width, so if percentage box values
+ever appear the machine-independence claim needs re-checking.
 
-Baseline: `.style-baseline/`, 6 routes, **1,441 elements**. Regenerable in seconds
-with `--write` — the property the deleted captures lacked.
+Baseline: `.style-baseline/`, 6 routes, **1,441 elements**, regenerable with
+`--write`.
 
 **Positive control, per 15:** perturbing `chrome.tsx` `gap: 10 → 14` produced
 `row-gap: 10px -> 14px` naming the element, on all six routes, plus 30 geometry
-consequences. Reverted; the gate returns clean and the bundle hash returned to
+consequences. Reverted; clean, and the bundle hash returned to
 `index-BDNeyRad.js`.
 
 ### The 91 baselines are superseded as a gate — and RETAINED on disk
@@ -1488,3 +1537,285 @@ weaken Step 6's conclusion — moving unreachable code changes nothing by
 definition — but it is a second reason the hash is not a general substitute for a
 behavioural check, alongside the already-recorded one that Step 8 changes source
 bytes deliberately.
+
+## The harness is repaired — 2026-08-26
+
+All four defects closed. `scripts/fidelity-gate.mjs` replaces
+`fidelity-capture.mjs` as the gate.
+
+| # | Defect | Repair |
+|---|---|---|
+| 1 | `PROTO_URL` hardcoded to `file:///D:/...` | resolved relatively from the script |
+| 2 | chromium revision 1228 vs required 1234 | browsers installed; **`playwright` pinned EXACTLY (`1.62.1`, no caret)** so the revision cannot drift |
+| 3 | `127.0.0.1` vs `[::1]` | `localhost` |
+| 4 | **no verdict, exits 0 regardless** | `pixelmatch` + `pngjs` as real workspace devDependencies, per-screen diff images, **non-zero exit**, and a capture failure is now a hard failure instead of a logged `✗` |
+
+Also pinned in the capture context: `timezoneId: 'UTC'`, `locale`,
+`reducedMotion`, `colorScheme`, `deviceScaleFactor` — everything that can move a
+pixel without the code changing.
+
+**Threshold is ZERO.** Verified: `--write` then `--check` returns
+"10 screens, pixel-identical".
+
+**Positive control — and it settles the tolerance question empirically.**
+Perturbing `chrome.tsx` `gap: 10 → 11` — a **one-pixel** change — was caught on
+**9 of 10 screens**, at **0.0207 – 0.0819%** of frame.
+
+**That is an order of magnitude BELOW the 0.66–2.14% cross-machine drift.** A
+tolerance sized to absorb that drift would have missed this change completely.
+It is the clearest possible demonstration that the answer was never a threshold —
+it was fixing the baseline provenance so no threshold is needed.
+
+**The live baseline lives in `.pixel-baseline/`, not `.fidelity/`, and is
+gitignored.** They were briefly the same directory, and a `--write` **silently
+overwrote seven tracked archive images** before it was caught and reverted. The
+2026-08-22 archive and the live baseline are different artefacts with different
+lifetimes; keeping them in one directory guaranteed that collision.
+
+## The app-vs-prototype delta — measured for the first time, 2026-08-26
+
+**This number did not previously exist.** The old harness captured `dc-*` from the
+**dev server** and `app-*` from **`vite preview`**, at different viewports on
+different days — the two families were never mutually comparable, so no delta was
+ever computed. The 2026-08-22 "Aligned" verdict was a human comparing images.
+
+Captured with `scripts/measure-prototype-delta.mjs`: both halves, one browser
+context, one viewport, one timezone, back to back.
+
+| Screen | Differing px | % of frame |
+|---|---:|---:|
+| dashboard | 70,536 | **6.12%** |
+| issues list | 66,147 | **5.74%** |
+| workspace detail | 52,926 | **4.59%** |
+| create issue | 54,969 | **4.77%** |
+| **mean** | | **5.31%** |
+
+**Read this as a good result.** The app renders its own deterministic seed while
+the prototype renders its own sample rows, so **a large share of every number
+above is DATA, not layout** — different issue IDs, different titles, different
+dates, all of which differ pixel-for-pixel while the structure matches. Against
+that floor, 4.6–6.1% means the port is structurally close to the prototype.
+
+**It is not a gate and must never become one.** There is no threshold at which
+"the app matches the prototype" is a pass/fail question while the two render
+different data.
+
+**Why it was worth taking now:** Step 8 performs ~815 token conversions. After
+that, any deviation from the prototype that exists today becomes
+**indistinguishable from one Step 8 caused**. This was the last moment the two
+could be told apart cheaply, and the figure is now on record.
+
+## Static token-equivalence — coverage of the 467
+
+`scripts/check-token-equivalence.mjs`. Asserts that a proposed
+`'<literal>' → var(--token)` substitution matches the token's **declared value in
+the manifest**. No browser. For anything it passes, the computed value the browser
+resolves is character-for-character what it resolved before — **a proof, not a
+test**.
+
+| Bucket | Count | % |
+|---|---:|---:|
+| exact match — one literal, one token, right family | 9 | 1.9% |
+| decomposable — shorthand, every part matched, right family | 95 | 20.3% |
+| already tokenised — only zeros/keywords/`var()` remain | 10 | 2.1% |
+| **TRANCHE 1 — statically provable** | **114** | **24.4%** |
+| value-only match — **wrong token family** | 76 | 16.3% |
+| unknown property | 23 | 4.9% |
+| unmatched — no token has this value | 254 | 54.4% |
+
+**The exact-match tranche the runbook assumed is nearly absent.** Only 9 warnings
+are a bare literal with a right-family token. Tranche 1 is dominated by
+*shorthands* — `1px solid var(--border-subtle)` (41×) → `--border-width`. So the
+467 are largely **already-tokenised shorthands tripping on a stray `1px`**, not
+raw values awaiting conversion.
+
+**Value preservation is necessary and not sufficient, and the check enforces
+both.** `padding: '14px 16px'` value-matches `--fs-body-md`/`--fs-body-lg` —
+**font-size tokens on a padding property**. Pixel-identical and wrong to write,
+and it breaks the moment the type scale moves independently of spacing. Without
+the family check tranche 1 reads 213 (45.6%); with it, **114**. The 76
+"value-only" rows are safe to render and need a human to choose the token.
+
+**What it cannot cover:** the 254 unmatched, blocked by values no token has —
+`10px` (31×), `#fff` (24×), `11px` (22×), `#f0f2f5` (19×), `12.5px`, `10.5px`,
+`11.5px`, `#dde3e9`. Those are prototype constants and need the pixel gate.
+
+## Step 8 tranche 1 — converted 2026-08-26
+
+**103 substitutions across 20 files. Values ceiling 467 → 363.**
+
+Every one was proved value-preserving *and* family-appropriate by
+`scripts/check-token-equivalence.mjs` before being written. Dominated by
+`'1px solid var(--border-subtle)'` → `'var(--border-width) solid …'` — declarations
+already 90% tokenised that tripped on a stray `1px`.
+
+### The bucket arithmetic, reconciled
+
+An earlier summary presented 114 + 76 + 254 = 444 against 467, leaving 23
+unexplained. **There is no remainder.** The 23 are the `unknown property` bucket,
+omitted from that sum. Verified independently:
+
+```
+total raw-value warnings           : 467
+  property determinable on the line: 412
+  NO property on the line          :  55
+      every part matched           :  23   -> bucket "unknown property"
+      a part unmatched             :  32   -> bucket "unmatched"
+```
+
+**What the 23 actually are:** literals inside **ternary branches** (39 of the 55)
+and JSX props (16), where the CSS property sits before the `?` and the
+same-line regex cannot see it — `boxShadow: isActive ? 'inset 0 -2px …' : …`.
+They are convertible in principle; a real AST walk would recover the property.
+Held back deliberately rather than guessed at.
+
+### The rehearsal found two defects — which is what it was for
+
+1. **The codemod double-applied.** One literal can raise TWO warnings — `'1px
+   dashed #DCE1E6'` trips both `Raw px` and `Raw hex` — and both point at the
+   **same node**. Applying both produced
+   `'…var(--neutral-200)' dashed var(--neutral-200)'` and broke the parse.
+   Caught by `tsc`, reverted, fixed by keying edits on the node range. **Had this
+   run unattended over 350 conversions it would have corrupted dozens of files.**
+2. **`#fff` is not matched to `--neutral-0`.** The equivalence check compares
+   hex strings exactly, so 3-digit hex never matches the manifest's 6-digit form.
+   **24 warnings are convertible today and are being reported as unmatched.**
+   That is a defect in the tool, not a gap in the design system.
+
+### The end-to-end confirmation, and why it matters
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | exit 0 |
+| values ceiling | **467 → 363**, ratcheted automatically |
+| numeric / imports | 348 / 0 — unchanged |
+| **JS bundle hash** | **CHANGED** `index-BDNeyRad` → `index-CAOysY3E` (403.94 → 405.38 kB) |
+| **pixel gate** | **10 screens, pixel-identical** |
+| **app-vs-prototype delta** | **unchanged to the pixel** — 70536 / 66147 / 52926 / 54969 |
+
+**This is the case that justifies the whole gate design.** The bundle hash changed
+— `var(--space-3)` is longer than `12px` — while the render did not move by one
+pixel. Step 6's acceptance rested on identical hashes; **that evidence is
+unavailable for Step 8 by construction**, and only a pixel comparison can settle
+it. The first real batch demonstrated exactly that.
+
+The delta re-measurement is the stronger of the two. The seed is fixed, so a
+value-preserving conversion must leave the app-vs-prototype relationship
+**byte-identical** — and all four screens returned the same pixel counts to the
+digit. A changed delta after a value-preserving conversion would mean something
+went wrong that a per-screen self-comparison could miss.
+
+## The remaining 353 — analysis, not a recommendation
+
+**No conversion is proposed here.** This is a decision for the designer and the
+architect, because **the design system is a byte-copy with a drift gate: adding a
+token is not an edit this project can make.**
+
+| Bucket | Count |
+|---|---:|
+| unmatched — no token has the value | 254 |
+| value-only — token exists, **wrong family** | 76 |
+| unknown property — ternary/JSX context | 23 |
+| **total** | **353** |
+
+### Category A — values that cluster, and probably should be tokens
+
+| Value | Uses | Note |
+|---|---:|---|
+| `#fff` | 24 | **already a token** (`--neutral-0`); blocked only by the tool's hex-normalisation defect |
+| `2px` | 14 | a second border width; `--border-width` is 1px |
+| `#7c5cdb14`, `#2a6fdb14`, … | ~15 | **token colours at 8% alpha** — the base hues ARE tokens; the tint is not |
+| `3px`, `5px`, `7px` | 14 | off-grid spacing near `--space-1` (4px) / `--space-2` (8px) |
+
+**The alpha cluster is the most systemic.** Every one is an existing token with
+an alpha suffix, so the design system already owns the hue and not the tint. That
+is a missing *layer*, not missing values.
+
+### Category B — prototype constants
+
+| Value | Uses |
+|---|---:|
+| `12.5px`, `10.5px`, `13.5px`, `11.5px` | **42** |
+| `10px`, `11px`, `9px` | **63** |
+| `#f0f2f5`, `#f6f8fa`, `#f4e2c0`, `#dde3e9` | **36** |
+
+Half-pixel type sizes and off-scale greys with no systemic meaning — the values
+`steps-for-new-repo.md` Step 8 already names as prototype constants.
+
+### Category C — genuinely arbitrary
+
+The long tail below the top blockers. Individually one- or two-use values that
+fit no scale and repeat nowhere.
+
+### The options, and their cost
+
+| Option | Cost | Consequence |
+|---|---|---|
+| **App-owned `--proto-*` layer** | ~1 day | Values become named and greppable; the ceiling can fall to near zero. **But they are NOT design-system tokens** and must never be mistaken for them — a second vocabulary to maintain |
+| **Upstream request** | weeks, external dependency | The only option that makes them real tokens. Needs a design-system owner and a release; unknown whether that channel exists |
+| **Accept permanently** | zero | **The values ceiling stops at roughly 353 forever.** Honest, and it means the ratchet stops being a burn-down and becomes a fixed regression guard |
+
+**No single recommendation, because the evidence does not support one.** Category
+A's alpha cluster argues for upstream; Category B argues for `--proto-*` or
+acceptance; and whether the upstream channel exists at all is unknown here.
+**This is the point where the design system either grows or the ceiling stops,
+and that is not this project's call.**
+
+### On the 76 wrong-family — converting them would be worse than leaving them
+
+**Recommend they stay literal** unless a correct-family token exists.
+
+`padding: '14px 16px'` value-matches `--fs-body-md` / `--fs-body-lg`. Substituting
+those is **false tokenisation**: it looks compliant, it renders identically today,
+and it **breaks the moment the type scale moves independently of spacing** — which
+is the entire reason the two scales are separate. It is also *harder to find* than
+the literal was, because it now reads as intentional.
+
+A literal is honest about being unresolved. A wrong-family token is not.
+
+**[PLACEHOLDER — decide the fate of the remaining 353.** Options and costs above.
+**Trigger:** before any further Step 8 tranche. **Owner:** designer + architect
+jointly — one owns whether the design system grows, the other owns whether the
+app carries a `--proto-*` layer.]**
+
+**[PLACEHOLDER — two defects in `check-token-equivalence.mjs`.** (1) 3-digit hex
+is not normalised, hiding ~24 convertible warnings. (2) The property is read by a
+same-line regex, so 55 literals in ternary/JSX position are unclassifiable — an
+AST walk would recover them. Both understate tranche 1. **Trigger:** before
+tranche 2. **Owner:** Frontend Lead.]**
+
+## The app-vs-prototype delta — a measurement, not a verdict
+
+**Mean 5.31% across four paired screens**, captured 2026-08-26 with
+`scripts/measure-prototype-delta.mjs`.
+
+| Screen | Differing px | % of frame |
+|---|---:|---:|
+| dashboard | 70,536 | 6.12% |
+| issues list | 66,147 | 5.74% |
+| workspace detail | 52,926 | 4.59% |
+| create issue | 54,969 | 4.77% |
+
+**Method:** both halves in ONE browser context — same viewport (1280×900), same
+`timezoneId`, same browser build, back to back. The previous harness captured
+`dc-*` from the **dev server** and `app-*` from **`vite preview`** on different
+days, so the two families were never mutually comparable and this number had
+never been computed.
+
+**This is a measurement, NOT a verdict, and it must never become a gate.**
+
+**The data-versus-layout split is INFERRED AND UNMEASURED.** The app renders its
+own deterministic seed while the prototype renders its own sample rows — different
+IDs, titles and dates — so some share of every figure is text differing
+pixel-for-pixel while the structure matches. **How large that share is has not
+been measured**, so "4.59% means the workspace is 95% faithful" is not a claim
+this number supports.
+
+**Its value is as a BEFORE number.** The seed is frozen, so re-running it after a
+value-preserving conversion must return **the same figures**. It already has: the
+tranche-1 batch left all four counts identical to the digit.
+
+**A changed delta after a value-preserving conversion means something went
+wrong** — and it is a stronger end-to-end check than any per-screen
+self-comparison, because it compares against an artefact the conversion cannot
+touch.

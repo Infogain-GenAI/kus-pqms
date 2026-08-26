@@ -78,7 +78,7 @@ export function DataTable<T = Record<string, unknown>>({
   return (
     <div
       style={{
-        border: '1px solid var(--border-subtle)',
+        border: 'var(--border-width) solid var(--border-subtle)',
         borderRadius: 'var(--radius-lg)',
         overflow: 'hidden',
         background: 'var(--surface-card)',
@@ -93,11 +93,11 @@ export function DataTable<T = Record<string, unknown>>({
           <tr
             style={{
               background: 'var(--surface-sunken)',
-              borderBottom: '1px solid var(--border-default)',
+              borderBottom: 'var(--border-width) solid var(--border-default)',
             }}
           >
             {selectable && (
-              <th style={{ width: 44, padding: '0 0 0 16px', textAlign: 'left' }}>
+              <th style={{ width: 44, padding: '0 0 0 var(--space-4)', textAlign: 'left' }}>
                 <HeaderCheckbox
                   checked={allChecked}
                   indeterminate={someChecked}
@@ -134,7 +134,7 @@ export function DataTable<T = Record<string, unknown>>({
                   }
                   style={{
                     height: 40,
-                    padding: '0 16px',
+                    padding: '0 var(--space-4)',
                     textAlign: c.align || 'left',
                     width: c.width,
                     whiteSpace: 'nowrap',
@@ -191,7 +191,7 @@ export function DataTable<T = Record<string, unknown>>({
             return (
               <Row key={id ?? i} rowH={rowH} last={i === rows.length - 1} selected={checked}>
                 {selectable && (
-                  <td style={{ width: 44, padding: '0 0 0 16px' }}>
+                  <td style={{ width: 44, padding: '0 0 0 var(--space-4)' }}>
                     <HeaderCheckbox
                       checked={checked}
                       onChange={() => onToggleRow && onToggleRow(id)}
@@ -202,7 +202,7 @@ export function DataTable<T = Record<string, unknown>>({
                   <td
                     key={c.key}
                     style={{
-                      padding: '0 16px',
+                      padding: '0 var(--space-4)',
                       textAlign: c.align || 'left',
                       font: `var(--fw-regular) var(--fs-body-md)/1.4 var(--font-body)`,
                       color: 'var(--text-primary)',

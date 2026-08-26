@@ -105,7 +105,7 @@ export function CreateIssueScreen() {
         <SectionCard>
           <CardHead title="System Classification" />
           {/* PATH bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--accent-50)', border: '1px solid var(--accent-100)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-3)', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--accent-50)', border: 'var(--border-width) solid var(--accent-100)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-3)', flexWrap: 'wrap' }}>
             <span style={{ font: 'var(--fw-bold) 10px/1 var(--font-body)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Path</span>
             {pathSteps.map((s, i) => (
               <span key={s.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
@@ -196,7 +196,7 @@ export function CreateIssueScreen() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 {correlated.map((i) => (
-                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '9px 12px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '9px 12px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
                     <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{i.id}</span>
                     <SourceBadge source={i.source} size="sm" />
                     <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{i.title}</span>

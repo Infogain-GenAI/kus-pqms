@@ -47,7 +47,7 @@ export function SearchField({ value, onChange, onClear, placeholder = 'Search…
           width: '100%',
           height: '100%',
           boxSizing: 'border-box',
-          padding: '0 32px 0 32px',
+          padding: '0 var(--space-8) 0 var(--space-8)',
           border: 'none',
           outline: 'none',
           background: 'transparent',

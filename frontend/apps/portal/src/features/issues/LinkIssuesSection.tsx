@@ -67,7 +67,7 @@ export function LinkIssuesSection({
         <div
           style={{
             marginTop: 'var(--space-2)',
-            border: '1px solid var(--border-subtle)',
+            border: 'var(--border-width) solid var(--border-subtle)',
             borderRadius: 'var(--radius-lg)',
             overflow: 'hidden',
           }}
@@ -116,7 +116,7 @@ export function LinkIssuesSection({
                   gap: 'var(--space-3)',
                   padding: 'var(--space-3)',
                   background: 'var(--selected-bg)',
-                  border: '1px solid var(--accent-100)',
+                  border: 'var(--border-width) solid var(--accent-100)',
                   borderRadius: 'var(--radius-lg)',
                 }}
               >

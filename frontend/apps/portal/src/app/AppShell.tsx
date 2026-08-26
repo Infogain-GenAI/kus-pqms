@@ -61,9 +61,9 @@ export function AppShell() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-app)' }}>
       <header
-        style={{ position: 'sticky', top: 0, zIndex: 40, height: 'var(--header-height)', flex: 'none', background: 'var(--surface-card)', borderBottom: '1px solid var(--border-subtle)' }}
+        style={{ position: 'sticky', top: 0, zIndex: 40, height: 'var(--header-height)', flex: 'none', background: 'var(--surface-card)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}
       >
-      <div style={{ maxWidth: 1800, height: '100%', margin: '0 auto', padding: '0 40px', display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div style={{ maxWidth: 1800, height: '100%', margin: '0 auto', padding: '0 var(--space-10)', display: 'flex', alignItems: 'center', gap: 20 }}>
         <button aria-label="Kia PQMS home" onClick={() => nav('/dashboard')} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'inline-flex' }}>
           <Logo tone="dark" height={22} />
         </button>
@@ -80,7 +80,7 @@ export function AppShell() {
                 style={{
                   border: 'none',
                   background: 'transparent',
-                  padding: '0 12px',
+                  padding: '0 var(--space-3)',
                   cursor: it.disabled ? 'not-allowed' : 'pointer',
                   font: `${isActive ? 'var(--fw-semibold)' : 'var(--fw-medium)'} var(--fs-body-md)/1 var(--font-body)`,
                   color: it.disabled ? 'var(--text-disabled)' : isActive ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -101,7 +101,7 @@ export function AppShell() {
             <Icon icon={Bell} size={19} />
           </IconButton>
           {unreadCount > 0 && (
-            <span aria-hidden style={{ position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 'var(--radius-pill)', background: 'var(--status-escalated)', border: '1.5px solid var(--surface-card)', color: '#fff', font: 'var(--fw-bold) 9.5px/13px var(--font-body)', textAlign: 'center', pointerEvents: 'none' }}>
+            <span aria-hidden style={{ position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, padding: '0 var(--space-1)', borderRadius: 'var(--radius-pill)', background: 'var(--status-escalated)', border: '1.5px solid var(--surface-card)', color: '#fff', font: 'var(--fw-bold) 9.5px/13px var(--font-body)', textAlign: 'center', pointerEvents: 'none' }}>
               {unreadCount}
             </span>
           )}
@@ -109,7 +109,7 @@ export function AppShell() {
             <>
               <div onClick={() => setNotifOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
               {/* Notification panel — layout/type per the prototype's header dropdown (380w, 5 rows, View-all footer). */}
-              <div style={{ position: 'absolute', top: 46, right: 0, zIndex: 100, width: 380, background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 46, right: 0, zIndex: 100, width: 380, background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #F0F2F5' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ font: 'var(--fw-bold) 14px/1 var(--font-body)', color: 'var(--text-primary)' }}>Notifications</span>
@@ -170,7 +170,7 @@ export function AppShell() {
             </span>
           </button>
           {roleMenu && (
-            <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 260, background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', padding: 6, zIndex: 60 }}>
+            <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 260, background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', padding: 6, zIndex: 60 }}>
               <div style={{ padding: '8px 10px 6px', font: 'var(--fw-semibold) 10.5px/1 var(--font-body)', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Switch role (demo)</div>
               {ROLES.map((r) => (
                 <button

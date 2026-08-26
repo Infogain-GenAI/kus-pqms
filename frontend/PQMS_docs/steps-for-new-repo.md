@@ -605,46 +605,40 @@ byte-identical.
 
 ## Step 8 — Token conversion (Phase 3.1)
 
-> 🔴 **PREREQUISITE — the static token check plus the computed-style gate.**
-> **Not the fidelity harness. A pixel gate's necessary tolerance exceeds the
-> signal it exists to detect.**
+> 🔴 **PREREQUISITE — the repaired fidelity gate, plus the static token check.**
 >
-> Measured: environment drift between the machine that captured the baselines and
-> the current one was 0.66–2.1% of pixels on screens whose source never changed,
-> while a genuine source change showed 4.6%. A tolerance loose enough to pass the
-> noise also passes the regression. See 15-devsecops-and-ci-cd.md.
+> ⚠️ **An earlier revision of this block said the opposite** — that the harness
+> should NOT be repaired because a pixel gate's tolerance exceeds its signal. That
+> was wrong. It cited **cross-machine** drift (0.66–2.14%) as if it were a
+> property of the method. **Same-machine, same-browser capture is 0.0000% —
+> byte-identical across all nine screens** — so the gate needs no tolerance and
+> runs at **threshold zero**. The harness is repaired and is the prerequisite.
 >
-> The two gates that replace it:
->
-> | Gate | Asserts | Covers |
+> | Tool | Answers | When |
 > |---|---|---|
-> | `scripts/check-token-equivalence.mjs` | the token's manifest value **equals** the literal it replaces | **tranche 1** — statically, no browser |
-> | `scripts/style-gate.mjs` | every whitelisted computed style unchanged, per element per route | **tranche 2** — and tranche 1 as a second check |
+> | `scripts/check-token-equivalence.mjs` | does this substitution preserve the value? | **per conversion**, no browser |
+> | `scripts/fidelity-gate.mjs` | did anything change? (threshold 0) | **after each file**, in `build`/`pre-push` |
+> | `scripts/style-gate.mjs` | *which declaration* changed? | **by hand, when the gate fails** |
 >
-> **Step 8 therefore splits into two tranches, and the first needs no rendering
-> at all.** Run `node scripts/check-token-equivalence.mjs` for the current split.
+> **Step 8 still splits into two tranches**, and the first needs no rendering:
+> run `node scripts/check-token-equivalence.mjs` for the current split.
 >
-> ---
+> **The condition the gate depends on:** the browser revision is pinned in
+> `package.json`, and the baseline is valid only for the machine that produced it.
+> Revision drift is what produced the 0.66–2.14% that cost a day to diagnose; the
+> pin turns that into a loud install failure instead of silent pixel movement.
 >
-> **The harness repair is sequenced AFTER Step 8**, and it has two preconditions
-> that must land first, because "byte-identical" is not a property it could
-> demonstrate without them:
+> **Two known limits remain, and neither blocks Step 8:**
 >
-> 1. **Self-host Inter.** `index.html` loads it from Google Fonts, so text
->    metrics — and therefore every layout — depend on a network fetch succeeding
->    and on which Inter revision is served.
-> 2. **Pin `timezoneId`** in the Playwright context. Dates are currently rendered
->    with local-time getters over UTC anchors (see 18's application-defect
->    register), so the same seed row renders a different date in IST and US-East.
->    A capture taken in one zone can never match one taken in another.
+> 1. **Inter is loaded from Google Fonts**, so text metrics depend on a network
+>    fetch and on which revision is served. Self-hosting it removes that variable.
+> 2. **Dates render with local-time getters over UTC anchors** (see 18's
+>    application-defect register), so the same seed row renders a different date in
+>    IST and US-East. `timezoneId` is pinned in the capture context as a
+>    workaround; **the underlying defect is a user-facing bug, not a harness
+>    setting.**
 >
-> Until both hold, a perfect pixel comparison would still fail for reasons that
-> have nothing to do with the code under test.
->
-> The four harness defects remain, recorded for whoever picks it up:
->
-> **It is the only behavioural test this project has**, and it does not run.
-> Three verified defects plus one that is worse than all of them:
+> The defects that were repaired, recorded for the history:
 >
 > 1. `PROTO_URL` is hardcoded to `file:///D:/...` — **no `D:` drive exists.**
 >    The prototype is present locally under `_bmad-output/`.

@@ -101,7 +101,7 @@ export function ModelCodeYearPicker({
           marginTop: 'var(--space-2)',
           maxHeight: 168,
           overflowY: 'auto',
-          border: '1px solid var(--border-subtle)',
+          border: 'var(--border-width) solid var(--border-subtle)',
           borderRadius: 'var(--radius-lg)',
         }}
       >
@@ -149,7 +149,7 @@ export function ModelCodeYearPicker({
             </span>
           </div>
 
-          <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
             {codes.map((code, ix) => {
               const entry = MODEL_CODES.find((m) => m.code === code)
               if (!entry) return null
@@ -172,7 +172,7 @@ export function ModelCodeYearPicker({
                     style={{
                       padding: 'var(--space-3)',
                       background: 'var(--surface-sunken)',
-                      borderRight: '1px solid var(--border-subtle)',
+                      borderRight: 'var(--border-width) solid var(--border-subtle)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>

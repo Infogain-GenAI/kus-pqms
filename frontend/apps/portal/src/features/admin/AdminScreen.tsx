@@ -50,8 +50,8 @@ interface JobStatusMeta {
 }
 
 const JOB_STATUS: Record<string, JobStatusMeta> = {
-  completed: { label: 'Completed', color: '#1F8A5B', tint: '#1F8A5B14', icon: CheckCircle2 },
-  running: { label: 'Running', color: '#7C5CDB', tint: '#7C5CDB14', icon: LoaderCircle },
+  completed: { label: 'Completed', color: 'var(--success-500)', tint: '#1F8A5B14', icon: CheckCircle2 },
+  running: { label: 'Running', color: 'var(--status-review)', tint: '#7C5CDB14', icon: LoaderCircle },
   scheduled: { label: 'Scheduled', color: 'var(--info-500)', tint: '#2A6FDB14', icon: Clock },
   failed: { label: 'Failed', color: 'var(--danger-500)', tint: '#D92D2014', icon: CircleX },
 }
@@ -65,7 +65,7 @@ const JOBS = [
 
 const KPIS = [
   { label: 'Scheduled jobs', value: '4', icon: Layers, color: 'var(--info-500)', tint: '#2A6FDB14' },
-  { label: 'Running now', value: '1', icon: LoaderCircle, color: '#7C5CDB', tint: '#7C5CDB14' },
+  { label: 'Running now', value: '1', icon: LoaderCircle, color: 'var(--status-review)', tint: '#7C5CDB14' },
   { label: 'Failed (24h)', value: '1', icon: CircleX, color: 'var(--danger-500)', tint: '#D92D2014' },
   { label: 'Avg duration', value: '1m 14s', icon: Timer, color: 'var(--status-disposed)', tint: '#0E938414' },
 ]
@@ -82,7 +82,7 @@ const SOURCES = [
 
 const MODULE_TINT: Record<string, { color: string; tint: string }> = {
   Scoring: { color: 'var(--info-500)', tint: '#2A6FDB14' },
-  Sources: { color: '#7C5CDB', tint: '#7C5CDB14' },
+  Sources: { color: 'var(--status-review)', tint: '#7C5CDB14' },
   Reminders: { color: 'var(--status-disposed)', tint: '#0E938414' },
   Batch: { color: 'var(--kia-midnight)', tint: '#05141F14' },
 }
@@ -97,7 +97,7 @@ const AUDIT = [
 
 const CLASS_COUNTS = [
   { label: 'Systems', value: '10', icon: Layers, color: 'var(--info-500)', tint: '#2A6FDB14' },
-  { label: 'Sub-systems', value: '25', icon: Box, color: '#7C5CDB', tint: '#7C5CDB14' },
+  { label: 'Sub-systems', value: '25', icon: Box, color: 'var(--status-review)', tint: '#7C5CDB14' },
   { label: 'Components', value: '35', icon: Cpu, color: 'var(--status-disposed)', tint: '#0E938414' },
   { label: 'Symptoms', value: '43', icon: Activity, color: 'var(--warning-500)', tint: '#E2820B14' },
 ]
@@ -141,7 +141,7 @@ const inputStyle: CSSProperties = {
   boxSizing: 'border-box',
   border: '1px solid #DDE3E9',
   borderRadius: 'var(--radius-lg)',
-  padding: '0 12px',
+  padding: '0 var(--space-3)',
   font: 'var(--fw-regular) 13.5px/1 var(--font-body)',
   color: 'var(--text-primary)',
   background: 'var(--surface-card)',
@@ -225,7 +225,7 @@ export function AdminScreen() {
           <h1 style={{ margin: '0 0 5px', font: 'var(--fw-bold) 28px/1.15 var(--font-display)', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Issue Administration</h1>
           <p style={{ margin: 0, font: 'var(--fw-regular) 13.5px/1.4 var(--font-body)', color: 'var(--text-secondary)' }}>Manage ISM module operations, configurations, and system controls.</p>
         </div>
-        <div style={{ textAlign: 'right', flex: 'none', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: '11px 16px', boxShadow: 'var(--shadow-xs)' }}>
+        <div style={{ textAlign: 'right', flex: 'none', background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: '11px 16px', boxShadow: 'var(--shadow-xs)' }}>
           <ULabel style={{ letterSpacing: '0.05em', marginBottom: 4 }}>Last configuration update</ULabel>
           <div style={{ font: 'var(--fw-semibold) 13px/1.3 var(--font-body)', color: 'var(--text-primary)' }}>06/23/2026 · 06:12</div>
           <div style={{ marginTop: 1, font: 'var(--fw-regular) 11.5px/1.3 var(--font-body)', color: 'var(--text-disabled)' }}>by M. Singh (Admin)</div>
@@ -305,7 +305,7 @@ export function AdminScreen() {
       <SectionCard pad={false} style={{ marginBottom: 18 }}>
         <SectionHead n={2} title="Issue reminder configuration" sub="Configure notification thresholds for aging and overdue actions." />
         <div style={{ padding: 20, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-          <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
+          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
               <IconChip icon={ClockAlert} tint="var(--warning-50)" color="var(--warning-500)" size={30} iconSize={16} />
               <div style={{ font: 'var(--fw-semibold) 13.5px/1.3 var(--font-body)', color: 'var(--text-primary)' }}>Issue aging reminder</div>
@@ -315,7 +315,7 @@ export function AdminScreen() {
             <ULabel style={{ letterSpacing: '0.05em' }}>Critical threshold</ULabel>
             <DaysInput value={agingCrit} onChange={setAgingCrit} />
           </div>
-          <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
+          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 9, marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <IconChip icon={FileClock} tint="var(--accent-50)" color="var(--accent-600)" size={30} iconSize={16} />
@@ -328,7 +328,7 @@ export function AdminScreen() {
             <ULabel style={{ letterSpacing: '0.05em' }}>Notification frequency</ULabel>
             <FreqSelect value={qirFreq} onChange={setQirFreq} />
           </div>
-          <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
+          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 9, marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <IconChip icon={Gavel} tint="#EDE9FB" color="#7C5CDB" size={30} iconSize={16} />
@@ -342,7 +342,7 @@ export function AdminScreen() {
             <FreqSelect value={dispFreq} onChange={setDispFreq} />
           </div>
         </div>
-        <div style={{ padding: '0 20px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ padding: '0 var(--space-5) var(--space-5)', display: 'flex', justifyContent: 'flex-end' }}>
           <Button iconLeft={<Icon icon={Check} size={16} />} style={{ height: 40, padding: '0 18px', borderRadius: 'var(--radius-lg)' }}>
             Save reminder settings
           </Button>
@@ -352,7 +352,7 @@ export function AdminScreen() {
       {/* SECTION 3 — Issue source configuration */}
       <SectionCard pad={false} style={{ marginBottom: 18 }}>
         <SectionHead n={3} title="Issue source configuration" sub="Control which channels are available in the Issue Entry source dropdown." />
-        <div style={{ padding: '8px 20px 16px' }}>
+        <div style={{ padding: 'var(--space-2) var(--space-5) var(--space-4)' }}>
           {SOURCES.map((s) => {
             const on = sourceOn[s.key]
             const c = on ? '#1F8A5B' : 'var(--text-muted)'
@@ -436,7 +436,7 @@ export function AdminScreen() {
         <div style={{ padding: '18px 20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
             {CLASS_COUNTS.map((k) => (
-              <div key={k.label} style={{ display: 'flex', alignItems: 'center', gap: 11, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: '12px 14px' }}>
+              <div key={k.label} style={{ display: 'flex', alignItems: 'center', gap: 11, border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', padding: '12px 14px' }}>
                 <IconChip icon={k.icon} tint={k.tint} color={k.color} size={34} iconSize={17} />
                 <div>
                   <div style={{ font: 'var(--fw-bold) 20px/1 var(--font-display)', color: 'var(--text-primary)' }}>{k.value}</div>
@@ -448,7 +448,7 @@ export function AdminScreen() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16, alignItems: 'start' }}>
             {/* left: classification tree */}
-            <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
+            <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '11px 13px', borderBottom: '1px solid #F0F2F5', background: 'var(--bg-app)' }}>
                 <ULabel style={{ letterSpacing: '0.05em', marginBottom: 0 }}>Classification tree</ULabel>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -486,7 +486,7 @@ export function AdminScreen() {
             </div>
 
             {/* right: empty state (no selection) */}
-            <div style={{ border: '1px dashed #DCE1E6', borderRadius: 'var(--radius-xl)', padding: '48px 24px', textAlign: 'center', color: 'var(--text-disabled)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div style={{ border: 'var(--border-width) dashed var(--neutral-200)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-12) var(--space-6)', textAlign: 'center', color: 'var(--text-disabled)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <Icon icon={MousePointerClick} size={24} />
               <div style={{ font: 'var(--fw-semibold) 13.5px/1.3 var(--font-body)', color: 'var(--text-secondary)' }}>Select a classification item</div>
               <div style={{ maxWidth: 320, font: 'var(--fw-regular) 12.5px/1.45 var(--font-body)' }}>Choose any System, Sub-system, Component or Symptom from the tree to view details and configuration options.</div>

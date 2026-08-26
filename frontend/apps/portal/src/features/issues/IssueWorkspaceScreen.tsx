@@ -120,7 +120,7 @@ export function IssueWorkspaceScreen() {
               )}
               {issue.isEws && <TagChip tint="var(--danger-50)" color="var(--danger-600)">EWS flagged</TagChip>}
             </div>
-            <h1 style={{ margin: '0 0 12px', font: 'var(--fw-bold) 24px/1.2 var(--font-display)', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{issue.title}</h1>
+            <h1 style={{ margin: '0 0 var(--space-3)', font: 'var(--fw-bold) 24px/1.2 var(--font-display)', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{issue.title}</h1>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <MetaChip icon={Car}>{modelCodeLabel(issue)}</MetaChip>
               {issue.system && <MetaChip icon={Settings2}>{issue.system}{issue.component ? ` / ${issue.component}` : issue.subSystem ? ` / ${issue.subSystem}` : ''}</MetaChip>}
@@ -180,8 +180,8 @@ function ApprovalBanner({ issue, canApprove, isProposer, onApprove, onReject }: 
       <div style={{ font: 'var(--fw-semibold) var(--fs-body-md)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>
         Proposed: {issue.dispositionOutcome ?? STATUS[issue.proposedStatus ?? 'review'].label} — awaiting approval
       </div>
-      <div style={{ margin: '4px 0 0', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>{issue.proposalRationale}</div>
-      <div style={{ margin: '4px 0 0', font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>Proposed by {issue.proposedBy}</div>
+      <div style={{ margin: 'var(--space-1) 0 0', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>{issue.proposalRationale}</div>
+      <div style={{ margin: 'var(--space-1) 0 0', font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>Proposed by {issue.proposedBy}</div>
       {canApprove ? (
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 12 }}>
           <div style={{ flex: 1 }}>
@@ -217,14 +217,14 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <SectionCard>
           <CardHead icon={Car} title="Vehicle information" />
-          <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', background: 'var(--neutral-50)', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', background: 'var(--neutral-50)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}>
               <span style={{ padding: '9px 14px', font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-disabled)' }}>Model code</span>
-              <span style={{ padding: '9px 14px', font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-disabled)', borderLeft: '1px solid var(--border-subtle)' }}>Selected model year(s)</span>
+              <span style={{ padding: '9px 14px', font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-disabled)', borderLeft: 'var(--border-width) solid var(--border-subtle)' }}>Selected model year(s)</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr' }}>
               <span style={{ padding: '12px 14px', font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-primary)' }}>{(issue.modelCodes ?? [issue.modelCode]).join(', ')}</span>
-              <span style={{ padding: '9px 14px', borderLeft: '1px solid var(--border-subtle)' }}>
+              <span style={{ padding: '9px 14px', borderLeft: 'var(--border-width) solid var(--border-subtle)' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', height: 24, padding: '0 10px', borderRadius: 'var(--radius-md)', background: 'var(--neutral-50)', font: 'var(--fw-semibold) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-primary)' }}>{issue.modelYear}</span>
               </span>
             </div>
@@ -302,7 +302,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
               })}
             </div>
           ) : issue.sourceEvidence?.length ? (
-            <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
               <button
                 onClick={() => setSrcOpen((v) => !v)}
                 aria-expanded={srcOpen}
@@ -313,7 +313,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
                 <Icon icon={srcOpen ? ChevronUp : ChevronDown} size={15} style={{ color: 'var(--text-muted)' }} />
               </button>
               {srcOpen && (
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(issue.sourceEvidence.length, 5)}, 1fr)`, gap: 'var(--space-4)', padding: '4px 14px 14px', borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(issue.sourceEvidence.length, 5)}, 1fr)`, gap: 'var(--space-4)', padding: '4px 14px 14px', borderTop: 'var(--border-width) solid var(--border-subtle)', paddingTop: 12 }}>
                   {issue.sourceEvidence.map((ev) => (
                     <div key={ev.label}>
                       <ULabel>{ev.label}</ULabel>
@@ -350,7 +350,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
             {linked.map((lid) => {
               const li = store.getIssue(lid)
               return (
-                <button key={lid} onClick={() => onOpen(lid)} style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', padding: '8px 12px', cursor: 'pointer' }}>
+                <button key={lid} onClick={() => onOpen(lid)} style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', padding: 'var(--space-2) var(--space-3)', cursor: 'pointer' }}>
                   <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--accent-700)' }}>{lid}</span>
                   {li && <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-semibold) var(--fs-caption)/1.2 var(--font-body)', color: 'var(--text-primary)' }}>{li.title}</span>}
                   {li && <StatusBadge status={li.status} size="sm" />}
@@ -406,14 +406,14 @@ function InvestigationTab({ issueId, canEdit }: { issueId: string; canEdit: bool
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {activities.map((a, idx) => (
-                  <div key={a.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderTop: idx === 0 ? 'none' : '1px solid var(--divider)' }}>
+                  <div key={a.id} style={{ display: 'flex', gap: 12, padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : '1px solid var(--divider)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{a.type}</span>
                         {a.attachments?.length ? <TagChip>{a.attachments.length} file{a.attachments.length > 1 ? 's' : ''}</TagChip> : null}
                       </div>
                       <div style={{ margin: '3px 0 0', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>{a.summary}</div>
-                      <div style={{ margin: '4px 0 0', font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>{a.author} · {fmtMDY(a.createdAt)} {fmtHM(a.createdAt)}</div>
+                      <div style={{ margin: 'var(--space-1) 0 0', font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>{a.author} · {fmtMDY(a.createdAt)} {fmtHM(a.createdAt)}</div>
                     </div>
                   </div>
                 ))}
@@ -467,7 +467,7 @@ function PartsPanel({ issueId, canEdit }: { issueId: string; canEdit: boolean })
       {parts.length > 0 && (
         <div style={{ marginBottom: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {parts.map((p) => (
-            <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 56px 110px 110px', gap: 'var(--space-3)', alignItems: 'center', padding: '10px 12px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }}>
+            <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 56px 110px 110px', gap: 'var(--space-3)', alignItems: 'center', padding: '10px 12px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }}>
               <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)' }}>{p.partNumber}</span>
               <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.description}</span>
               <span>×{p.qty}</span>
@@ -488,7 +488,7 @@ function PartsPanel({ issueId, canEdit }: { issueId: string; canEdit: boolean })
   )
 }
 
-const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', height: 'var(--control-sm)', padding: '0 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }
+const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', height: 'var(--control-sm)', padding: '0 10px', border: 'var(--border-width) solid var(--border-default)', borderRadius: 'var(--radius-md)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }
 
 /* ---------- Resolution ---------- */
 
@@ -536,7 +536,7 @@ function ResolutionTab({ issue, onChangeStatus, onCreateQir, canQir }: { issue: 
           right={<TagChip style={{ textTransform: 'none' }} tint={escalated ? 'var(--warning-50)' : undefined} color={escalated ? 'var(--warning-600)' : undefined}>{escalated ? 'Escalated' : 'Not linked'}</TagChip>}
         />
         {escalated ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
             <Icon icon={ClipboardPlus} size={16} />
             <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-secondary)' }}>
               QIR hand-off recorded — the reference appears here read-only; the QIR module owns what happens next.
@@ -570,8 +570,8 @@ function CommunicationTab({ comments, onPost }: { comments: import('@/data/types
           {type === 'Internal' ? 'Visible only to internal PQMS users.' : 'Visible to external partners on this issue.'}
         </span>
       </div>
-      <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '6px 8px', background: 'var(--neutral-25)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <div style={{ border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '6px 8px', background: 'var(--neutral-25)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}>
           {[BoldIcon, ItalicIcon, ListIcon, ListOrdered, Link2, Paperclip].map((I, i) => (
             <span key={i} aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, color: 'var(--text-muted)' }}>
               <Icon icon={I} size={14} />
@@ -835,7 +835,7 @@ function ManageLinksModal({ open, issue, onClose }: { open: boolean; issue: Issu
           {draft.map((lid) => {
             const li = store.getIssue(lid)
             return (
-              <div key={lid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+              <div key={lid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) var(--space-3)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
                 <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{lid}</span>
                 <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{li?.title}</span>
                 <Button variant="ghost" size="sm" style={{ color: 'var(--danger-500)', borderColor: '#E3B8B0' }} onClick={() => setDraft((d) => d.filter((x) => x !== lid))}>Unlink</Button>
@@ -850,7 +850,7 @@ function ManageLinksModal({ open, issue, onClose }: { open: boolean; issue: Issu
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {candidates.map((c) => (
-            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) var(--space-3)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
               <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{c.id}</span>
               <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{c.title}</span>
               <StatusBadge status={c.status} size="sm" />
@@ -859,7 +859,7 @@ function ManageLinksModal({ open, issue, onClose }: { open: boolean; issue: Issu
           ))}
         </div>
       )}
-      <p style={{ margin: '12px 0 0', font: 'var(--fw-regular) var(--fs-caption)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
+      <p style={{ margin: 'var(--space-3) 0 0', font: 'var(--fw-regular) var(--fs-caption)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
         Links notify both owners; unlink is a soft delete recorded in the audit trail.
       </p>
     </Modal>

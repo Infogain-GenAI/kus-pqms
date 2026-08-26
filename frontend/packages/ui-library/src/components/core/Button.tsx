@@ -22,8 +22,8 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
 
 const SIZES: Record<ButtonSize, { h: string; px: string; fs: string; gap: string }> = {
   sm: { h: 'var(--control-sm)', px: '10px', fs: 'var(--fs-body-sm)', gap: '6px' },
-  md: { h: 'var(--control-md)', px: '14px', fs: 'var(--fs-body-md)', gap: '8px' },
-  lg: { h: 'var(--control-lg)', px: '18px', fs: 'var(--fs-body-lg)', gap: '8px' },
+  md: { h: 'var(--control-md)', px: '14px', fs: 'var(--fs-body-md)', gap: 'var(--space-2)' },
+  lg: { h: 'var(--control-lg)', px: '18px', fs: 'var(--fs-body-lg)', gap: 'var(--space-2)' },
 }
 
 const PALETTE: Record<ButtonVariant, { bg: string; fg: string; bd: string; hbg: string; abg: string }> = {

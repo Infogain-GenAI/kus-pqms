@@ -71,7 +71,7 @@ const EMPTY_FILTERS: FilterDraft = { modelCode: '', modelYear: '', system: '', s
 const DEFAULT_SORT: DataTableSort = { key: 'issueDate', dir: 'desc' }
 
 const drawerLabel = { font: 'var(--fw-bold) 11px/1.35 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)' } as const
-const fieldRow = { display: 'grid', gridTemplateColumns: '116px 1fr', gap: 16, alignItems: 'center', padding: '8px 0' } as const
+const fieldRow = { display: 'grid', gridTemplateColumns: '116px 1fr', gap: 16, alignItems: 'center', padding: 'var(--space-2) 0' } as const
 
 function SegRow({ options, value, onChange }: { options: { v: string; l: string }[]; value: string; onChange: (v: string) => void }) {
   return (
@@ -102,7 +102,7 @@ function Drawer({ icon, title, subtitle, onClose, footer, children }: { icon: Lu
               <div style={{ marginTop: 1, font: 'var(--fw-regular) 11.5px/1.2 var(--font-body)', color: 'var(--text-disabled)' }}>{subtitle}</div>
             </div>
           </div>
-          <button aria-label="Close" onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', color: 'var(--text-secondary)', cursor: 'pointer', flex: 'none' }}>
+          <button aria-label="Close" onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', color: 'var(--text-secondary)', cursor: 'pointer', flex: 'none' }}>
             <Icon icon={X} size={18} />
           </button>
         </div>
@@ -116,7 +116,7 @@ function Drawer({ icon, title, subtitle, onClose, footer, children }: { icon: Lu
 function DrawerSection({ icon, label, open, onToggle, children }: { icon: LucideIcon; label: string; open: boolean; onToggle: () => void; children: ReactNode }) {
   return (
     <>
-      <button onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '16px 0 8px', border: 'none', background: 'none', cursor: 'pointer' }}>
+      <button onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: 'var(--space-4) 0 var(--space-2)', border: 'none', background: 'none', cursor: 'pointer' }}>
         <Icon icon={icon} size={15} style={{ color: 'var(--kia-midnight)', flex: 'none' }} />
         <span style={{ font: 'var(--fw-bold) 12px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-primary)' }}>{label}</span>
         <span style={{ flex: 1 }} />
@@ -327,7 +327,7 @@ export function IssueListScreen() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
         <div>
           <h1 style={{ margin: 0, font: 'var(--fw-bold) 30px/1.15 var(--font-display)', letterSpacing: 'var(--ls-h1)', color: 'var(--text-primary)' }}>Issue list</h1>
-          <p style={{ margin: '8px 0 0', font: 'var(--fw-regular) var(--fs-body-md)/1 var(--font-body)', color: 'var(--text-secondary)' }}>Monitor, prioritize and manage product quality issues.</p>
+          <p style={{ margin: 'var(--space-2) 0 0', font: 'var(--fw-regular) var(--fs-body-md)/1 var(--font-body)', color: 'var(--text-secondary)' }}>Monitor, prioritize and manage product quality issues.</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           <Button variant="secondary" iconLeft={<Icon icon={Download} size={16} />}>Export</Button>
@@ -338,11 +338,11 @@ export function IssueListScreen() {
       {/* KPI strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
         {kpiDefs.map((k) => (
-          <button key={k.label} onClick={k.apply} style={{ textAlign: 'left', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-xs)', padding: 'var(--space-4)', cursor: 'pointer' }}>
+          <button key={k.label} onClick={k.apply} style={{ textAlign: 'left', background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-xs)', padding: 'var(--space-4)', cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
               <IconChip icon={k.icon} tint={k.tint} color={k.tone === 'var(--text-primary)' ? 'var(--accent-600)' : k.tone} size={36} iconSize={17} />
               {k.pct && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px', borderRadius: 'var(--radius-pill)', background: k.tint, color: k.tone === 'var(--text-primary)' ? 'var(--accent-700)' : k.tone, font: 'var(--fw-bold) 11px/1 var(--font-body)' }}>{k.pct}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 var(--space-2)', borderRadius: 'var(--radius-pill)', background: k.tint, color: k.tone === 'var(--text-primary)' ? 'var(--accent-700)' : k.tone, font: 'var(--fw-bold) 11px/1 var(--font-body)' }}>{k.pct}</span>
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -376,11 +376,11 @@ export function IssueListScreen() {
 
       {/* Bulk-action bar */}
       {selected.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)', padding: 'var(--space-3) var(--space-4)', background: 'var(--selected-bg)', border: '1px solid var(--accent-100)', borderRadius: 'var(--radius-lg)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)', padding: 'var(--space-3) var(--space-4)', background: 'var(--selected-bg)', border: 'var(--border-width) solid var(--accent-100)', borderRadius: 'var(--radius-lg)' }}>
           <Badge tone="accent">{selected.length} {selected.length === 1 ? 'Issue Selected' : 'Issues Selected'}</Badge>
           <span style={{ color: 'var(--text-secondary)', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)' }}>Change Status:</span>
           <Select aria-label="Target status" size="sm" value={bulkTarget} placeholder="Choose…" options={STATUS_KEYS.map((k) => ({ value: k, label: STATUS[k].label }))} onChange={(e) => setBulkTarget(e.target.value)} style={{ width: 170 }} />
-          <input value={bulkReason} onChange={(e) => setBulkReason(e.target.value)} placeholder="Reason (required)" style={{ height: 'var(--control-sm)', padding: '0 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', width: 240 }} />
+          <input value={bulkReason} onChange={(e) => setBulkReason(e.target.value)} placeholder="Reason (required)" style={{ height: 'var(--control-sm)', padding: '0 10px', border: 'var(--border-width) solid var(--border-default)', borderRadius: 'var(--radius-md)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', width: 240 }} />
           <Button size="sm" onClick={applyBulk} disabled={!bulkTarget || !bulkReason.trim()}>Apply</Button>
           <Button variant="secondary" size="sm">Assign to role</Button>
           <Button variant="ghost" size="sm" iconLeft={<Icon icon={Download} size={14} />}>Export XLSX</Button>
@@ -390,7 +390,7 @@ export function IssueListScreen() {
 
       {/* Table card */}
       <SectionCard pad={false}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-3) var(--space-4)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}>
           <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
             Showing <b style={{ color: 'var(--text-primary)' }}>{filtered.length}</b> of {tab === 'my' ? myIssues.length : issues.length} issues
           </span>
@@ -415,7 +415,7 @@ export function IssueListScreen() {
               style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}
             />
             {/* Footer band — inside the table card, like the prototype */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: 'var(--border-width) solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
                   Showing <b style={{ color: 'var(--text-primary)' }}>{(pageClamped - 1) * pageSize + 1}–{Math.min(pageClamped * pageSize, filtered.length)}</b> of {filtered.length} issues
@@ -425,7 +425,7 @@ export function IssueListScreen() {
                   <select
                     value={pageSize}
                     onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
-                    style={{ height: 26, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)', background: 'var(--surface-card)' }}
+                    style={{ height: 26, border: 'var(--border-width) solid var(--border-default)', borderRadius: 'var(--radius-sm)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)', background: 'var(--surface-card)' }}
                   >
                     {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
@@ -469,9 +469,9 @@ export function IssueListScreen() {
             <div style={fieldRow}>
               <label style={drawerLabel}>Issue Date</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-                <input type="date" aria-label="Start date" value={draft.dateFrom} onChange={(e) => setDraft((d) => ({ ...d, dateFrom: e.target.value }))} style={{ flex: 1, minWidth: 0, height: 42, boxSizing: 'border-box', padding: '0 11px', border: '1px solid var(--border-default)', borderRadius: 10, font: 'var(--fw-medium) 13.5px/1 var(--font-body)', color: draft.dateFrom ? 'var(--text-primary)' : 'var(--text-disabled)', background: 'var(--surface-card)' }} />
+                <input type="date" aria-label="Start date" value={draft.dateFrom} onChange={(e) => setDraft((d) => ({ ...d, dateFrom: e.target.value }))} style={{ flex: 1, minWidth: 0, height: 42, boxSizing: 'border-box', padding: '0 11px', border: 'var(--border-width) solid var(--border-default)', borderRadius: 10, font: 'var(--fw-medium) 13.5px/1 var(--font-body)', color: draft.dateFrom ? 'var(--text-primary)' : 'var(--text-disabled)', background: 'var(--surface-card)' }} />
                 <span style={{ font: 'var(--fw-regular) 12px/1 var(--font-body)', color: 'var(--text-disabled)', flex: 'none' }}>to</span>
-                <input type="date" aria-label="End date" value={draft.dateTo} onChange={(e) => setDraft((d) => ({ ...d, dateTo: e.target.value }))} style={{ flex: 1, minWidth: 0, height: 42, boxSizing: 'border-box', padding: '0 11px', border: '1px solid var(--border-default)', borderRadius: 10, font: 'var(--fw-medium) 13.5px/1 var(--font-body)', color: draft.dateTo ? 'var(--text-primary)' : 'var(--text-disabled)', background: 'var(--surface-card)' }} />
+                <input type="date" aria-label="End date" value={draft.dateTo} onChange={(e) => setDraft((d) => ({ ...d, dateTo: e.target.value }))} style={{ flex: 1, minWidth: 0, height: 42, boxSizing: 'border-box', padding: '0 11px', border: 'var(--border-width) solid var(--border-default)', borderRadius: 10, font: 'var(--fw-medium) 13.5px/1 var(--font-body)', color: draft.dateTo ? 'var(--text-primary)' : 'var(--text-disabled)', background: 'var(--surface-card)' }} />
               </div>
             </div>
             <div style={fieldRow}>
@@ -506,7 +506,7 @@ export function IssueListScreen() {
         >
           <div style={{ ...drawerLabel, padding: '16px 0 10px' }}>Default columns</div>
           {[{ key: '_id', label: 'Issue ID', required: true }, { key: '_title', label: 'Issue Title', required: true }, ...DEFAULT_COLS.map((c) => ({ ...c, required: false }))].map((c) => (
-            <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: c.required ? 'default' : 'pointer', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)' }}>
+            <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) 0', cursor: c.required ? 'default' : 'pointer', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)' }}>
               <input
                 type="checkbox"
                 disabled={c.required}
@@ -514,7 +514,7 @@ export function IssueListScreen() {
                 onChange={(e) => setColsDraft((s) => (e.target.checked ? [...s, c.key] : s.filter((x) => x !== c.key)))}
               />
               {c.label}
-              {c.required && <span style={{ marginLeft: 'auto', font: 'var(--fw-bold) 9.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-disabled)', background: 'var(--neutral-50)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '3px 7px' }}>Required</span>}
+              {c.required && <span style={{ marginLeft: 'auto', font: 'var(--fw-bold) 9.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-disabled)', background: 'var(--neutral-50)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '3px 7px' }}>Required</span>}
             </label>
           ))}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 10px' }}>
@@ -529,7 +529,7 @@ export function IssueListScreen() {
             </label>
           </div>
           {OPTIONAL_COLS.map((c) => (
-            <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)' }}>
+            <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) 0', cursor: 'pointer', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)' }}>
               <input type="checkbox" checked={colsDraft.includes(c.key)} onChange={(e) => setColsDraft((s) => (e.target.checked ? [...s, c.key] : s.filter((x) => x !== c.key)))} />
               {c.label}
             </label>

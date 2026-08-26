@@ -57,7 +57,7 @@ export function NotificationsScreen() {
                 gap: 'var(--space-3)',
                 textAlign: 'left',
                 padding: 'var(--space-4)',
-                border: '1px solid var(--border-subtle)',
+                border: 'var(--border-width) solid var(--border-subtle)',
                 borderRadius: 'var(--radius-xl)',
                 background: n.read ? 'var(--surface-card)' : 'var(--selected-bg)',
                 cursor: 'pointer',

@@ -23,9 +23,9 @@ export function Header({ title, left, right, children, style, ...rest }: HeaderP
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 16,
-        padding: '0 24px',
+        padding: '0 var(--space-6)',
         background: 'var(--surface-card)',
-        borderBottom: '1px solid var(--border-subtle)',
+        borderBottom: 'var(--border-width) solid var(--border-subtle)',
         ...style,
       }}
       {...rest}

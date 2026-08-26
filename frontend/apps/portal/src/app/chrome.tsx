@@ -14,7 +14,7 @@ import { Icon } from '@pqms/ui-library'
  * 1280w, ~1720 at 1920w — verified against PQMS_SE.html at both widths).
  */
 export function PageContainer({ children, style }: { children: ReactNode; wide?: boolean; style?: CSSProperties }) {
-  return <div style={{ maxWidth: 1800, margin: '0 auto', padding: '0 40px var(--space-10)', ...style }}>{children}</div>
+  return <div style={{ maxWidth: 1800, margin: '0 auto', padding: '0 var(--space-10) var(--space-10)', ...style }}>{children}</div>
 }
 
 export interface Crumb {
@@ -32,7 +32,7 @@ export function PageCrumb({ trail, backTo }: { trail: Crumb[]; backTo?: string }
         <button
           aria-label="Back"
           onClick={() => nav(backTo)}
-          style={{ width: 26, height: 26, borderRadius: '50%', border: '1px solid var(--border-subtle)', background: 'var(--surface-card)', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none' }}
+          style={{ width: 26, height: 26, borderRadius: '50%', border: 'var(--border-width) solid var(--border-subtle)', background: 'var(--surface-card)', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none' }}
         >
           <Icon icon={ArrowLeft} size={13} />
         </button>
@@ -71,7 +71,7 @@ export function SectionCard({ children, style, pad = true }: { children: ReactNo
     <section
       style={{
         background: 'var(--surface-card)',
-        border: '1px solid var(--border-subtle)',
+        border: 'var(--border-width) solid var(--border-subtle)',
         borderRadius: 'var(--radius-xl)',
         boxShadow: 'var(--shadow-xs)',
         padding: pad ? 'var(--space-5)' : 0,
@@ -113,7 +113,7 @@ export function CardHead({ icon, tint, color, title, subtitle, right }: { icon?:
 export function MetaChip({ icon, children }: { icon?: LucideIcon; children: ReactNode }) {
   return (
     <span
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, padding: '0 10px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', color: 'var(--text-secondary)', font: 'var(--fw-medium) var(--fs-caption)/1 var(--font-body)', whiteSpace: 'nowrap' }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, padding: '0 10px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', color: 'var(--text-secondary)', font: 'var(--fw-medium) var(--fs-caption)/1 var(--font-body)', whiteSpace: 'nowrap' }}
     >
       {icon && <Icon icon={icon} size={13} />}
       {children}
@@ -216,7 +216,7 @@ export function Modal({ open, onClose, title, children, footer, width = 540 }: {
   return (
     <div
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-      style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-modal)' as unknown as number, background: 'rgba(5,20,31,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '9vh 16px 16px' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-modal)' as unknown as number, background: 'rgba(5,20,31,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '9vh var(--space-4) var(--space-4)' }}
     >
       <div ref={ref} role="dialog" aria-modal="true" style={{ width, maxWidth: '100%', background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', padding: 'var(--space-6)' }}>
         <div style={{ font: 'var(--fw-semibold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)', marginBottom: 'var(--space-4)' }}>{title}</div>

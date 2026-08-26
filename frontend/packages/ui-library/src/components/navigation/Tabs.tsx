@@ -27,7 +27,7 @@ export function Tabs({ tabs = [], activeKey, onChange, style, ...rest }: TabsPro
         display: 'flex',
         alignItems: 'center',
         gap: 4,
-        borderBottom: '1px solid var(--border-subtle)',
+        borderBottom: 'var(--border-width) solid var(--border-subtle)',
         ...style,
       }}
       {...rest}

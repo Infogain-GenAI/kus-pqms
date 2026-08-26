@@ -82,14 +82,14 @@ export function SideNav({
           {header}
         </div>
       )}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-2)' }}>
         {sections
           ? sections.map((sec, i) => (
               <div key={i} style={{ marginBottom: 12 }}>
                 {!collapsed && sec.title && (
                   <div
                     style={{
-                      padding: '8px 12px 4px',
+                      padding: 'var(--space-2) var(--space-3) var(--space-1)',
                       font: 'var(--fw-semibold) 10px/1 var(--font-body)',
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
@@ -108,7 +108,7 @@ export function SideNav({
         <div
           style={{
             padding: 8,
-            borderTop: '1px solid rgba(255,255,255,0.08)',
+            borderTop: 'var(--border-width) solid rgba(255,255,255,0.08)',
             flex: 'none',
           }}
         >

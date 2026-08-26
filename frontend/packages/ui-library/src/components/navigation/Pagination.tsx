@@ -100,7 +100,7 @@ function PageBtn({ children, active, disabled, style, className, ...rest }: Page
       style={{
         minWidth: 32,
         height: 32,
-        padding: '0 8px',
+        padding: '0 var(--space-2)',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
