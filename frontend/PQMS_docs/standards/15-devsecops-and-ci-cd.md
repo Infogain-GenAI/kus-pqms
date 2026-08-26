@@ -764,3 +764,86 @@ twelve-stage deploy graph, SBOM and licence scanning, and every `infra/` concern
 (cache headers, CSP, the SPA rewrite — see 12 and 13). **This file specifies the
 frontend's jobs and the gates on them. It does not restructure the client's
 pipeline.**
+
+## A codemod keys on the node, never on the finding
+
+**The rule.** A codemod driven by linter output must key its edits on the
+**source node range**, never on the finding. One node can raise several findings,
+and applying each independently writes over the same text more than once.
+
+**Worked example, from this repository.** The Step 8 token conversion is driven by
+`no-restricted-syntax` warnings. The literal
+
+```js
+border: '1px dashed #DCE1E6'
+```
+
+raises **two** — `Raw px value` for the `1px` and `Raw hex colour` for the
+`#DCE1E6` — and **both report the same node with the same line, column and end
+column.** The first pass rewrote the whole literal to its fully-tokenised form;
+the second pass rewrote the *already rewritten* text again, producing
+
+```js
+border: 'var(--border-width) dashed var(--neutral-200)' dashed var(--neutral-200)'
+```
+
+which does not parse. Caught by `tsc --noEmit` over 103 conversions and reverted.
+**Unattended over ~350 it would have damaged dozens of files**, and the damage is
+not always a syntax error — a double-write that happens to stay syntactically
+valid is a silent content change.
+
+**Why this belongs beside the positive-control rule:** it is the same family. A
+mechanism that looks correct, runs without error, and is silently wrong. The
+defence is also the same shape — **do not trust that the tool did what it
+appeared to do; verify the output independently.** Here the verification was a
+type-check and a pixel comparison, and the type-check is what caught it.
+
+Two supporting practices, both cheap:
+
+- **Apply edits right-to-left within a line**, so earlier column offsets stay
+  valid as later text changes length.
+- **Dry-run first and read a sample.** The double-write was visible in the diff
+  before it was applied; nobody looked.
+
+## A bundle hash proves nothing once content changes by design
+
+**The rule.** Identical build output is strong evidence for a change that should
+produce identical output, and **no evidence at all** for a change that should not.
+Choose the check by what the change is expected to do to the artefact.
+
+**Both halves of that were demonstrated in this repository, three days apart.**
+
+**Step 6 — the workspace split.** A pure move: no source byte was meant to change
+meaning. The JS and CSS bundle hashes were **identical before and after**
+(`index-BDNeyRad.js`, `index-fURKnrD4.css`), which proved byte-identical rendering
+more strongly than a screenshot could. Correct use.
+
+**Step 8 — token conversion.** `padding: '16px'` becomes
+`padding: 'var(--space-4)'`. The source bytes change **on purpose**, so the hash
+**must** change while the pixels **must not**:
+
+```
+index-BDNeyRad.js  403.94 kB   ->   index-CAOysY3E.js  405.38 kB   (+1.44 kB)
+pixel comparison:  10 screens, IDENTICAL
+```
+
+The hash moved because `var(--space-4)` is longer than `16px`. It carries no
+information about the only property that mattered.
+
+**One further limit, found the same week:** a bundle hash is also blind to any
+change in code that is **tree-shaken out**. Editing a component that nothing
+imports produced an identical hash — the edit was real and never reached the
+bundle.
+
+### The strongest end-to-end check available here, and it is not a self-comparison
+
+Across 133 conversions the app was also compared against the **UX prototype**, an
+artefact the conversion cannot touch. The per-screen pixel counts were
+**unchanged to the digit** — 70536 / 66147 / 52926 / 54969.
+
+**That is worth more than any per-screen pass against the app's own baseline.** A
+self-comparison can only tell you the app matches what you just captured; a
+comparison against an independent artefact tells you the *relationship* to
+something external is preserved. **A changed delta after a value-preserving
+conversion means something went wrong**, and it is detectable even if the app's
+own baseline was regenerated at the wrong moment.

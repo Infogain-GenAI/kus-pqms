@@ -73,7 +73,7 @@ export function SideNav({
       {header && (
         <div
           style={{
-            padding: collapsed ? '16px 0' : '16px',
+            padding: collapsed ? 'var(--space-4) 0' : 'var(--space-4)',
             display: 'flex',
             justifyContent: collapsed ? 'center' : 'flex-start',
             flex: 'none',
@@ -141,7 +141,7 @@ function NavItem({ item, active, collapsed, onSelect }: NavItemProps) {
         gap: 12,
         width: '100%',
         height: 40,
-        padding: collapsed ? 0 : '0 12px',
+        padding: collapsed ? 0 : '0 var(--space-3)',
         justifyContent: collapsed ? 'center' : 'flex-start',
         border: 'none',
         borderRadius: 'var(--radius-md)',
@@ -152,7 +152,7 @@ function NavItem({ item, active, collapsed, onSelect }: NavItemProps) {
           : hover
             ? 'rgba(255,255,255,0.06)'
             : 'transparent',
-        color: active ? '#fff' : 'rgba(255,255,255,0.72)',
+        color: active ? 'var(--neutral-0)' : 'rgba(255,255,255,0.72)',
         font: `${active ? 'var(--fw-semibold)' : 'var(--fw-medium)'} var(--fs-body-md)/1 var(--font-body)`,
         position: 'relative',
         transition: 'background var(--dur-fast)',
@@ -200,7 +200,7 @@ function NavItem({ item, active, collapsed, onSelect }: NavItemProps) {
           style={{
             font: 'var(--fw-semibold) 11px/1 var(--font-body)',
             background: 'rgba(255,255,255,0.14)',
-            color: '#fff',
+            color: 'var(--neutral-0)',
             padding: '2px 7px',
             borderRadius: 'var(--radius-pill)',
           }}

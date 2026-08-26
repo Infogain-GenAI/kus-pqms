@@ -42,7 +42,7 @@ export function Avatar({ name = '', src = null, size = 'md', style, ...rest }: A
         borderRadius: '50%',
         overflow: 'hidden',
         background: src ? 'var(--neutral-100)' : hue,
-        color: '#fff',
+        color: 'var(--neutral-0)',
         flex: 'none',
         font: `var(--fw-semibold) ${dim * 0.4}px/1 var(--font-body)`,
         ...style,

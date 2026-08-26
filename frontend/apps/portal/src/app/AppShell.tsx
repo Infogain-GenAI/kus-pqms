@@ -101,7 +101,7 @@ export function AppShell() {
             <Icon icon={Bell} size={19} />
           </IconButton>
           {unreadCount > 0 && (
-            <span aria-hidden style={{ position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, padding: '0 var(--space-1)', borderRadius: 'var(--radius-pill)', background: 'var(--status-escalated)', border: '1.5px solid var(--surface-card)', color: '#fff', font: 'var(--fw-bold) 9.5px/13px var(--font-body)', textAlign: 'center', pointerEvents: 'none' }}>
+            <span aria-hidden style={{ position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, padding: '0 var(--space-1)', borderRadius: 'var(--radius-pill)', background: 'var(--status-escalated)', border: '1.5px solid var(--surface-card)', color: 'var(--neutral-0)', font: 'var(--fw-bold) 9.5px/13px var(--font-body)', textAlign: 'center', pointerEvents: 'none' }}>
               {unreadCount}
             </span>
           )}
@@ -114,7 +114,7 @@ export function AppShell() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ font: 'var(--fw-bold) 14px/1 var(--font-body)', color: 'var(--text-primary)' }}>Notifications</span>
                     {unreadCount > 0 && (
-                      <span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', color: '#fff', background: 'var(--status-escalated)', borderRadius: 20, padding: '2px 7px' }}>{unreadCount} new</span>
+                      <span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', color: 'var(--neutral-0)', background: 'var(--status-escalated)', borderRadius: 20, padding: '2px 7px' }}>{unreadCount} new</span>
                     )}
                   </div>
                   <button onClick={markAllRead} style={{ border: 'none', background: 'none', color: 'var(--accent-700)', font: 'var(--fw-semibold) 12px/1 var(--font-body)', cursor: 'pointer' }}>Mark all read</button>

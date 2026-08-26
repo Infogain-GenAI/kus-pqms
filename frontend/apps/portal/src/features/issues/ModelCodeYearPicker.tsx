@@ -119,7 +119,7 @@ export function ModelCodeYearPicker({
                 justifyContent: 'space-between',
                 gap: 'var(--space-3)',
                 padding: '7px var(--space-3)',
-                borderTop: i === 0 ? 'none' : '1px solid var(--border-subtle)',
+                borderTop: i === 0 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
                 background: codes.includes(m.code) ? 'var(--hover-overlay)' : 'transparent',
               }}
             >
@@ -165,7 +165,7 @@ export function ModelCodeYearPicker({
                     display: 'grid',
                     gridTemplateColumns: '186px minmax(0,1fr)',
                     alignItems: 'stretch',
-                    borderTop: ix === 0 ? 'none' : '1px solid var(--border-subtle)',
+                    borderTop: ix === 0 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
                   }}
                 >
                   <div

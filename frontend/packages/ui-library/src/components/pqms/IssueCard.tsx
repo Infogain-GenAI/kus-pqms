@@ -162,7 +162,7 @@ export function IssueCard({
                   height: 22,
                   borderRadius: '50%',
                   background: 'var(--kia-midnight-70)',
-                  color: '#fff',
+                  color: 'var(--neutral-0)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',

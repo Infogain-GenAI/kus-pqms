@@ -61,7 +61,7 @@ export function Badge({ tone = 'neutral', variant = 'subtle', size = 'md', child
     },
     solid: {
       background: t.base,
-      color: '#fff',
+      color: 'var(--neutral-0)',
       border: 'var(--border-width) solid transparent',
     },
     outline: {

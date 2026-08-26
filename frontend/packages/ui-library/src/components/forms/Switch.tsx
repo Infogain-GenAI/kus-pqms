@@ -56,7 +56,7 @@ export function Switch({ label, checked = false, disabled = false, onChange, siz
               width: dims.k,
               height: dims.k,
               borderRadius: '50%',
-              background: '#fff',
+              background: 'var(--neutral-0)',
               boxShadow: 'var(--shadow-xs)',
               transform: checked ? `translateX(${dims.w - dims.k - 4}px)` : 'translateX(0)',
               transition: 'transform var(--dur-base) var(--ease-standard)',

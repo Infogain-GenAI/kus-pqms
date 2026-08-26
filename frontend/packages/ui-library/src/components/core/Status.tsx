@@ -55,7 +55,7 @@ export function StatusPill({ status = 'open', size = 'md', disabled = false, sty
         borderRadius: 'var(--radius-pill)',
         font: `var(--fw-semibold) ${z.fs}/1 var(--font-body)`,
         background: s.color,
-        color: '#fff',
+        color: 'var(--neutral-0)',
         opacity: disabled ? 0.5 : 1,
         whiteSpace: 'nowrap',
         ...style,

@@ -113,7 +113,7 @@ function PageBtn({ children, active, disabled, style, className, ...rest }: Page
             : hover
               ? 'var(--neutral-50)'
               : 'var(--surface-card)',
-        color: active ? '#fff' : disabled ? 'var(--text-disabled)' : 'var(--text-secondary)',
+        color: active ? 'var(--neutral-0)' : disabled ? 'var(--text-disabled)' : 'var(--text-secondary)',
         font: `var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)`,
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'background var(--dur-fast)',

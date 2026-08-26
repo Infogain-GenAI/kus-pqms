@@ -56,7 +56,15 @@ const resolve = (name, depth = 0) => {
   return resolve(m[1], depth + 1)
 }
 
-const norm = (v) => String(v).trim().replace(/^['"]|['"]$/g, '').toLowerCase()
+// Hex is normalised to 6 digits before comparison. DEFECT FIXED 2026-08-26:
+// exact string matching meant '#fff' never matched the manifest's '#FFFFFF', so
+// 24 convertible warnings were reported as unmatched — a tooling defect that
+// looked like a design-system gap.
+const expandHex = (v) => {
+  const m = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(v)
+  return m ? '#' + m[1] + m[1] + m[2] + m[2] + m[3] + m[3] : v
+}
+const norm = (v) => expandHex(String(v).trim().replace(/^['"]|['"]$/g, '').toLowerCase())
 
 // value -> [token names], including aliases pointing at the same primitive
 const byValue = new Map()
@@ -124,12 +132,38 @@ const literalAt = (filePath, m) => {
   return line.slice(m.column - 1, (m.endColumn ?? m.column) - 1)
 }
 
-/** The CSS-in-JS property this literal is assigned to, if it is on the same line. */
+/**
+ * The CSS-in-JS property this literal is assigned to.
+ *
+ * DEFECT FIXED 2026-08-26. The original only matched `prop:` IMMEDIATELY before
+ * the literal, so 55 values were unclassifiable — 39 of them inside ternary
+ * branches, where the property sits before the `?`:
+ *     boxShadow: isActive ? 'inset 0 -2px 0 0 var(--accent-500)' : 'none'
+ *
+ * Two forms are now resolved, and ONLY two. Anything else still returns null:
+ * the rule is convert what resolves unambiguously, never what has to be guessed.
+ */
 const propertyAt = (filePath, m) => {
   const line = readSrc(filePath)[m.line - 1] ?? ''
   const before = line.slice(0, m.column - 1)
-  const hit = /([A-Za-z][A-Za-z0-9]*)\s*:\s*$/.exec(before)
-  return hit ? hit[1] : null
+
+  // Form 1 — directly assigned:  padding: '16px'
+  const direct = /([A-Za-z][A-Za-z0-9]*)\s*:\s*$/.exec(before)
+  if (direct) return direct[1]
+
+  // Form 2 — a ternary branch:  prop: <cond> ? 'x' : 'y'
+  // Accepted only when the text between the property and the literal contains
+  // NO further `{`/`}`/`;`/`,` — i.e. we have not crossed into a nested object
+  // or a sibling property, which is where a wrong attribution would come from.
+  const ternary = /([A-Za-z][A-Za-z0-9]*)\s*:\s*([^{};,]*\?[^{};]*)$/.exec(before)
+  if (ternary) {
+    const between = ternary[2]
+    // A second `:` inside the gap means we are in the ELSE branch of the ternary,
+    // which is still the same property — but a second `?` means nested ternaries
+    // and the property can no longer be attributed with confidence.
+    if ((between.match(/\?/g) || []).length === 1) return ternary[1]
+  }
+  return null
 }
 
 // --- semantic fitness -------------------------------------------------------

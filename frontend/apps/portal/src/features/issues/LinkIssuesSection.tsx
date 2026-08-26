@@ -86,7 +86,7 @@ export function LinkIssuesSection({
                   alignItems: 'center',
                   gap: 'var(--space-3)',
                   padding: 'var(--space-3)',
-                  borderTop: ix === 0 ? 'none' : '1px solid var(--border-subtle)',
+                  borderTop: ix === 0 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
                 }}
               >
                 <span className="ism-mono" style={{ fontSize: 'var(--fs-caption)', fontWeight: 600, flex: 'none' }}>{i.id}</span>

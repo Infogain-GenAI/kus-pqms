@@ -144,7 +144,7 @@ export function ToggleGroup({ options, value, onChange, variant = 'light', size 
         gap: 4,
         padding: variant === 'light' ? 4 : 0,
         background: variant === 'light' ? 'var(--neutral-50)' : 'transparent',
-        border: variant === 'light' ? '1px solid var(--border-subtle)' : 'none',
+        border: variant === 'light' ? 'var(--border-width) solid var(--border-subtle)' : 'none',
         borderRadius: 10,
       }}
     >

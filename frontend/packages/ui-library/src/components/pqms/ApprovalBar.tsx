@@ -52,7 +52,7 @@ export function ApprovalBar({
             height: 36,
             borderRadius: '50%',
             background: 'var(--warning-500)',
-            color: '#fff',
+            color: 'var(--neutral-0)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',

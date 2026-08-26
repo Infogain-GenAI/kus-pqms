@@ -237,7 +237,7 @@ function Row({ children, rowH, last, selected }: RowProps) {
       onMouseLeave={() => setHover(false)}
       style={{
         height: rowH,
-        borderBottom: last ? 'none' : '1px solid var(--border-subtle)',
+        borderBottom: last ? 'none' : 'var(--border-width) solid var(--border-subtle)',
         background: selected
           ? 'var(--selected-bg)'
           : hover
@@ -292,7 +292,7 @@ function HeaderCheckbox({ checked, indeterminate, onChange }: HeaderCheckboxProp
           justifyContent: 'center',
           background: on ? 'var(--accent-500)' : 'var(--surface-card)',
           border: `1.5px solid ${on ? 'var(--accent-500)' : 'var(--border-strong)'}`,
-          color: '#fff',
+          color: 'var(--neutral-0)',
         }}
       >
         {indeterminate ? (

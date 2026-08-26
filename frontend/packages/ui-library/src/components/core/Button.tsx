@@ -74,7 +74,7 @@ export function Button({
         justifyContent: 'center',
         gap: s.gap,
         height: s.h,
-        padding: isLink ? '0 4px' : `0 ${s.px}`,
+        padding: isLink ? '0 var(--space-1)' : `0 ${s.px}`,
         width: fullWidth ? '100%' : 'auto',
         font: `var(--fw-semibold) ${s.fs}/1 var(--font-body)`,
         color: isDisabled ? 'var(--text-disabled)' : p.fg,

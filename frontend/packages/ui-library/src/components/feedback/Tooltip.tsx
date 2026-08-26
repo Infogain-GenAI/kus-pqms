@@ -61,7 +61,7 @@ export function Tooltip({ label, placement = 'top', children, style, ...rest }: 
             padding: '5px 9px',
             borderRadius: 'var(--radius-sm)',
             background: 'var(--kia-midnight)',
-            color: '#fff',
+            color: 'var(--neutral-0)',
             font: `var(--fw-medium) var(--fs-caption)/1.3 var(--font-body)`,
             whiteSpace: 'nowrap',
             boxShadow: 'var(--shadow-md)',

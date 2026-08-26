@@ -52,7 +52,7 @@ export function Checkbox({ label, checked = false, indeterminate = false, disabl
             borderRadius: 'var(--radius-sm)',
             background: disabled ? 'var(--disabled-bg)' : on ? 'var(--kia-midnight)' : 'var(--surface-card)',
             border: `1.5px solid ${disabled ? 'var(--border-default)' : on ? 'var(--kia-midnight)' : 'var(--border-strong)'}`,
-            color: '#fff',
+            color: 'var(--neutral-0)',
             transition: 'all var(--dur-fast)',
           }}
         >

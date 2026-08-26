@@ -8253,6 +8253,89 @@ twelve-stage deploy graph, SBOM and licence scanning, and every `infra/` concern
 frontend's jobs and the gates on them. It does not restructure the client's
 pipeline.**
 
+### A codemod keys on the node, never on the finding
+
+**The rule.** A codemod driven by linter output must key its edits on the
+**source node range**, never on the finding. One node can raise several findings,
+and applying each independently writes over the same text more than once.
+
+**Worked example, from this repository.** The Step 8 token conversion is driven by
+`no-restricted-syntax` warnings. The literal
+
+```js
+border: '1px dashed #DCE1E6'
+```
+
+raises **two** — `Raw px value` for the `1px` and `Raw hex colour` for the
+`#DCE1E6` — and **both report the same node with the same line, column and end
+column.** The first pass rewrote the whole literal to its fully-tokenised form;
+the second pass rewrote the *already rewritten* text again, producing
+
+```js
+border: 'var(--border-width) dashed var(--neutral-200)' dashed var(--neutral-200)'
+```
+
+which does not parse. Caught by `tsc --noEmit` over 103 conversions and reverted.
+**Unattended over ~350 it would have damaged dozens of files**, and the damage is
+not always a syntax error — a double-write that happens to stay syntactically
+valid is a silent content change.
+
+**Why this belongs beside the positive-control rule:** it is the same family. A
+mechanism that looks correct, runs without error, and is silently wrong. The
+defence is also the same shape — **do not trust that the tool did what it
+appeared to do; verify the output independently.** Here the verification was a
+type-check and a pixel comparison, and the type-check is what caught it.
+
+Two supporting practices, both cheap:
+
+- **Apply edits right-to-left within a line**, so earlier column offsets stay
+  valid as later text changes length.
+- **Dry-run first and read a sample.** The double-write was visible in the diff
+  before it was applied; nobody looked.
+
+### A bundle hash proves nothing once content changes by design
+
+**The rule.** Identical build output is strong evidence for a change that should
+produce identical output, and **no evidence at all** for a change that should not.
+Choose the check by what the change is expected to do to the artefact.
+
+**Both halves of that were demonstrated in this repository, three days apart.**
+
+**Step 6 — the workspace split.** A pure move: no source byte was meant to change
+meaning. The JS and CSS bundle hashes were **identical before and after**
+(`index-BDNeyRad.js`, `index-fURKnrD4.css`), which proved byte-identical rendering
+more strongly than a screenshot could. Correct use.
+
+**Step 8 — token conversion.** `padding: '16px'` becomes
+`padding: 'var(--space-4)'`. The source bytes change **on purpose**, so the hash
+**must** change while the pixels **must not**:
+
+```
+index-BDNeyRad.js  403.94 kB   ->   index-CAOysY3E.js  405.38 kB   (+1.44 kB)
+pixel comparison:  10 screens, IDENTICAL
+```
+
+The hash moved because `var(--space-4)` is longer than `16px`. It carries no
+information about the only property that mattered.
+
+**One further limit, found the same week:** a bundle hash is also blind to any
+change in code that is **tree-shaken out**. Editing a component that nothing
+imports produced an identical hash — the edit was real and never reached the
+bundle.
+
+#### The strongest end-to-end check available here, and it is not a self-comparison
+
+Across 133 conversions the app was also compared against the **UX prototype**, an
+artefact the conversion cannot touch. The per-screen pixel counts were
+**unchanged to the digit** — 70536 / 66147 / 52926 / 54969.
+
+**That is worth more than any per-screen pass against the app's own baseline.** A
+self-comparison can only tell you the app matches what you just captured; a
+comparison against an independent artefact tells you the *relationship* to
+something external is preserved. **A changed delta after a value-preserving
+conversion means something went wrong**, and it is detectable even if the app's
+own baseline was regenerated at the wrong moment.
+
 ---
 
 ## 16 — Code Review Checklist
@@ -10794,6 +10877,85 @@ tranche-1 batch left all four counts identical to the digit.
 wrong** — and it is a stronger end-to-end check than any per-screen
 self-comparison, because it compares against an artefact the conversion cannot
 touch.
+
+### Step 8 tranche 1b, and the numeric family — 2026-08-26
+
+#### Two tool defects fixed, 30 more conversions unlocked
+
+Both were in `check-token-equivalence.mjs`; neither was a design-system gap.
+
+1. **3-digit hex was never normalised**, so `#fff` never matched the manifest's
+   `#FFFFFF`. **24 warnings were reported as unmatched while being convertible.**
+2. **The property was read by a same-line regex**, so 55 literals in ternary
+   branches and JSX props were unclassifiable. Now resolved for the two
+   unambiguous forms — direct assignment, and a *single* ternary with no
+   intervening `{`/`}`/`;`/`,`. **Nested ternaries still return null**: the rule
+   is convert what resolves unambiguously, never what has to be guessed.
+
+Effect: exact 0 → 18, decomposable 0 → 12, unknown-property 23 → 15,
+unmatched 254 → 230.
+
+#### Tranche 1b converted — values ceiling 363 → 333
+
+30 substitutions. Same discipline, same result:
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | 0 |
+| values ceiling | **363 → 333** |
+| bundle hash | changed (`index-CAOysY3E` → `index-L81UZtc8`) |
+| **pixel gate** | **10 screens, pixel-identical** |
+| **prototype delta** | **unchanged to the digit** — 70536 / 66147 / 52926 / 54969 |
+
+**Running total: 133 conversions, ceiling 467 → 333, every screen
+pixel-identical, and the prototype delta never moved.**
+
+#### The numeric family — 348 warnings, analysed, NOT converted
+
+This family had never been analysed. It is **far richer than the string family**,
+and it reorders the rest of Step 8.
+
+| Bucket | Count | % |
+|---|---:|---:|
+| **exact match, right family** | **141** | **40.5%** |
+| wrong family | 77 | 22.1% |
+| no exact token | 130 | 37.4% |
+| property unresolved | 0 | 0.0% |
+
+**40.5% exact, against roughly 5% for the strings.** The reason is structural: a
+bare number in a React style object **is** px, and these sit on the 4px grid in a
+way the string shorthands never did.
+
+Top conversions available:
+
+| Uses | Conversion |
+|---:|---|
+| 33 | `gap: 8` → `--space-2` |
+| 23 | `gap: 12` → `--space-3` |
+| 9 | `gap: 16` → `--space-4` |
+| 6 | `gap: 4` → `--space-1` |
+| 5 | `height: 40` → `--row-height-compact` |
+| 5 | `height: 16` → `--icon-sm` |
+| 4 | `height: 28` → `--control-sm` |
+
+**One difference from the string family, and the pixel gate is what settles it.**
+Converting `gap: 8` to `gap: 'var(--space-2)'` **changes the value's type from
+number to string.** React accepts both — it appends `px` to a bare number and
+passes a string through — so the rendered result should be identical. **That is a
+real change and an assumption, not a proof**, which is exactly the case the pixel
+gate exists for. The static equivalence check cannot see it, because it compares
+values and not types.
+
+**No conversion performed.** Reported first, as instructed, because the hit rate
+reorders the work: **141 provable conversions here versus 40 remaining in the
+string family.**
+
+**[PLACEHOLDER — convert the numeric family.** 141 exact matches available. The
+77 wrong-family cases get the same treatment as the strings — leave them literal
+(23 of them are `6px` on `gap`, which has no `--space-` token at 6px). The 130
+unmatched cluster on `10px` (30), `7px` (16), `9px` (13), `2px` (11) and belong in
+the same decision packet as the string residue. **Trigger:** after the design-token
+decision returns, since the two residues overlap. **Owner:** Frontend Lead.]**
 
 ---
 

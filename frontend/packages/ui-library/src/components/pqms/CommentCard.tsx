@@ -35,7 +35,7 @@ export function CommentCard({ author, role, time, children, internal = false, st
           height: 32,
           borderRadius: '50%',
           background: 'var(--kia-midnight-70)',
-          color: '#fff',
+          color: 'var(--neutral-0)',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',

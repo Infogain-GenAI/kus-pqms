@@ -153,7 +153,7 @@ function SectionHead({ n, title, sub, right }: { n: number; title: string; sub: 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px solid #F0F2F5' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ width: 26, height: 26, borderRadius: 'var(--radius-lg)', background: 'var(--kia-midnight)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: 'var(--fw-bold) 13px/1 var(--font-display)', flex: 'none' }}>{n}</span>
+        <span style={{ width: 26, height: 26, borderRadius: 'var(--radius-lg)', background: 'var(--kia-midnight)', color: 'var(--neutral-0)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: 'var(--fw-bold) 13px/1 var(--font-display)', flex: 'none' }}>{n}</span>
         <div>
           <div style={{ font: 'var(--fw-bold) 15.5px/1.3 var(--font-body)', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{title}</div>
           <div style={{ marginTop: 1, font: 'var(--fw-regular) 12px/1.35 var(--font-body)', color: 'var(--text-disabled)' }}>{sub}</div>

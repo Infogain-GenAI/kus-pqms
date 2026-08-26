@@ -294,7 +294,7 @@ function DetailTab({ issue, canEdit, onManageLinks, onOpen }: { issue: Issue; ca
                       <span style={{ display: 'block', font: 'var(--fw-semibold) var(--fs-body-sm)/1.2 var(--font-body)', color: 'var(--text-primary)' }}>{SOURCE[k].label}</span>
                       <span style={{ display: 'block', marginTop: 2, font: 'var(--fw-regular) var(--fs-caption)/1.2 var(--font-body)', color: 'var(--text-muted)' }}>{SRC_SUB[k]}</span>
                     </span>
-                    <span aria-hidden style={{ width: 16, height: 16, flex: 'none', borderRadius: 4, border: `1.5px solid ${active ? 'var(--kia-midnight)' : 'var(--neutral-300)'}`, background: active ? 'var(--kia-midnight)' : 'var(--surface-card)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span aria-hidden style={{ width: 16, height: 16, flex: 'none', borderRadius: 4, border: `1.5px solid ${active ? 'var(--kia-midnight)' : 'var(--neutral-300)'}`, background: active ? 'var(--kia-midnight)' : 'var(--surface-card)', color: 'var(--neutral-0)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                       {active && <Icon icon={Check} size={11} />}
                     </span>
                   </button>
@@ -406,7 +406,7 @@ function InvestigationTab({ issueId, canEdit }: { issueId: string; canEdit: bool
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {activities.map((a, idx) => (
-                  <div key={a.id} style={{ display: 'flex', gap: 12, padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : '1px solid var(--divider)' }}>
+                  <div key={a.id} style={{ display: 'flex', gap: 12, padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{a.type}</span>

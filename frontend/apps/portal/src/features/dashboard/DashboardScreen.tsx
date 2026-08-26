@@ -137,7 +137,7 @@ export function DashboardScreen() {
                 const isOver = overdue(i)
                 const bar = isOver ? 'var(--danger-500)' : i.proposedStatus ? 'var(--warning-500)' : 'var(--accent-500)'
                 return (
-                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : '1px solid var(--divider)' }}>
+                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'var(--space-3) 0', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)' }}>
                     <span aria-hidden style={{ alignSelf: 'stretch', width: 3, borderRadius: 2, background: bar, flex: 'none' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: 'var(--fw-semibold) var(--fs-body-md)/1.3 var(--font-body)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.title}</div>
@@ -175,7 +175,7 @@ export function DashboardScreen() {
               }
             />
             {recents.map((i, idx) => (
-              <button key={i.id} onClick={() => open(i)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', border: 'none', borderTop: idx === 0 ? 'none' : '1px solid var(--divider)', background: 'transparent', cursor: 'pointer', padding: '11px 0' }}>
+              <button key={i.id} onClick={() => open(i)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', border: 'none', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)', background: 'transparent', cursor: 'pointer', padding: '11px 0' }}>
                 <Badge tone="accent" size="sm">ISSUE</Badge>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', font: 'var(--fw-semibold) var(--fs-caption)/1.2 var(--font-mono)', color: 'var(--text-muted)' }}>{i.id}</span>
@@ -196,7 +196,7 @@ export function DashboardScreen() {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {attention.length === 0 && <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)' }}>No high-priority signals.</p>}
               {attention.map((i, idx) => (
-                <button key={i.id} onClick={() => open(i)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', border: 'none', borderTop: idx === 0 ? 'none' : '1px solid var(--divider)', background: 'transparent', cursor: 'pointer', padding: 'var(--space-3) 0' }}>
+                <button key={i.id} onClick={() => open(i)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', border: 'none', borderTop: idx === 0 ? 'none' : 'var(--border-width) solid var(--divider)', background: 'transparent', cursor: 'pointer', padding: 'var(--space-3) 0' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
                       <Badge tone="accent" size="sm">ISSUE</Badge>
