@@ -80,7 +80,18 @@ const eslint = new ESLint({
 // eslint.adherence.config.mjs also moved to three src roots; this is the target list.
 // If these paths ever stop matching, ESLint lints NOTHING and every family counts 0 —
 // which ds-gate would then RATCHET IN as success. That is why the split's acceptance is
-// 'counts unchanged AND non-zero', and why the guard below exists.
+// 'counts unchanged AND non-zero'.
+//
+// THE GUARD BELOW IS A SECOND LINE OF DEFENCE, NOT THE FIRST. Verified 2026-08-25:
+// ESLint throws before it is reached in both of the obvious cases —
+// `NoFilesFoundError` when a target path does not exist, and `AllFilesIgnoredError`
+// when a path exists but its contents are all ignored. Both exit non-zero, which is
+// the right outcome by a different route.
+//
+// What the guard actually covers is the case ESLint does NOT throw on: targets that
+// resolve and contain lintable files, where the CONFIG's own `files` globs match
+// none of them. That is the shape the workspace split produced, and it is the one
+// that would otherwise report a clean zero.
 const LINT_TARGETS = ['apps', 'packages']
 const results = await eslint.lintFiles(LINT_TARGETS)
 if (results.length === 0) {

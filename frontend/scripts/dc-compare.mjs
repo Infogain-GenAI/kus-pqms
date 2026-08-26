@@ -4,7 +4,7 @@
 //   expects: http://127.0.0.1:8123 serving exports/kia-npqms-v4-v5/
 //            http://127.0.0.1:5173 the vite dev server
 import { chromium } from 'playwright'
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -14,41 +14,40 @@ mkdirSync(OUT, { recursive: true })
 
 const W = Number(process.argv[2]) || 1920
 const H = Number(process.argv[3]) || 1080
-const EXPORT_DIR = resolve(here, '../../_bmad-output/planning-artifacts/ux/design-source/exports/kia-npqms-v4-v5')
+// The prototype export directory is served EXTERNALLY on :8123 (see usage above).
+// This script no longer needs a path into it — the in-flight rewrite below removed
+// the last reason to reach across the component boundary at all.
+//   serve with: npx serve _bmad-output/planning-artifacts/ux/design-source/exports/kia-npqms-v4-v5 -p 8123
 const DC_URL = 'http://127.0.0.1:8123/ISM%20%2B%20QIR%20SE%20Role%20-%20P-C.dc.html'
 const APP_URL = 'http://127.0.0.1:5173'
 
-// The SE prototype's admin screen is unreachable through its own nav; regenerate a copy
-// whose constructor boots straight into screen:'admin' (the only change).
+// The SE prototype's admin screen is unreachable through its own nav, so the
+// document's constructor has to be booted straight into screen:'admin'.
 //
-// ⚠️ THIS WRITES INTO A TRACKED DIRECTORY, AND IT HAS TO.
-// EXPORT_DIR is `_bmad-output/planning-artifacts/ux/design-source/exports/...`, which
-// is tracked and belongs to the UX design source — another component's artefact.
-// 33-polyglot-monorepo-integration.md's boundary rule says not to write there.
+// THIS NO LONGER WRITES A FILE ANYWHERE. Previous revisions generated
+// `_boot-admin.dc.html` INSIDE `_bmad-output/.../exports/`, which is another
+// team's directory and a boundary violation (33-polyglot-monorepo-integration.md).
 //
-// A temp directory is NOT an option: the `.dc.html` resolves its own runtime
-// (`support.js`, `_ds/`) by RELATIVE path and is served over :8123 from EXPORT_DIR,
-// so a copy anywhere else loads a blank page. The boot copy must sit beside its
-// assets. This was tried and reverted rather than left as a plausible-looking fix.
+// Relocating the copy is not possible: the `.dc.html` resolves its runtime
+// (`support.js`, `_ds/`) by RELATIVE path from wherever it is served, so a copy in
+// `.fidelity/` or a temp directory loads a blank page. The file has to be at that
+// origin — which is exactly why writing it there was hard to avoid.
 //
-// ⚠️ AND IT ALREADY HAPPENED. `_boot-admin.dc.html` is not a hypothetical future
-// commit — it was committed in `fa25e69` and is tracked today. **`.gitignore` does
-// not affect an already-tracked file**, so the entry added alongside this comment
-// prevents a recurrence and does NOT untrack the existing one. Closing it fully
-// needs `git rm --cached` on that path, which is a deliberate staged change and is
-// left for whoever picks this up.
+// So the file is removed from the problem entirely: the ORIGINAL url is requested
+// and the response body is rewritten IN FLIGHT by a Playwright route handler. Same
+// origin, same relative asset resolution, no artefact on disk, and nothing that
+// can go stale after a re-vendor.
 //
-// What is closed here:
-//   1. `.gitignore` carries `_boot-admin.dc.html`, so a fresh generation on any
-//      other checkout cannot be swept in by `git add -A`.
-//   2. The `existsSync` guard is removed. It also caused a subtler bug: a
-//      re-vendored prototype would keep serving a STALE boot copy, silently
-//      comparing the app against the previous design revision — which, given the
-//      file is tracked, is exactly what would happen on every clone today.
-const bootAdmin = resolve(EXPORT_DIR, '_boot-admin.dc.html')
-{
-  const src = readFileSync(resolve(EXPORT_DIR, 'ISM + QIR SE Role - P-C.dc.html'), 'utf8')
-  writeFileSync(bootAdmin, src.replace("screen: props.startScreen || 'home',", "screen: 'admin',"))
+// (`_boot-admin.dc.html` was committed in `fa25e69` and is still tracked. It is
+// now unreferenced; untracking it with `git rm --cached` is a separate step,
+// recorded in 18-project-context-and-implementation-status.md.)
+const PROTO_FILE = 'ISM + QIR SE Role - P-C.dc.html'
+const bootAdminInto = async (page) => {
+  await page.route(`**/${encodeURIComponent(PROTO_FILE).replace(/%20/g, '*')}*`, async (route) => {
+    const res = await route.fetch()
+    const body = (await res.text()).replace("screen: props.startScreen || 'home',", "screen: 'admin',")
+    await route.fulfill({ response: res, body })
+  })
 }
 
 const browser = await chromium.launch()
@@ -111,8 +110,10 @@ try {
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${OUT}/dc-modal-changestatus@${W}.png` })
   console.log(`✓ dc-modal-changestatus@${W}`)
-  // admin screen (patched boot copy)
-  await page.goto('http://127.0.0.1:8123/_boot-admin.dc.html', { waitUntil: 'load', timeout: 60000 })
+  // admin screen — same URL as the rest, with the constructor rewritten in flight
+  // so no patched copy is ever written to disk. See bootAdminInto above.
+  await bootAdminInto(page)
+  await page.goto(DC_URL, { waitUntil: 'load', timeout: 60000 })
   await page.waitForTimeout(4500)
   await page.screenshot({ path: `${OUT}/dc-admin@${W}.png`, fullPage: true })
   console.log(`✓ dc-admin@${W}`)
