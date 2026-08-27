@@ -9,53 +9,61 @@
 //
 // Characterisation, not specification: pin what it does; where it looks wrong,
 // pin it and record the finding.
+//
+// ─── HARNESS CHANGED 2026-08-27, AND IT HAD TO ────────────────────────────────
+// The Workspace sections became child routes, so the shell renders an <Outlet />
+// rather than the section components directly. A harness that mounts
+// <IssueWorkspaceScreen /> under a single <Route path="/issues/:id"> would
+// therefore render the shell with an EMPTY BODY and still pass every
+// role-gating assertion below — green, and testing half the screen.
+//
+// So these now mount the REAL route tree from apps/portal/src/routes.tsx. That is
+// strictly better than the old harness for these tests specifically: the propose
+// -> approve affordances live in the shell's header and banner, and mounting the
+// real tree proves they are reachable at the URL a user actually lands on.
 import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import type { ReactNode } from 'react'
-import { RoleProvider } from '@/data/roles'
-import { StoreProvider } from '@/data/store'
-import { IssueWorkspaceScreen } from '@/features/issues/IssueWorkspaceScreen'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { routes } from '@/routes'
+import { bodyText, renderAt } from './support/dataRouter'
 
 const ISSUE = 'HV-260101'
 
-/** The screen reads its id from the route, so it needs a real route match. */
+/**
+ * Renders the workspace at its canonical URL. `/issues/:id` redirects to
+ * `/detail`, so this exercises the index redirect on every test as a side
+ * benefit.
+ */
 const renderAs = (initialRole: 'SE' | 'ASM' | 'PQM' | 'ADMIN' = 'SE') =>
-  render(
-    <MemoryRouter initialEntries={[`/issues/${ISSUE}`]}>
-      <RoleProvider initialRole={initialRole}>
-        <StoreProvider>
-          <Routes>
-            <Route path="/issues/:id" element={<IssueWorkspaceScreen />} />
-          </Routes>
-        </StoreProvider>
-      </RoleProvider>
-    </MemoryRouter>,
-  )
+  renderAt(routes, `/issues/${ISSUE}`, { role: initialRole })
 
-const body = () => document.body.textContent ?? ''
+/** The shell is lazily loaded, so nothing is synchronous. */
+const settled = () => waitFor(() => expect(bodyText()).toContain(ISSUE))
+
 const btn = (name: RegExp) => screen.queryByRole('button', { name })
 
 describe('the screen renders the issue from the route', () => {
-  it('shows the id it was routed to', () => {
+  it('shows the id it was routed to', async () => {
     renderAs()
-    expect(body()).toContain(ISSUE)
+    await settled()
+    expect(bodyText()).toContain(ISSUE)
   })
 })
 
 describe('INVARIANT — propose parks the status, it does not move it', () => {
-  it('"Change status" is available to an SE and disabled once a proposal exists', () => {
+  it('"Change status" is available to an SE and disabled once a proposal exists', async () => {
     renderAs('SE')
+    await settled()
     const change = btn(/^Change status$/i)
     expect(change).toBeTruthy()
     // No proposal outstanding on the seeded issue, so the affordance is live.
     expect((change as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('an SE does NOT see the approval affordance', () => {
+  it('an SE does NOT see the approval affordance', async () => {
     // ApprovalBanner renders the Approve/Reject pair only when can('approve').
     // SE has capability 'read', so it must not appear.
     renderAs('SE')
+    await settled()
     expect(btn(/^Approve$/i)).toBeNull()
     expect(btn(/^Reject$/i)).toBeNull()
   })
@@ -68,49 +76,125 @@ describe('INVARIANT — the approval affordance is role-gated', () => {
   it.each([
     ['ASM', true],
     ['PQM', true],
-  ] as const)('%s can approve → affordance present once a proposal exists', (role) => {
+  ] as const)('%s can approve → affordance present once a proposal exists', async (role) => {
     renderAs(role)
+    await settled()
     // With no proposal outstanding the banner is absent for everyone; what is
     // asserted here is that the role itself is permitted — the Change status
     // affordance is present and the screen renders without the SE-only framing.
     expect(btn(/^Change status$/i)).toBeTruthy()
   })
 
-  it('ADMIN cannot create or edit, per the capability model', () => {
+  it('ADMIN cannot create or edit, per the capability model', async () => {
     // computeCan: 'create' is false for cap 'admin'. Pinned because it is the
     // one role whose permissions are subtractive rather than additive, and that
     // is easy to reverse by accident.
     renderAs('ADMIN')
-    expect(body()).toContain(ISSUE)
+    await settled()
+    expect(bodyText()).toContain(ISSUE)
   })
 })
 
-// ⚠️ PINNED — TAB STATE IS LOCAL, NOT ROUTED.
+// ─────────────────────────────────────────────────────────────────────────────
+// ⚠️ REPLACES A PINNED ASSERTION THAT CITED 07 FOR SOMETHING 07 NEVER SAID.
 //
-// 07-routing-and-layouts.md records this as a deliberate divergence: the
-// workspace tabs (Detail / Investigation / Resolution / Communication / History)
-// are component state, not route segments, so a tab is NOT deep-linkable and a
-// browser Back does not step between tabs.
+// The previous version of this block pinned "tab state is local, not routed" and
+// justified it as "07-routing-and-layouts.md records this as a deliberate
+// divergence". THAT CITATION WAS FALSE, and it is worth recording why rather than
+// deleting it quietly, because the same claim is repeated in
+// 18-project-context-and-implementation-status.md:2246 and is still there:
 //
-// Pinned so that if it ever becomes a route, the test says exactly what changed
-// rather than the change being invisible. Deep-linking a tab is a reasonable
-// future requirement; silently acquiring it is not.
-describe('tab state is local, not routed — pinned divergence, see 07', () => {
-  it('switching tabs does not change the URL', () => {
-    renderAs()
-    const before = window.location.pathname
-
-    const investigation = screen.queryAllByRole('tab').find((t) => /Investigation/i.test(t.textContent ?? ''))
-    if (!investigation) return // tabs not rendered in this state; nothing to assert
-    fireEvent.click(investigation)
-
-    expect(window.location.pathname).toBe(before)
+//   · 07's Divergence table (07:250-267) has eight rows. All of them are path
+//     naming, QIR/TSB scope, AdminLayout, or notifications. NONE is about tab
+//     state.
+//   · 07:478-518 ("Workspace sections are a route segment, not component state")
+//     requires the OPPOSITE of what the old test said 07 recorded, and cites BRD
+//     NAV-01 for it.
+//
+// So the old assertion pinned real behaviour against an invented justification.
+// The behaviour has now been changed deliberately, per 07 — and the assertion is
+// REPLACED rather than removed, so a regression is still caught, exactly as the
+// original intent required.
+//
+// The surviving half is re-aimed: Issue Priority genuinely IS still local state,
+// by an explicit open decision (18:219, owner PQM), so the "does not change the
+// URL" assertion moves onto the tab where it remains true.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('the five Workspace sections ARE routed — per 07 and BRD NAV-01', () => {
+  it('the index redirects to the detail section', async () => {
+    const { router } = renderAs()
+    await settled()
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/issues/${ISSUE}/detail`))
   })
 
-  it('the workspace renders a tab set rather than nested routes', () => {
+  it('clicking a section link changes the URL to that section', async () => {
+    const { router } = renderAs()
+    await settled()
+    const link = await waitFor(() => {
+      const found = screen.getAllByRole('link').find((a) => /Investigation/i.test(a.textContent ?? ''))
+      expect(found).toBeTruthy()
+      return found!
+    })
+    fireEvent.click(link)
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/issues/${ISSUE}/investigation`))
+  })
+
+  it('a section is deep-linkable — landing directly on it renders it', async () => {
+    // This is the actual NAV-01 requirement: a copied link reproduces what the
+    // sender saw. Unreachable before the split, at any URL.
+    //
+    // Asserted via the search field's PLACEHOLDER, not via body text: a
+    // placeholder is an attribute, not a text node, so it never appears in
+    // `textContent`. ("Audit Log" would also identify this section, but it is a
+    // per-entry classification label too, so it can appear for reasons other than
+    // History having rendered.)
+    const { router } = renderAt(routes, `/issues/${ISSUE}/history`, { role: 'PQM' })
+    await waitFor(() => expect(screen.getByPlaceholderText('Search history…')).toBeTruthy())
+    expect(router.state.location.pathname).toBe(`/issues/${ISSUE}/history`)
+  })
+
+  it('the tabs are links now, not ARIA tabs', async () => {
+    // Records the semantic change deliberately. They navigate, so they are links;
+    // the previous role="tab"/aria-selected strip promised keyboard semantics it
+    // never implemented. scripts/fidelity-gate.mjs depended on the old roles and
+    // was updated in the same change.
     renderAs()
-    const tabs = screen.queryAllByRole('tab')
-    // If this becomes zero, the tabs became routes and 07's divergence closed.
-    expect(tabs.length).toBeGreaterThan(0)
+    await settled()
+    await waitFor(() => expect(screen.getAllByRole('link').length).toBeGreaterThan(0))
+    const sectionTabs = screen.queryAllByRole('tab').filter((t) => /Investigation|Resolution|Communication|History|Issue Detail/i.test(t.textContent ?? ''))
+    expect(sectionTabs.length).toBe(0)
+  })
+})
+
+describe('Issue Priority is the ONE tab still local state — pinned open decision (18:219)', () => {
+  it('opening Priority does NOT change the URL', async () => {
+    // The surviving half of the old assertion, re-aimed. Still true here, and
+    // deliberately so: routing Priority would silently answer PQM's open question
+    // about whether Scoring is a section, a sub-route of Detail, or a modal.
+    const { router } = renderAs('PQM')
+    await settled()
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/issues/${ISSUE}/detail`))
+
+    const priority = await waitFor(() => {
+      const found = screen.getAllByRole('button').find((b) => /Issue Priority/i.test(b.textContent ?? ''))
+      expect(found).toBeTruthy()
+      return found!
+    })
+    const before = router.state.location.pathname
+    fireEvent.click(priority)
+
+    expect(router.state.location.pathname).toBe(before)
+  })
+
+  it('Priority is a button while the five sections are links', async () => {
+    // The mixed strip, pinned as a shape: if Priority ever becomes a route this
+    // fails and says so, rather than the asymmetry vanishing unnoticed.
+    renderAs('PQM')
+    await settled()
+    await waitFor(() => expect(screen.getAllByRole('link').length).toBeGreaterThan(0))
+    const priorityButtons = screen.getAllByRole('button').filter((b) => /Issue Priority/i.test(b.textContent ?? ''))
+    expect(priorityButtons.length).toBe(1)
+    const priorityLinks = screen.getAllByRole('link').filter((a) => /Issue Priority/i.test(a.textContent ?? ''))
+    expect(priorityLinks.length).toBe(0)
   })
 })

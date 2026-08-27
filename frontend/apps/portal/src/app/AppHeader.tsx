@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Bell, Check, CircleDot, HelpCircle, Info, OctagonAlert, TriangleAlert } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Avatar, IconButton, Logo } from '@pqms/ui-library'
@@ -12,6 +12,17 @@ import type { NotificationCategory, RoleKey } from '@/data/types'
 // App chrome per the UX prototype: a white 60px sticky top bar —
 // logo · divider · horizontal primary nav · spacer · help · bell(+unread) · user.
 // No side nav. QIR / TSB nav items are present but disabled (out of scope).
+//
+// EXTRACTED FROM AppShell.tsx (2026-08-27) so that DefaultLayout and
+// FixedHeightLayout can render the same header without either owning it — per
+// 07-routing-and-layouts.md, both layouts "render the same app header". The
+// markup below is a verbatim move; only its wrapper changed.
+//
+// ON THIS FILE'S LOCATION: 18-project-context-and-implementation-status.md:222
+// carries an open placeholder — "Where AppHeader belongs — 07 reserves
+// src/layouts/ for layouts" (owner: Frontend Lead). Putting it in src/app/
+// HONOURS that reservation but DOES NOT RESOLVE the placeholder; it remains open
+// and is not this pass's to close.
 
 const ROLES: { key: RoleKey; label: string }[] = [
   { key: 'SE', label: 'SE — Service Engineer' },
@@ -29,7 +40,7 @@ const NOTIF_CAT: Record<NotificationCategory, { color: string; tint: string; ico
   Information: { color: 'var(--status-disposed)', tint: '#E2F4F2', icon: Info },
 }
 
-export function AppShell() {
+export function AppHeader() {
   const loc = useLocation()
   const nav = useNavigate()
   const { role, user, setRole, can } = useRole()
@@ -59,10 +70,9 @@ export function AppShell() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-app)' }}>
-      <header
-        style={{ position: 'sticky', top: 0, zIndex: 40, height: 'var(--header-height)', flex: 'none', background: 'var(--surface-card)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}
-      >
+    <header
+      style={{ position: 'sticky', top: 0, zIndex: 40, height: 'var(--header-height)', flex: 'none', background: 'var(--surface-card)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}
+    >
       <div style={{ maxWidth: 1800, height: '100%', margin: '0 auto', padding: '0 var(--space-10)', display: 'flex', alignItems: 'center', gap: 'var(--space-5)' }}>
         <button aria-label="Kia PQMS home" onClick={() => nav('/dashboard')} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'inline-flex' }}>
           <Logo tone="dark" height={22} />
@@ -186,10 +196,6 @@ export function AppShell() {
           )}
         </div>
       </div>
-      </header>
-      <main style={{ flex: 1 }}>
-        <Outlet />
-      </main>
-    </div>
+    </header>
   )
 }
