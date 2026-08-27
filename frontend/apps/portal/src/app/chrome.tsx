@@ -128,60 +128,110 @@ export interface ToggleOption {
   badge?: ReactNode
 }
 
-/**
- * ToggleGroup — segmented control.
- * variant 'light': gray group container, active = white pill + shadow (sub-tabs).
- * variant 'dark': transparent container, active = Kia-Midnight pill (workspace tabs, composer type).
+export type ToggleVariant = 'light' | 'dark'
+export type ToggleSize = 'sm' | 'md'
+
+/*
+ * ─── THE SEGMENTED-CONTROL STYLE IS EXPORTED, NOT INLINE. WHY ─────────────────
+ *
+ * The Issue Workspace tab strip is NAVIGATION, not state: per
+ * 07-routing-and-layouts.md each section tab is a `NavLink` to a sibling route,
+ * which is what makes `aria-current` correct for free and browser Back step
+ * between sections. But ONE tab — Issue Priority — is still local state by
+ * explicit decision (the Scoring question is open, owned by PQM, per 18:219), so
+ * the strip is genuinely mixed: five anchors and one button.
+ *
+ * The requirement is that the user cannot tell. Rather than restyle a NavLink to
+ * "look like" a ToggleGroup button — which is the version that drifts the first
+ * time either side is touched — the three style pieces below are shared by BOTH
+ * renderers, so visual identity holds BY CONSTRUCTION rather than by inspection.
+ *
+ * There is a second, harder constraint that rules out the copy-paste version
+ * outright: `scripts/ds-gate.mjs` sits at ZERO HEADROOM (values 333/333, numeric
+ * 207/207). A duplicated pill would re-declare `gap: 7`, `padding: '0 14px'`,
+ * `borderRadius: 10`, `minWidth: 18`, `height: 18`, `padding: '0 5px'` and two
+ * font literals — every one of which the gate counts. Copying the styles would
+ * fail the build. Sharing them cannot.
+ *
+ * These are a PURE MOVE of the values that were inline in `ToggleGroup`. The one
+ * addition is `textDecoration: 'none'`, needed because a `NavLink` renders an
+ * `<a>`; it is a no-op on the `<button>`.
  */
-export function ToggleGroup({ options, value, onChange, variant = 'light', size = 'md' }: { options: ToggleOption[]; value: string; onChange: (k: string) => void; variant?: 'light' | 'dark'; size?: 'sm' | 'md' }) {
+
+/** The pill itself — active/inactive, per variant and size. */
+export function togglePillStyle(active: boolean, variant: ToggleVariant, size: ToggleSize): CSSProperties {
   const h = size === 'sm' ? 30 : 36
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 7,
+    height: h,
+    padding: '0 14px',
+    border: 'none',
+    borderRadius: 'var(--radius-lg)',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    textDecoration: 'none',
+    background: active ? (variant === 'dark' ? 'var(--kia-midnight)' : 'var(--surface-card)') : 'transparent',
+    color: active ? (variant === 'dark' ? '#fff' : 'var(--text-primary)') : 'var(--text-secondary)',
+    font: `${active ? 'var(--fw-semibold)' : 'var(--fw-medium)'} var(--fs-body-sm)/1 var(--font-body)`,
+    boxShadow: active && variant === 'light' ? 'var(--shadow-sm)' : 'none',
+    transition: 'background var(--dur-fast) var(--ease-standard)',
+  }
+}
+
+/** The group container that holds the pills. */
+export function toggleGroupStyle(variant: ToggleVariant): CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 'var(--space-1)',
+    padding: variant === 'light' ? 4 : 0,
+    background: variant === 'light' ? 'var(--neutral-50)' : 'transparent',
+    border: variant === 'light' ? 'var(--border-width) solid var(--border-subtle)' : 'none',
+    borderRadius: 10,
+  }
+}
+
+/**
+ * A pill's contents: optional icon, label, optional count badge. Shared so that
+ * the anchor and the button render byte-identical children, not merely similar
+ * ones.
+ */
+export function TogglePillContent({ icon, label, badge, active, variant }: { icon?: LucideIcon; label: ReactNode; badge?: ReactNode; active: boolean; variant: ToggleVariant }) {
   return (
-    <div
-      role="tablist"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 'var(--space-1)',
-        padding: variant === 'light' ? 4 : 0,
-        background: variant === 'light' ? 'var(--neutral-50)' : 'transparent',
-        border: variant === 'light' ? 'var(--border-width) solid var(--border-subtle)' : 'none',
-        borderRadius: 10,
-      }}
-    >
+    <>
+      {icon && <Icon icon={icon} size={15} />}
+      {label}
+      {badge != null && (
+        <span
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 'var(--radius-pill)', background: active ? (variant === 'dark' ? 'rgba(255,255,255,0.18)' : 'var(--neutral-100)') : 'var(--neutral-100)', color: active && variant === 'dark' ? '#fff' : 'var(--text-secondary)', font: 'var(--fw-bold) 10.5px/1 var(--font-body)' }}
+        >
+          {badge}
+        </span>
+      )}
+    </>
+  )
+}
+
+/**
+ * ToggleGroup — segmented control, for tab strips that ARE state.
+ * variant 'light': gray group container, active = white pill + shadow (sub-tabs).
+ * variant 'dark': transparent container, active = Kia-Midnight pill (composer type).
+ *
+ * Still correct for genuine in-screen state — Investigation's
+ * Activities/Parts switch, History's All/Lifecycle/Audit filter, the composer's
+ * Internal/External toggle. It is NOT what the Workspace section strip uses any
+ * more; that is `WorkspaceTabStrip`, because a section is a place, not a filter.
+ */
+export function ToggleGroup({ options, value, onChange, variant = 'light', size = 'md' }: { options: ToggleOption[]; value: string; onChange: (k: string) => void; variant?: ToggleVariant; size?: ToggleSize }) {
+  return (
+    <div role="tablist" style={toggleGroupStyle(variant)}>
       {options.map((o) => {
         const active = o.key === value
         return (
-          <button
-            key={o.key}
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(o.key)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              height: h,
-              padding: '0 14px',
-              border: 'none',
-              borderRadius: 'var(--radius-lg)',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              background: active ? (variant === 'dark' ? 'var(--kia-midnight)' : 'var(--surface-card)') : 'transparent',
-              color: active ? (variant === 'dark' ? '#fff' : 'var(--text-primary)') : 'var(--text-secondary)',
-              font: `${active ? 'var(--fw-semibold)' : 'var(--fw-medium)'} var(--fs-body-sm)/1 var(--font-body)`,
-              boxShadow: active && variant === 'light' ? 'var(--shadow-sm)' : 'none',
-              transition: 'background var(--dur-fast) var(--ease-standard)',
-            }}
-          >
-            {o.icon && <Icon icon={o.icon} size={15} />}
-            {o.label}
-            {o.badge != null && (
-              <span
-                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 'var(--radius-pill)', background: active ? (variant === 'dark' ? 'rgba(255,255,255,0.18)' : 'var(--neutral-100)') : 'var(--neutral-100)', color: active && variant === 'dark' ? '#fff' : 'var(--text-secondary)', font: 'var(--fw-bold) 10.5px/1 var(--font-body)' }}
-              >
-                {o.badge}
-              </span>
-            )}
+          <button key={o.key} role="tab" aria-selected={active} onClick={() => onChange(o.key)} style={togglePillStyle(active, variant, size)}>
+            <TogglePillContent icon={o.icon} label={o.label} badge={o.badge} active={active} variant={variant} />
           </button>
         )
       })}
