@@ -24,3 +24,5 @@ desktop.ini
 # tracked UX design-source export. It must live there to resolve support.js/_ds by
 # relative path, so it is ignored rather than relocated.
 _boot-admin.dc.html
+
+docs/POC-HANDOVER.md
