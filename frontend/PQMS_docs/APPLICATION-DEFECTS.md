@@ -1,7 +1,7 @@
 # Application defects — triage
 
 **Date:** 2026-08-26 · **Class:** working register, not a standard.
-**For:** Frontend Lead, architect, and whoever owns the ISM domain rules.
+**For:** Frontend Lead,  architect, and whoever owns the ISM domain rules.
 
 **This document is self-contained.** It assumes no prior reading.
 
