@@ -20,19 +20,6 @@ import { routes } from './routes'
  */
 const router = createBrowserRouter(routes)
 
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { AppShell } from '@/app/AppShell'
-import { DashboardScreen } from '@/features/dashboard/DashboardScreen'
-import { IssueListScreen } from '@/features/issues/IssueListScreen'
-import { CreateIssueScreen } from '@/features/issues/CreateIssueScreen'
-import { IssueWorkspaceScreen } from '@/features/issues/IssueWorkspaceScreen'
-import { AdminScreen } from '@/features/admin/AdminScreen'
-import { NotificationsScreen } from '@/features/notifications/NotificationsScreen'
-import { QirManagementScreen } from '@/features/qir/QirManagementScreen'
-import { TsbManagementScreen } from '@/features/tsb/TsbManagementScreen'
-
-// AppShell is the layout route — it renders the chrome and an <Outlet/>.
-// `/issues/new` is declared before `/issues/:id` so it is not read as an id.
 export default function App() {
   return <RouterProvider router={router} />
 }

@@ -489,6 +489,11 @@ export function IssueListScreen() {
         <button
           onClick={() => setLinkedModalFor(r.id)}
           title="Review correlated issues"
+          aria-label={
+            r.linkedIssueIds?.length
+              ? `${r.linkedIssueIds.length} linked issue${r.linkedIssueIds.length === 1 ? '' : 's'} — review correlated issues for ${r.id}`
+              : `No linked issues — review correlated issues for ${r.id}`
+          }
           style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)' }}
         >
           {r.linkedIssueIds?.length ? (
