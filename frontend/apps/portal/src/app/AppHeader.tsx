@@ -59,13 +59,13 @@ export function AppHeader() {
   }, [roleMenu])
 
   const seg = loc.pathname.split('/')[1] || 'dashboard'
-  const active = seg === 'issues' ? 'issues' : seg === 'admin' ? 'admin' : seg === 'notifications' ? 'notifications' : 'dashboard'
+  const active = seg === 'issues' ? 'issues' : seg === 'qir' ? 'qir' : seg === 'tsb' ? 'tsb' : seg === 'admin' ? 'admin' : seg === 'notifications' ? 'notifications' : 'dashboard'
 
   const items: { key: string; label: string; to?: string; disabled?: boolean }[] = [
     { key: 'dashboard', label: 'Overview', to: '/dashboard' },
     { key: 'issues', label: 'Issue Management', to: '/issues' },
-    { key: 'qir', label: 'QIR Management', disabled: true },
-    { key: 'tsb', label: 'TSB Management', disabled: true },
+    { key: 'qir', label: 'QIR Management', to: '/qir' },
+    { key: 'tsb', label: 'TSB Management', to: '/tsb' },
     ...(can('administer') ? [{ key: 'admin', label: 'Administration', to: '/admin' }] : []),
   ]
 
@@ -88,16 +88,30 @@ export function AppHeader() {
                 onClick={() => it.to && nav(it.to)}
                 title={it.disabled ? 'Not available in this release' : undefined}
                 style={{
+                  position: 'relative',
                   border: 'none',
                   background: 'transparent',
                   padding: '0 var(--space-3)',
                   cursor: it.disabled ? 'not-allowed' : 'pointer',
                   font: `${isActive ? 'var(--fw-semibold)' : 'var(--fw-medium)'} var(--fs-body-md)/1 var(--font-body)`,
                   color: it.disabled ? 'var(--text-disabled)' : isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                  boxShadow: isActive ? 'inset 0 -2px 0 0 var(--accent-500)' : 'none',
                 }}
               >
                 {it.label}
+                {isActive && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      left: 'var(--space-3)',
+                      right: 'var(--space-3)',
+                      bottom: 'var(--space-2)',
+                      height: 2,
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--accent-500)',
+                    }}
+                  />
+                )}
               </button>
             )
           })}

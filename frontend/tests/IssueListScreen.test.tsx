@@ -49,7 +49,7 @@ describe('default scope is role-driven', () => {
     const all = total()
 
     expect(mine).toBe(7)
-    expect(all).toBe(33)
+    expect(all).toBe(35)
     expect(all).toBeGreaterThan(mine)
   })
 })
@@ -145,7 +145,7 @@ describe('sorting and columns', () => {
 // PINNED, NOT FIXED. Recorded in PQMS_docs/APPLICATION-DEFECTS.md. When it is
 // fixed these expectations flip, and that failure is the signal.
 describe('pagination interaction — PINNED DEFECT, see APPLICATION-DEFECTS.md', () => {
-  /** All Issues (33) at 20/page gives 2 pages. Returns true if we reached page 2. */
+  /** All Issues (35) at 20/page gives 2 pages. Returns true if we reached page 2. */
   const goToPage2 = () => {
     fireEvent.click(tab(/^All Issues/i))
     const two = screen.queryByRole('button', { name: /^2$/ })
@@ -157,7 +157,7 @@ describe('pagination interaction — PINNED DEFECT, see APPLICATION-DEFECTS.md',
   it('the seed paginates, so these tests are meaningful', () => {
     renderList()
     fireEvent.click(tab(/^All Issues/i))
-    expect(total()).toBe(33)
+    expect(total()).toBe(35)
     expect(screen.queryByRole('button', { name: /^2$/ })).toBeTruthy()
   })
 
@@ -165,7 +165,7 @@ describe('pagination interaction — PINNED DEFECT, see APPLICATION-DEFECTS.md',
     renderList()
     expect(goToPage2()).toBe(true)
     fireEvent.click(tab(/^My Issues/i))
-    expect(pagingLine()).toMatch(/Showing\s+1[–-]/)
+    expect(pagingLine()).toMatch(/Showing\s+1\s*[–-]/)
   })
 
   it('SORTING does NOT reset to page 1 — the defect', () => {

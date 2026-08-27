@@ -8,7 +8,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
 } from 'react'
-import { Check, ChevronDown, ChevronsUpDown, ChevronUp, Minus } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, Minus } from 'lucide-react'
 import { Icon } from '../../icons/Icon'
 import styles from './DataTable.module.css'
 
@@ -20,7 +20,7 @@ import styles from './DataTable.module.css'
  * columns: [{ key, header, width?, align?, sortable?, render?(row) }]
  * rows: array of objects keyed by column.key
  *
- * Sort chevrons are Lucide ChevronUp / ChevronDown / ChevronsUpDown; the checkbox
+ * Sort icons are Lucide ArrowUp / ArrowDown / ArrowUpDown; the checkbox
  * check/minus are Lucide Check / Minus (DS used inline paths). Sortable headers are
  * made keyboard-focusable (tabIndex + Enter/Space) so the added focus ring is
  * reachable, and expose aria-sort. All sort/selection/hover logic is preserved.
@@ -33,6 +33,8 @@ export interface DataTableColumn<T> {
   width?: number | string
   align?: CellAlign
   sortable?: boolean
+  /** Freezes this column (and the row-selection checkbox, if any) so it stays put while the rest of the table scrolls horizontally. Sticky columns must be a contiguous run starting at the left edge. */
+  sticky?: boolean
   render?: (row: T) => ReactNode
 }
 
@@ -55,6 +57,15 @@ export interface DataTableProps<T> extends Omit<HTMLAttributes<HTMLDivElement>, 
   style?: CSSProperties
 }
 
+// Fallback width for columns that don't declare one, so the table always has a
+// deterministic total width -- this is what lets it scroll instead of squeeze
+// columns when more are toggled on.
+const DEFAULT_COLUMN_WIDTH = 140
+
+function resolvedColumnWidth<T>(c: DataTableColumn<T>): number | string {
+  return c.width ?? DEFAULT_COLUMN_WIDTH
+}
+
 export function DataTable<T = Record<string, unknown>>({
   columns = [],
   rows = [],
@@ -69,12 +80,32 @@ export function DataTable<T = Record<string, unknown>>({
   style,
   ...rest
 }: DataTableProps<T>) {
-  const rowH =
-    density === 'compact' ? 'var(--row-height-compact)' : 'var(--row-height-default)'
+  const cellPadding = density === 'compact' ? 'var(--space-2) var(--space-4)' : 'var(--space-4) var(--space-4)'
   const getId = (r: T) => (r as Record<string, unknown>)[rowKey] as string | number
   const allChecked =
     selectable && rows.length > 0 && rows.every((r) => selectedIds.includes(getId(r)))
   const someChecked = selectable && selectedIds.length > 0 && !allChecked
+  const checkboxWidth = selectable ? 44 : 0
+  const totalWidth =
+    checkboxWidth +
+    columns.reduce((sum, c) => {
+      const w = resolvedColumnWidth(c)
+      return sum + (typeof w === 'number' ? w : DEFAULT_COLUMN_WIDTH)
+    }, 0)
+  // Sticky columns are a contiguous run from the left edge (after the checkbox
+  // column, if any) -- each gets a `left` offset equal to the cumulative width
+  // of the sticky columns before it, so they stack into one frozen pane.
+  let stickyCursor = checkboxWidth
+  const leftOffsets = columns.map((c) => {
+    if (!c.sticky) return undefined
+    const offset = stickyCursor
+    const w = resolvedColumnWidth(c)
+    stickyCursor += typeof w === 'number' ? w : DEFAULT_COLUMN_WIDTH
+    return offset
+  })
+  const hasSticky = leftOffsets.some((o) => o !== undefined)
+  // Lighter than the card body so the header still reads as its own band.
+  const headerBg = 'var(--neutral-25)'
   return (
     <div
       style={{
@@ -86,163 +117,199 @@ export function DataTable<T = Record<string, unknown>>({
       }}
       {...rest}
     >
-      <table
-        style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontFamily: 'var(--font-body)' }}
-      >
-        <thead>
-          <tr
-            style={{
-              background: 'var(--surface-sunken)',
-              borderBottom: 'var(--border-width) solid var(--border-default)',
-            }}
-          >
-            {selectable && (
-              <th style={{ width: 44, padding: '0 0 0 var(--space-4)', textAlign: 'left' }}>
-                <HeaderCheckbox
-                  checked={allChecked}
-                  indeterminate={someChecked}
-                  onChange={onToggleAll}
-                />
-              </th>
-            )}
-            {columns.map((c) => {
-              const active = sort?.key === c.key
-              return (
+      <div style={{ overflowX: 'auto' }}>
+        <table
+          style={{
+            width: '100%',
+            minWidth: totalWidth,
+            tableLayout: 'fixed',
+            borderCollapse: 'collapse',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                background: headerBg,
+                borderBottom: 'var(--border-width) solid var(--border-subtle)',
+              }}
+            >
+              {selectable && (
                 <th
-                  key={c.key}
-                  className={c.sortable ? styles.focusable : undefined}
-                  tabIndex={c.sortable ? 0 : undefined}
-                  aria-sort={
-                    active
-                      ? sort?.dir === 'asc'
-                        ? 'ascending'
-                        : 'descending'
-                      : c.sortable
-                        ? 'none'
-                        : undefined
-                  }
-                  onClick={() => c.sortable && onSort && onSort(c.key)}
-                  onKeyDown={
-                    c.sortable
-                      ? (e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            onSort && onSort(c.key)
-                          }
-                        }
-                      : undefined
-                  }
                   style={{
-                    height: 'var(--row-height-compact)',
-                    padding: '0 var(--space-4)',
-                    textAlign: c.align || 'left',
-                    width: c.width,
-                    whiteSpace: 'nowrap',
-                    font: `var(--fw-semibold) var(--fs-caption)/1 var(--font-body)`,
-                    letterSpacing: '0.03em',
-                    textTransform: 'uppercase',
-                    color: 'var(--text-muted)',
-                    cursor: c.sortable ? 'pointer' : 'default',
-                    userSelect: 'none',
+                    width: 44,
+                    padding: '0 0 0 var(--space-4)',
+                    textAlign: 'left',
+                    ...(hasSticky ? { position: 'sticky', left: 0, zIndex: 2, background: headerBg } : {}),
                   }}
                 >
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-1)',
-                      justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start',
-                    }}
-                  >
-                    {c.header}
-                    {c.sortable &&
-                      (active && sort?.dir === 'asc' ? (
-                        <Icon
-                          icon={ChevronUp}
-                          size={13}
-                          strokeWidth={2.2}
-                          style={{ color: 'var(--accent-500)' }}
-                        />
-                      ) : active && sort?.dir === 'desc' ? (
-                        <Icon
-                          icon={ChevronDown}
-                          size={13}
-                          strokeWidth={2.2}
-                          style={{ color: 'var(--accent-500)' }}
-                        />
-                      ) : (
-                        <Icon
-                          icon={ChevronsUpDown}
-                          size={13}
-                          strokeWidth={2.2}
-                          style={{ color: active ? 'var(--accent-500)' : 'var(--neutral-400)' }}
-                        />
-                      ))}
-                  </span>
+                  <HeaderCheckbox
+                    checked={allChecked}
+                    indeterminate={someChecked}
+                    onChange={onToggleAll}
+                  />
                 </th>
-              )
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => {
-            const id = getId(r)
-            const checked = selectedIds.includes(id)
-            return (
-              <Row key={id ?? i} rowH={rowH} last={i === rows.length - 1} selected={checked}>
-                {selectable && (
-                  <td style={{ width: 44, padding: '0 0 0 var(--space-4)' }}>
-                    <HeaderCheckbox
-                      checked={checked}
-                      onChange={() => onToggleRow && onToggleRow(id)}
-                    />
-                  </td>
-                )}
-                {columns.map((c) => (
-                  <td
+              )}
+              {columns.map((c, i) => {
+                const active = sort?.key === c.key
+                const stickyLeft = leftOffsets[i]
+                return (
+                  <th
                     key={c.key}
+                    className={c.sortable ? styles.focusable : undefined}
+                    tabIndex={c.sortable ? 0 : undefined}
+                    aria-sort={
+                      active
+                        ? sort?.dir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : c.sortable
+                          ? 'none'
+                          : undefined
+                    }
+                    onClick={() => c.sortable && onSort && onSort(c.key)}
+                    onKeyDown={
+                      c.sortable
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              onSort && onSort(c.key)
+                            }
+                          }
+                        : undefined
+                    }
                     style={{
+                      height: 'var(--row-height-compact)',
                       padding: '0 var(--space-4)',
                       textAlign: c.align || 'left',
-                      font: `var(--fw-regular) var(--fs-body-md)/1.4 var(--font-body)`,
-                      color: 'var(--text-primary)',
-                      whiteSpace: 'nowrap',
-                      fontVariantNumeric: c.align === 'right' ? 'tabular-nums' : 'normal',
+                      width: resolvedColumnWidth(c),
+                      overflow: 'hidden',
+                      font: `var(--fw-semibold) var(--fs-caption)/1 var(--font-body)`,
+                      letterSpacing: '0.03em',
+                      textTransform: 'uppercase',
+                      color: 'var(--text-muted)',
+                      cursor: c.sortable ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      ...(stickyLeft !== undefined
+                        ? { position: 'sticky', left: stickyLeft, zIndex: 2, background: headerBg }
+                        : {}),
                     }}
                   >
-                    {c.render ? c.render(r) : ((r as Record<string, unknown>)[c.key] as ReactNode)}
-                  </td>
-                ))}
-              </Row>
-            )
-          })}
-        </tbody>
-      </table>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-1)',
+                        justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start',
+                        minWidth: 0,
+                      }}
+                    >
+                      <span
+                        style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}
+                      >
+                        {c.header}
+                      </span>
+                      {c.sortable &&
+                        (active && sort?.dir === 'asc' ? (
+                          <Icon
+                            icon={ArrowUp}
+                            size={13}
+                            strokeWidth={2.2}
+                            style={{ color: 'var(--accent-500)', flexShrink: 0 }}
+                          />
+                        ) : active && sort?.dir === 'desc' ? (
+                          <Icon
+                            icon={ArrowDown}
+                            size={13}
+                            strokeWidth={2.2}
+                            style={{ color: 'var(--accent-500)', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <Icon
+                            icon={ArrowUpDown}
+                            size={13}
+                            strokeWidth={2.2}
+                            style={{ color: active ? 'var(--accent-500)' : 'var(--neutral-400)', flexShrink: 0 }}
+                          />
+                        ))}
+                    </span>
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => {
+              const id = getId(r)
+              const checked = selectedIds.includes(id)
+              return (
+                <Row key={id ?? i} last={i === rows.length - 1} selected={checked}>
+                  {selectable && (
+                    <td
+                      style={{
+                        width: 44,
+                        padding: '0 0 0 var(--space-4)',
+                        ...(hasSticky ? { position: 'sticky', left: 0, zIndex: 1, background: 'inherit' } : {}),
+                      }}
+                    >
+                      <HeaderCheckbox
+                        checked={checked}
+                        onChange={() => onToggleRow && onToggleRow(id)}
+                      />
+                    </td>
+                  )}
+                  {columns.map((c, ci) => {
+                    const stickyLeft = leftOffsets[ci]
+                    return (
+                      <td
+                        key={c.key}
+                        style={{
+                          padding: cellPadding,
+                          textAlign: c.align || 'left',
+                          font: `var(--fw-regular) var(--fs-body-md)/1.4 var(--font-body)`,
+                          color: 'var(--text-primary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          fontVariantNumeric: c.align === 'right' ? 'tabular-nums' : 'normal',
+                          ...(stickyLeft !== undefined
+                            ? { position: 'sticky', left: stickyLeft, zIndex: 1, background: 'inherit' }
+                            : {}),
+                        }}
+                      >
+                        {c.render ? c.render(r) : ((r as Record<string, unknown>)[c.key] as ReactNode)}
+                      </td>
+                    )
+                  })}
+                </Row>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
 
 interface RowProps {
   children: ReactNode
-  rowH: string
   last: boolean
   selected: boolean
 }
 
-function Row({ children, rowH, last, selected }: RowProps) {
+function Row({ children, last, selected }: RowProps) {
   const [hover, setHover] = useState(false)
   return (
     <tr
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        height: rowH,
         borderBottom: last ? 'none' : 'var(--border-width) solid var(--border-subtle)',
         background: selected
           ? 'var(--selected-bg)'
           : hover
             ? 'var(--hover-overlay)'
-            : 'transparent',
+            : 'var(--surface-card)',
         transition: 'background var(--dur-fast)',
       }}
     >

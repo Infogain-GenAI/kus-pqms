@@ -253,8 +253,9 @@ export function ULabel({ children, style }: { children: ReactNode; style?: CSSPr
   return <div style={{ ...fieldLabel, marginBottom: 6, ...style }}>{children}</div>
 }
 
-/** Single-level modal dialog (depth-1 per EXPERIENCE.md). Esc closes. */
-export function Modal({ open, onClose, title, children, footer, width = 540 }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width?: number }) {
+/** Single-level modal dialog (depth-1 per EXPERIENCE.md). Esc closes. `align` defaults to
+ * the established top-anchored position; pass 'center' to vertically center instead. */
+export function Modal({ open, onClose, title, children, footer, width = 540, align = 'top' }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width?: number; align?: 'top' | 'center' }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
@@ -266,12 +267,21 @@ export function Modal({ open, onClose, title, children, footer, width = 540 }: {
   return (
     <div
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-      style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-modal)' as unknown as number, background: 'rgba(5,20,31,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '9vh var(--space-4) var(--space-4)' }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 'var(--z-modal)' as unknown as number,
+        background: 'rgba(5,20,31,0.5)',
+        display: 'flex',
+        alignItems: align === 'center' ? 'center' : 'flex-start',
+        justifyContent: 'center',
+        padding: align === 'center' ? 'var(--space-4)' : '9vh var(--space-4) var(--space-4)',
+      }}
     >
-      <div ref={ref} role="dialog" aria-modal="true" style={{ width, maxWidth: '100%', background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', padding: 'var(--space-6)' }}>
-        <div style={{ font: 'var(--fw-semibold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)', marginBottom: 'var(--space-4)' }}>{title}</div>
-        <div>{children}</div>
-        {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-5)' }}>{footer}</div>}
+      <div ref={ref} role="dialog" aria-modal="true" style={{ width, maxWidth: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', padding: 'var(--space-6)' }}>
+        <div style={{ font: 'var(--fw-semibold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)', marginBottom: 'var(--space-4)', flex: 'none' }}>{title}</div>
+        <div style={{ overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>{children}</div>
+        {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-5)', flex: 'none' }}>{footer}</div>}
       </div>
     </div>
   )

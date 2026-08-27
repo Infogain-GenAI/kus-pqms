@@ -76,6 +76,8 @@ export interface Issue {
   title: string
   description: string
   source: SourceKey
+  /** Additional origin channels beyond `source`; list renders "+N" when present (per the UX). */
+  sources?: SourceKey[]
   status: StatusKey
   model: string
   modelCode: string

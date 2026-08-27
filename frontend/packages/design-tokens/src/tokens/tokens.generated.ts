@@ -12,7 +12,7 @@ export const tokens = {
   '--neutral-25': "#FAFBFC",
   '--neutral-50': "#F4F6F8",
   '--neutral-100': "#ECEFF2",
-  '--neutral-200': "#DCE1E6",
+  '--neutral-200': "#E7ECF1",
   '--neutral-300': "#C3CBD2",
   '--neutral-400': "#9AA5AE",
   '--neutral-500': "#6B7681",
