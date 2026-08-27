@@ -1,10 +1,12 @@
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Car, ChevronDown, ChevronUp, CircleCheck, ClipboardList, Columns3, Download, Flame, FolderOpen, Layers, Plus, RotateCcw, Search, SlidersHorizontal, TriangleAlert, X } from 'lucide-react'
+import { AlertTriangle, Car, Check, ChevronDown, ChevronUp, CircleCheck, ClipboardList, Columns3, Download, FileOutput, Flame, FolderOpen, Layers, Link2, Plus, RefreshCw, RotateCcw, Search, SlidersHorizontal, TriangleAlert, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
-  Badge,
+  Avatar,
   Button,
+  Checkbox,
   DataTable,
   EmptyState,
   Pagination,
@@ -16,34 +18,42 @@ import {
   STATUS,
   STATUS_KEYS,
   StatusBadge,
+  Textarea,
+  Tooltip,
   type DataTableColumn,
   type DataTableSort,
   type StatusKey,
 } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
-import { IconChip, PageContainer, PageCrumb, SectionCard } from '@/app/chrome'
+import { IconChip, Modal, PageContainer, PageCrumb, SectionCard, TagChip, ULabel } from '@/app/chrome'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
 import { daysOpen, fmtMDY, modelCodeLabel } from '@/data/util'
+import { PRIORITY_BANDS } from '@/data/priorityMatrix'
+import { LinkedIssuesModal } from './LinkedIssuesModal'
 import type { Issue } from '@/data/types'
 
 const PAGE_SIZES = [20, 50, 100]
 
-// Column model per the prototype's Columns drawer: Issue ID / Issue Title are REQUIRED,
-// four default columns are toggleable, six optional columns (no Relationship column exists).
+// Column model per the Columns drawer: Issue ID / Issue Title are REQUIRED,
+// five default columns are toggleable, nine optional columns.
 const DEFAULT_COLS = [
   { key: 'modelCode', label: 'Model Code' },
   { key: 'classification', label: 'Classification' },
   { key: 'status', label: 'Status' },
   { key: 'issueDate', label: 'Issue Date' },
+  { key: 'linked', label: 'Linked' },
 ] as const
 const OPTIONAL_COLS = [
   { key: 'source', label: 'Source' },
+  { key: 'model', label: 'Model' },
+  { key: 'modelYear', label: 'Model Year' },
+  { key: 'severity', label: 'Severity' },
+  { key: 'days', label: 'Days open' },
+  { key: 'owner', label: 'Owner' },
   { key: 'component', label: 'Component' },
   { key: 'symptom', label: 'Symptom' },
-  { key: 'dtc', label: 'DTC / Trouble Code' },
-  { key: 'owner', label: 'Owner' },
-  { key: 'days', label: 'Days' },
+  { key: 'dtc', label: 'DTC' },
 ] as const
 const DEFAULT_VISIBLE = DEFAULT_COLS.map((c) => c.key as string)
 
@@ -73,6 +83,152 @@ const DEFAULT_SORT: DataTableSort = { key: 'issueDate', dir: 'desc' }
 const drawerLabel = { font: 'var(--fw-bold) 11px/1.35 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)' } as const
 const fieldRow = { display: 'grid', gridTemplateColumns: '116px 1fr', gap: 'var(--space-4)', alignItems: 'center', padding: 'var(--space-2) 0' } as const
 
+// Shared "light" tooltip bubble (white card, hairline border) used across the table's
+// multi-value cells (Issue Title, Model Code, Source, Model, Model Year) — the
+// design-system Tooltip defaults to a dark bubble, which reads as a different
+// component; overriding its style keeps every cell tooltip visually consistent.
+const lightTooltipStyle = {
+  background: 'var(--surface-card)',
+  color: 'var(--text-primary)',
+  border: 'var(--border-width) solid var(--border-subtle)',
+  boxShadow: 'var(--shadow-md)',
+  whiteSpace: 'normal',
+  padding: '8px 12px',
+} as const
+
+/** Tooltip body for a labeled bullet list (e.g. "MODEL CODES" · SP2 · CV1). */
+function ListTooltipBody({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div style={{ minWidth: 120 }}>
+      <div style={{ font: 'var(--fw-bold) 10px/1 var(--font-body)', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>{label}</div>
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+        {items.map((it, i) => (
+          <li key={`${it}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 6, font: 'var(--fw-medium) var(--fs-body-sm)/1.2 var(--font-body)', color: 'var(--text-primary)' }}>
+            <span aria-hidden style={{ width: 'var(--space-1)', height: 'var(--space-1)', borderRadius: '50%', background: 'var(--text-muted)', flex: 'none' }} />
+            {it}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** Rounded count pill (e.g. "2 Models") used for a cell whose value collapses multiple items. */
+function CountPill({ children }: { children: ReactNode }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 10px', borderRadius: 'var(--radius-pill)', background: 'var(--neutral-100)', color: 'var(--text-primary)', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-mono)', whiteSpace: 'nowrap' }}>
+      {children}
+    </span>
+  )
+}
+
+/** Small "+N" badge appended next to a primary value that has additional hidden values. */
+function MorePill({ n }: { n: number }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 6px', borderRadius: 'var(--radius-pill)', background: 'var(--neutral-100)', color: 'var(--text-secondary)', font: 'var(--fw-semibold) 11px/1 var(--font-body)' }}>
+      +{n}
+    </span>
+  )
+}
+
+/** Custom status picker — a colored dot per option, matching the status badges used
+ * everywhere else in the list. The native `Select` can't render option content, hence
+ * a bespoke dropdown here instead of reusing it.
+ *
+ * The options panel renders through a portal to `document.body` with `position: fixed`,
+ * computed from the trigger's own bounding rect, rather than as an absolutely-positioned
+ * child. A modal body scrolls based on its descendants' full painted extent — an absolute
+ * panel inside it still pushes that extent outward even with its own `overflow-y: auto`,
+ * so the *modal* ends up scrolling to reveal it instead of the panel scrolling in place.
+ * Portaling out sidesteps that entirely (same fix as the table-cell Tooltip elsewhere). */
+function StatusDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [rect, setRect] = useState<DOMRect | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return
+    const update = () => setRect(triggerRef.current!.getBoundingClientRect())
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    // The panel is a portal-child of <body>, not a DOM descendant of the trigger, so a click
+    // on an option is otherwise indistinguishable from a genuine outside click — closing the
+    // menu on mousedown then leaves nothing mounted for the option's own click to land on.
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (triggerRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  const selected = value ? STATUS[value as StatusKey] : undefined
+  return (
+    <div ref={triggerRef} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{ width: '100%', height: 'var(--control-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--space-3)', border: `var(--border-width) solid ${open ? 'var(--accent-500)' : 'var(--border-default)'}`, borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', boxShadow: open ? 'var(--shadow-focus)' : 'none', cursor: 'pointer', font: 'var(--fw-regular) var(--fs-body-md)/1 var(--font-body)', color: selected ? 'var(--text-primary)' : 'var(--text-disabled)' }}
+      >
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          {selected && <span aria-hidden style={{ width: 'var(--space-2)', height: 'var(--space-2)', borderRadius: '50%', background: selected.color, flex: 'none' }} />}
+          {selected ? selected.label : 'Select status…'}
+        </span>
+        <Icon icon={ChevronDown} size={16} style={{ color: 'var(--text-disabled)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-fast)' }} />
+      </button>
+      {open &&
+        rect &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{
+              position: 'fixed',
+              top: rect.bottom + 4,
+              left: rect.left,
+              width: rect.width,
+              // Above var(--z-modal) (1200): this panel is a portal-child of <body>, same as
+              // the Modal itself, so it needs to outrank the modal's own z-index to paint on
+              // top of it — the ordinary --z-dropdown tier (1000) sits below the modal.
+              zIndex: 'var(--z-toast)' as unknown as number,
+              maxHeight: 220,
+              overflowY: 'auto',
+              background: 'var(--surface-card)',
+              border: 'var(--border-width) solid var(--border-subtle)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-lg)',
+              padding: 'var(--space-1)',
+            }}
+          >
+            {STATUS_KEYS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => { onChange(k); setOpen(false) }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', border: 'none', background: value === k ? 'var(--neutral-50)' : 'transparent', borderRadius: 'var(--radius-md)', cursor: 'pointer', textAlign: 'left', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', color: 'var(--text-primary)' }}
+              >
+                <span aria-hidden style={{ width: 'var(--space-2)', height: 'var(--space-2)', borderRadius: '50%', background: STATUS[k].color, flex: 'none' }} />
+                {STATUS[k].label}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </div>
+  )
+}
+
 function SegRow({ options, value, onChange }: { options: { v: string; l: string }[]; value: string; onChange: (v: string) => void }) {
   return (
     <div style={{ display: 'flex', gap: 7, minWidth: 0 }}>
@@ -94,7 +250,7 @@ function Drawer({ icon, title, subtitle, onClose, footer, children }: { icon: Lu
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(5,20,31,.34)' }} />
       <div role="dialog" aria-label={title} style={{ position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 121, width: 452, maxWidth: '94vw', background: 'var(--surface-card)', boxShadow: '-14px 0 44px rgba(5,20,31,.20)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)', padding: '18px 22px', borderBottom: '1px solid #F0F2F5', flex: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)', padding: '18px 22px', borderBottom: 'var(--border-width) solid var(--border-subtle)', flex: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
             <IconChip icon={icon} tint="#F1F4F7" color="var(--kia-midnight)" size={34} iconSize={18} />
             <div>
@@ -107,7 +263,7 @@ function Drawer({ icon, title, subtitle, onClose, footer, children }: { icon: Lu
           </button>
         </div>
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '4px 22px 18px' }}>{children}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '14px 22px', borderTop: '1px solid #F0F2F5', flex: 'none', background: 'var(--bg-app)' }}>{footer}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '14px 22px', borderTop: 'var(--border-width) solid var(--border-subtle)', flex: 'none', background: 'var(--bg-app)' }}>{footer}</div>
       </div>
     </>
   )
@@ -123,7 +279,7 @@ function DrawerSection({ icon, label, open, onToggle, children }: { icon: Lucide
         <Icon icon={open ? ChevronUp : ChevronDown} size={16} style={{ color: 'var(--text-disabled)' }} />
       </button>
       {open && <div style={{ paddingBottom: 6 }}>{children}</div>}
-      <div style={{ height: 1, background: '#EDF0F3', margin: '6px 0' }} />
+      <div style={{ height: 'var(--border-width)', background: 'var(--border-subtle)', margin: '6px 0' }} />
     </>
   )
 }
@@ -131,11 +287,12 @@ function DrawerSection({ icon, label, open, onToggle, children }: { icon: Lucide
 export function IssueListScreen() {
   const nav = useNavigate()
   const { user, scope } = useRole()
-  const { issues, bulkStatus } = useStore()
+  const { issues, bulkStatus, priorityResult } = useStore()
 
   const [tab, setTab] = useState<'my' | 'all'>(scope === 'own' ? 'my' : 'all')
   const [q, setQ] = useState('')
   const [drawer, setDrawer] = useState<'' | 'filter' | 'cols'>('')
+  const [linkedModalFor, setLinkedModalFor] = useState<string | null>(null)
   const [secOpen, setSecOpen] = useState({ vehicle: true, classification: true, issue: true })
   // Applied filters + the drawer's working draft.
   const [flt, setFlt] = useState<FilterDraft>(EMPTY_FILTERS)
@@ -149,6 +306,7 @@ export function IssueListScreen() {
   const [selected, setSelected] = useState<Array<string | number>>([])
   const [bulkTarget, setBulkTarget] = useState('')
   const [bulkReason, setBulkReason] = useState('')
+  const [bulkModalOpen, setBulkModalOpen] = useState(false)
 
   const myIssues = useMemo(() => issues.filter((i) => i.assignee === user.name || i.owner === user.name), [issues, user.name])
   const scoped = tab === 'my' ? myIssues : issues
@@ -228,7 +386,9 @@ export function IssueListScreen() {
     return { label: STATUS[k].label, count: n, tone: STATUS[k].color, tint: STATUS[k].tint, icon, pct: pct(n), apply: () => setStatusFilter(k) }
   }
   const kpiDefs: { label: string; count: number; tone: string; tint: string; icon: LucideIcon; pct?: string; apply: () => void }[] = [
-    { label: tab === 'my' ? 'My Issues' : 'All Issues', count: scoped.length, tone: 'var(--text-primary)', tint: 'var(--accent-50)', icon: Layers, apply: () => setTab('my') },
+    // Clears any active status filter and stays on whichever tab (My/All) is already
+    // selected — this card represents "everything in the current section," not a tab switch.
+    { label: tab === 'my' ? 'My Issues' : 'All Issues', count: scoped.length, tone: 'var(--text-primary)', tint: 'var(--accent-50)', icon: Layers, apply: () => setStatusFilter('') },
     kpiStatus('open', FolderOpen),
     kpiStatus('review', Search),
     kpiStatus('escalated', TriangleAlert),
@@ -236,65 +396,136 @@ export function IssueListScreen() {
     kpiStatus('closed', CircleCheck),
   ]
 
-  const columns: DataTableColumn<Issue>[] = [
-    {
-      key: 'id', header: 'Issue ID', width: 108, render: (r) => (
-        <button onClick={() => nav(`/issues/${r.id}`)} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{r.id}</button>
-      ),
+  // Toggleable columns, keyed for lookup. Rendered in `cols` order (below) rather
+  // than this declaration order, so a newly-checked column lands at the end of
+  // the visible set instead of snapping back into a fixed schema position.
+  const toggleableColumns: Record<string, DataTableColumn<Issue>> = {
+    source: {
+      key: 'source', header: 'Source', width: 150, render: (r: Issue) => {
+        const extra = (r.sources ?? []).filter((s) => s !== r.source)
+        const badge = (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <SourceBadge source={r.source} size="sm" />
+            {extra.length > 0 && <MorePill n={extra.length} />}
+          </span>
+        )
+        return extra.length > 0 ? (
+          <Tooltip label={<ListTooltipBody label="Sources" items={extra.map((s) => SOURCE[s].label)} />} placement="bottom" style={lightTooltipStyle}>
+            {badge}
+          </Tooltip>
+        ) : badge
+      },
     },
-    {
-      // Fixed ~380px title, width-less tail columns share the rest evenly —
-      // matches the live .dc prototype's column skeleton at every viewport.
-      key: 'title', header: 'Issue Title', width: 380, render: (r) => (
-        <button onClick={() => nav(`/issues/${r.id}`)} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'var(--fw-medium) var(--fs-body-md)/1.3 var(--font-body)', color: 'var(--text-primary)', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-          {r.isEws && <Icon icon={AlertTriangle} size={13} label="EWS-flagged" style={{ color: 'var(--danger-500)', marginRight: 6, verticalAlign: -2 }} />}
-          {r.title}
-        </button>
-      ),
+    modelCode: {
+      key: 'modelCode', header: 'Model Code', width: 130, sortable: true, render: (r: Issue) => {
+        const codes = r.modelCodes ?? []
+        if (codes.length > 1) {
+          return (
+            <Tooltip label={<ListTooltipBody label="Model Codes" items={codes} />} placement="bottom" style={lightTooltipStyle}>
+              <CountPill>{modelCodeLabel(r)}</CountPill>
+            </Tooltip>
+          )
+        }
+        return <span style={{ font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{modelCodeLabel(r)}</span>
+      },
     },
-    ...(cols.includes('source') ? [{
-      key: 'source', header: 'Source', render: (r: Issue) => <SourceBadge source={r.source} size="sm" />,
-    }] : []),
-    ...(cols.includes('modelCode') ? [{
-      key: 'modelCode', header: 'Model Code', sortable: true, render: (r: Issue) => (
-        <span style={{ font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{modelCodeLabel(r)}</span>
-      ),
-    }] : []),
-    ...(cols.includes('classification') ? [{
-      key: 'classification', header: 'Classification', render: (r: Issue) => (
+    classification: {
+      key: 'classification', header: 'Classification', width: 200, render: (r: Issue) => (
         <span style={{ display: 'block' }}>
-          <span style={{ display: 'block', font: 'var(--fw-semibold) var(--fs-body-sm)/1.25 var(--font-body)', color: 'var(--text-primary)' }}>{r.system ?? '—'}</span>
-          <span style={{ display: 'block', font: 'var(--fw-regular) var(--fs-caption)/1.25 var(--font-body)', color: 'var(--text-muted)' }}>{r.component ?? r.subSystem ?? ''}</span>
+          <span style={{ display: 'block', font: 'var(--fw-semibold) var(--fs-body-sm)/1.25 var(--font-body)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.system ?? '—'}</span>
+          <span style={{ display: 'block', font: 'var(--fw-regular) var(--fs-caption)/1.25 var(--font-body)', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.component ?? r.subSystem ?? ''}</span>
         </span>
       ),
-    }] : []),
-    ...(cols.includes('component') ? [{
-      key: 'component', header: 'Component', render: (r: Issue) => <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1.25 var(--font-body)', color: 'var(--text-secondary)' }}>{r.component ?? '—'}</span>,
-    }] : []),
-    ...(cols.includes('symptom') ? [{
-      key: 'symptom', header: 'Symptom', render: (r: Issue) => <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1.25 var(--font-body)', color: 'var(--text-secondary)' }}>{r.symptom ?? '—'}</span>,
-    }] : []),
-    ...(cols.includes('dtc') ? [{
-      key: 'dtc', header: 'DTC / Trouble Code', render: (r: Issue) => (
+    },
+    component: { key: 'component', header: 'Component', width: 160, render: (r: Issue) => <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1.25 var(--font-body)', color: 'var(--text-secondary)' }}>{r.component ?? '—'}</span> },
+    symptom: { key: 'symptom', header: 'Symptom', width: 180, render: (r: Issue) => <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1.25 var(--font-body)', color: 'var(--text-secondary)' }}>{r.symptom ?? '—'}</span> },
+    dtc: {
+      key: 'dtc', header: 'DTC', width: 170, render: (r: Issue) => (
         <span style={{ font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>
           {r.dtcCodes?.length ? (r.dtcCodes.length > 1 ? `${r.dtcCodes.length} DTC` : r.dtcCodes[0]) : '—'}
         </span>
       ),
-    }] : []),
-    ...(cols.includes('status') ? [{
-      key: 'status', header: 'Status', sortable: true, render: (r: Issue) => <StatusBadge status={r.status} />,
-    }] : []),
-    ...(cols.includes('issueDate') ? [{
-      key: 'issueDate', header: 'Issue Date', sortable: true, render: (r: Issue) => (
+    },
+    status: { key: 'status', header: 'Status', width: 160, sortable: true, render: (r: Issue) => <StatusBadge status={r.status} /> },
+    issueDate: {
+      key: 'issueDate', header: 'Issue Date', width: 130, sortable: true, render: (r: Issue) => (
         <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>{fmtMDY(r.reportedDate)}</span>
       ),
-    }] : []),
-    ...(cols.includes('owner') ? [{
-      key: 'owner', header: 'Owner', sortable: true, render: (r: Issue) => <span style={{ color: 'var(--text-secondary)' }}>{r.assignee ?? r.owner}</span>,
-    }] : []),
-    ...(cols.includes('days') ? [{
-      key: 'days', header: 'Days', sortable: true, render: (r: Issue) => <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>{daysOpen(r.reportedDate, r.closedAt)}</span>,
-    }] : []),
+    },
+    owner: {
+      key: 'owner', header: 'Owner', width: 170, sortable: true, render: (r: Issue) => {
+        const name = r.assignee ?? r.owner
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <Avatar name={name} size="sm" style={{ background: 'var(--kia-midnight)' }} />
+            <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+          </span>
+        )
+      },
+    },
+    days: { key: 'days', header: 'Days open', width: 100, sortable: true, render: (r: Issue) => <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>{daysOpen(r.reportedDate, r.closedAt)}</span> },
+    model: {
+      key: 'model', header: 'Model', width: 140, render: (r: Issue) => (
+        <Tooltip label={r.model} placement="bottom" style={lightTooltipStyle}>
+          <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{r.model}</span>
+        </Tooltip>
+      ),
+    },
+    modelYear: {
+      key: 'modelYear', header: 'Model Year', width: 110, sortable: true, render: (r: Issue) => (
+        <Tooltip label={String(r.modelYear)} placement="bottom" style={lightTooltipStyle}>
+          <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{r.modelYear}</span>
+        </Tooltip>
+      ),
+    },
+    severity: {
+      key: 'severity', header: 'Severity', width: 110, render: (r: Issue) => {
+        const p = priorityResult(r.id)
+        return p.scored ? <TagChip tint={PRIORITY_BANDS[p.final].tint} color={PRIORITY_BANDS[p.final].color}>{p.final}</TagChip> : <span style={{ color: 'var(--text-disabled)' }}>—</span>
+      },
+    },
+    linked: {
+      key: 'linked', header: 'Linked', width: 110, render: (r: Issue) => (
+        <button
+          onClick={() => setLinkedModalFor(r.id)}
+          title="Review correlated issues"
+          style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)' }}
+        >
+          {r.linkedIssueIds?.length ? (
+            <>
+              <Icon icon={Link2} size={13} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ color: 'var(--text-secondary)' }}>{r.linkedIssueIds.length}</span>
+            </>
+          ) : <span style={{ color: 'var(--text-disabled)' }}>—</span>}
+        </button>
+      ),
+    },
+  }
+
+  const columns: DataTableColumn<Issue>[] = [
+    {
+      // Issue ID and Issue Title are frozen (DataTable's `sticky`) so they stay
+      // visible while the rest of the row scrolls horizontally.
+      key: 'id', header: 'Issue ID', width: 108, sticky: true, render: (r) => (
+        <button onClick={() => nav(`/issues/${r.id}`)} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{r.id}</button>
+      ),
+    },
+    {
+      // Narrowed so Issue ID + Issue Title + all five default columns fit without
+      // horizontal scroll; every column below also carries an explicit width so
+      // the table has a deterministic total width — once toggled-on columns push
+      // past the container, DataTable scrolls horizontally instead of squeezing
+      // columns, and each column keeps its own width.
+      key: 'title', header: 'Issue Title', width: 240, sticky: true, render: (r) => (
+        <Tooltip label={r.title} placement="bottom" style={lightTooltipStyle} wrapperStyle={{ display: 'block', minWidth: 0 }}>
+          <button onClick={() => nav(`/issues/${r.id}`)} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'var(--fw-medium) var(--fs-body-md)/1.3 var(--font-body)', color: 'var(--text-primary)', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+            {r.isEws && <Icon icon={AlertTriangle} size={13} label="EWS-flagged" style={{ color: 'var(--danger-500)', marginRight: 6, verticalAlign: -2 }} />}
+            {r.title}
+          </button>
+        </Tooltip>
+      ),
+    },
+    ...cols.map((key) => toggleableColumns[key]).filter(Boolean),
   ]
 
   const onToggleAll = (e: ChangeEvent<HTMLInputElement>) => setSelected(e.target.checked ? pageRows.map((r) => r.id) : [])
@@ -304,7 +535,7 @@ export function IssueListScreen() {
   const applyBulk = () => {
     if (!bulkTarget || !bulkReason.trim()) return
     bulkStatus(selected.map(String), bulkTarget as StatusKey, bulkReason.trim(), { name: user.name, role: user.role })
-    setSelected([]); setBulkTarget(''); setBulkReason('')
+    setSelected([]); setBulkTarget(''); setBulkReason(''); setBulkModalOpen(false)
   }
   // Clearing filters also restores the default sort, which is what the prototype intends.
   // Its own clearFilters() assigns sortKey twice — 'registered' then 'priority' — so the
@@ -376,16 +607,99 @@ export function IssueListScreen() {
 
       {/* Bulk-action bar */}
       {selected.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)', padding: 'var(--space-3) var(--space-4)', background: 'var(--selected-bg)', border: 'var(--border-width) solid var(--accent-100)', borderRadius: 'var(--radius-lg)' }}>
-          <Badge tone="accent">{selected.length} {selected.length === 1 ? 'Issue Selected' : 'Issues Selected'}</Badge>
-          <span style={{ color: 'var(--text-secondary)', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)' }}>Change Status:</span>
-          <Select aria-label="Target status" size="sm" value={bulkTarget} placeholder="Choose…" options={STATUS_KEYS.map((k) => ({ value: k, label: STATUS[k].label }))} onChange={(e) => setBulkTarget(e.target.value)} style={{ width: 170 }} />
-          <input value={bulkReason} onChange={(e) => setBulkReason(e.target.value)} placeholder="Reason (required)" style={{ height: 'var(--control-sm)', padding: '0 10px', border: 'var(--border-width) solid var(--border-default)', borderRadius: 'var(--radius-md)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', width: 240 }} />
-          <Button size="sm" onClick={applyBulk} disabled={!bulkTarget || !bulkReason.trim()}>Apply</Button>
-          <Button variant="secondary" size="sm">Assign to role</Button>
-          <Button variant="ghost" size="sm" iconLeft={<Icon icon={Download} size={14} />}>Export XLSX</Button>
-          <Button variant="ghost" size="sm" onClick={() => setSelected([])}>Clear</Button>
+        <div
+          style={{
+            position: 'fixed',
+            left: '50%',
+            bottom: 'var(--space-6)',
+            transform: 'translateX(-50%)',
+            zIndex: 'var(--z-sticky)' as unknown as number,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 'var(--space-4)',
+            padding: 'var(--space-2) var(--space-5)',
+            background: 'var(--kia-midnight)',
+            borderRadius: 'var(--radius-pill)',
+            boxShadow: 'var(--shadow-lg)',
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 'var(--control-sm)', height: 'var(--control-sm)', borderRadius: '50%', background: 'var(--neutral-0)', color: 'var(--kia-midnight)', font: 'var(--fw-bold) var(--fs-body-sm)/1 var(--font-body)', flex: 'none' }}>
+              {selected.length}
+            </span>
+            <span style={{ color: 'var(--neutral-0)', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', whiteSpace: 'nowrap' }}>
+              {selected.length === 1 ? 'Issue Selected' : 'Issues Selected'}
+            </span>
+          </span>
+          <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
+          <button
+            onClick={() => setBulkModalOpen(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', border: 'none', background: 'transparent', padding: 0, color: 'var(--neutral-0)', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+          >
+            <Icon icon={RefreshCw} size={16} />
+            Change Status
+          </button>
+          <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
+          <button
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', border: 'none', background: 'transparent', padding: 0, color: 'var(--neutral-0)', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+          >
+            <Icon icon={FileOutput} size={16} />
+            Export XLSX
+          </button>
+          <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
+          <button
+            aria-label="Clear selection"
+            onClick={() => setSelected([])}
+            style={{ display: 'inline-flex', alignItems: 'center', border: 'none', background: 'transparent', padding: 0, color: 'var(--neutral-0)', cursor: 'pointer' }}
+          >
+            <Icon icon={X} size={18} />
+          </button>
         </div>
+      )}
+      {bulkModalOpen && (
+        <Modal
+          open={bulkModalOpen}
+          onClose={() => setBulkModalOpen(false)}
+          width={520}
+          title={
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
+                <IconChip icon={RefreshCw} tint="var(--accent-50)" color="var(--accent-600)" size={40} iconSize={18} />
+                <div>
+                  <div style={{ font: 'var(--fw-bold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)' }}>Change status</div>
+                  <div style={{ marginTop: 4, font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
+                    This will update {selected.length} selected issue{selected.length === 1 ? '' : 's'}. A valid reason is required for every status change.
+                  </div>
+                </div>
+              </div>
+              <button
+                aria-label="Close"
+                onClick={() => setBulkModalOpen(false)}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', color: 'var(--text-secondary)', cursor: 'pointer', flex: 'none' }}
+              >
+                <Icon icon={X} size={18} />
+              </button>
+            </div>
+          }
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setBulkModalOpen(false)}>Cancel</Button>
+              <Button iconLeft={<Icon icon={Check} size={15} />} onClick={applyBulk} disabled={!bulkTarget || !bulkReason.trim()}>
+                Update status for {selected.length} selected issue{selected.length === 1 ? '' : 's'}
+              </Button>
+            </>
+          }
+        >
+          <div style={{ borderTop: 'var(--border-width) solid var(--border-subtle)', margin: '0 0 var(--space-4)' }} />
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <ULabel>New status <span style={{ color: 'var(--danger-500)' }}>*</span></ULabel>
+            <StatusDropdown value={bulkTarget} onChange={setBulkTarget} />
+          </div>
+          <div>
+            <ULabel>Reason / comment <span style={{ color: 'var(--danger-500)' }}>*</span></ULabel>
+            <Textarea aria-label="Reason / comment" value={bulkReason} onChange={(e) => setBulkReason(e.target.value)} rows={3} placeholder="e.g. Bulk triage — moving reviewed issues to the next stage" />
+          </div>
+        </Modal>
       )}
 
       {/* Table card */}
@@ -418,14 +732,14 @@ export function IssueListScreen() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: 'var(--border-width) solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
                 <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
-                  Showing <b style={{ color: 'var(--text-primary)' }}>{(pageClamped - 1) * pageSize + 1}–{Math.min(pageClamped * pageSize, filtered.length)}</b> of {filtered.length} issues
+                  Showing <b style={{ color: 'var(--text-primary)' }}>{(pageClamped - 1) * pageSize + 1} - {Math.min(pageClamped * pageSize, filtered.length)}</b> of <b style={{ color: 'var(--text-primary)' }}>{filtered.length}</b> issues
                 </span>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
                   Rows:
                   <select
                     value={pageSize}
                     onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
-                    style={{ height: 26, border: 'var(--border-width) solid var(--border-default)', borderRadius: 'var(--radius-sm)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)', background: 'var(--surface-card)' }}
+                    style={{ height: 26, border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)', background: 'var(--surface-card)' }}
                   >
                     {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
@@ -506,35 +820,34 @@ export function IssueListScreen() {
         >
           <div style={{ ...drawerLabel, padding: '16px 0 10px' }}>Default columns</div>
           {[{ key: '_id', label: 'Issue ID', required: true }, { key: '_title', label: 'Issue Title', required: true }, ...DEFAULT_COLS.map((c) => ({ ...c, required: false }))].map((c) => (
-            <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) 0', cursor: c.required ? 'default' : 'pointer', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)' }}>
-              <input
-                type="checkbox"
+            <div key={c.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-2) 0' }}>
+              <Checkbox
                 disabled={c.required}
                 checked={c.required || colsDraft.includes(c.key)}
                 onChange={(e) => setColsDraft((s) => (e.target.checked ? [...s, c.key] : s.filter((x) => x !== c.key)))}
+                label={c.label}
+                style={c.required ? { color: 'var(--text-primary)' } : undefined}
               />
-              {c.label}
-              {c.required && <span style={{ marginLeft: 'auto', font: 'var(--fw-bold) 9.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-disabled)', background: 'var(--neutral-50)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '3px 7px' }}>Required</span>}
-            </label>
+              {c.required && <span style={{ font: 'var(--fw-bold) 9.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-disabled)', background: 'var(--neutral-50)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '3px 7px' }}>Required</span>}
+            </div>
           ))}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 10px' }}>
             <span style={drawerLabel}>Optional columns</span>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer', font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-              <input
-                type="checkbox"
-                checked={OPTIONAL_COLS.every((c) => colsDraft.includes(c.key))}
-                onChange={(e) => setColsDraft((s) => (e.target.checked ? Array.from(new Set([...s, ...OPTIONAL_COLS.map((c) => c.key as string)])) : s.filter((x) => !OPTIONAL_COLS.some((c) => c.key === x))))}
-              />
-              Select all
-            </label>
+            <Checkbox
+              checked={OPTIONAL_COLS.every((c) => colsDraft.includes(c.key))}
+              onChange={(e) => setColsDraft((s) => (e.target.checked ? Array.from(new Set([...s, ...OPTIONAL_COLS.map((c) => c.key as string)])) : s.filter((x) => !OPTIONAL_COLS.some((c) => c.key === x))))}
+              label={<span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Select all</span>}
+            />
           </div>
           {OPTIONAL_COLS.map((c) => (
-            <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) 0', cursor: 'pointer', font: 'var(--fw-medium) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-primary)' }}>
-              <input type="checkbox" checked={colsDraft.includes(c.key)} onChange={(e) => setColsDraft((s) => (e.target.checked ? [...s, c.key] : s.filter((x) => x !== c.key)))} />
-              {c.label}
-            </label>
+            <div key={c.key} style={{ padding: 'var(--space-2) 0' }}>
+              <Checkbox checked={colsDraft.includes(c.key)} onChange={(e) => setColsDraft((s) => (e.target.checked ? [...s, c.key] : s.filter((x) => x !== c.key)))} label={c.label} />
+            </div>
           ))}
         </Drawer>
+      )}
+      {linkedModalFor && (
+        <LinkedIssuesModal open issueId={linkedModalFor} onClose={() => setLinkedModalFor(null)} />
       )}
     </PageContainer>
   )

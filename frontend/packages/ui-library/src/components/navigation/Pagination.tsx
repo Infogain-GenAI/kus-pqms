@@ -104,7 +104,7 @@ function PageBtn({ children, active, disabled, style, className, ...rest }: Page
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        border: `1px solid ${active ? 'var(--kia-midnight)' : 'var(--border-default)'}`,
+        border: `1px solid ${active ? 'var(--kia-midnight)' : 'var(--border-subtle)'}`,
         borderRadius: 'var(--radius-md)',
         background: active
           ? 'var(--kia-midnight)'
