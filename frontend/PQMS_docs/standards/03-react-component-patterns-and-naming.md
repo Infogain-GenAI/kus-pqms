@@ -353,9 +353,44 @@ reference it from the `ErrorBoundary` property of **every lazily-loaded
 route** — 07-routing-and-layouts.md's tree marks which those are, and
 notes the three kinds of route that carry no boundary because they have
 no chunk to fail. Its behaviour:
-match the error against `'Failed to fetch dynamically imported module'`
-and trigger a hard reload; any other error is logged, not reloaded —
-reloading on every error risks masking a real bug or looping.
+match the error against the dynamic-import failure message **of every
+browser this app runs in** and trigger a hard reload; any other error is
+logged, not reloaded — reloading on every error risks masking a real bug
+or looping.
+
+**The message is the browser's, not the bundler's, and each engine words
+it differently.** An earlier revision of this file specified only
+`'Failed to fetch dynamically imported module'`. That string is
+**V8/Chromium's**, so a boundary matching only it recovers only Chromium
+users; Firefox and Safari fall through to the log-and-render path and a
+user holding a stale bundle after a deploy gets a dead end instead of
+the reload this section exists to trigger. Match all three:
+
+| Engine | Message |
+|---|---|
+| V8 / Chromium | `Failed to fetch dynamically imported module` |
+| SpiderMonkey / Firefox | `error loading dynamically imported module` |
+| JavaScriptCore / Safari | `Importing a module script failed` |
+
+**Do not attribute the string to Vite.** It is emitted by the browser's
+module loader; grepping the bundler's source for it is a dead end, and a
+comment naming the wrong emitter sends the next reader debugging in the
+wrong repository. (Recorded because exactly that happened: a code comment
+in this project called it "Vite's own message", and the mistake was
+caught only by an independent review pass grepping Vite's `dist` and
+finding nothing.)
+
+Widening the match adds no risk of a spurious reload loop: all three
+strings denote the same failure class — a module script that could not be
+fetched or parsed — so nothing newly matches that was not already a
+chunk-load failure.
+
+**[PLACEHOLDER — this app declares no browser support target: there is no
+`browserslist` key and no Vite build `target`. So "Chromium-only is
+acceptable" is not a conclusion available from the repository, which is
+why all three engines are matched rather than one. If a support target is
+ever declared and excludes an engine, its row above can go. Trigger:
+whenever a browser support target is set. Owner: Frontend Lead.]**
 
 Provenance: `kus-pqms` achieved the same outcome with a single global
 `router.onError` hook doing that regex match
