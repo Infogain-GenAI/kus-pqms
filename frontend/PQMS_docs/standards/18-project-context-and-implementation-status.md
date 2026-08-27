@@ -1590,6 +1590,11 @@ context, one viewport, one timezone, back to back.
 | create issue | 54,969 | **4.77%** |
 | **mean** | | **5.31%** |
 
+> ⚠️ **This measured `PQMS_SE.html`, superseded 2026-08-26.** It remains a valid
+> REGRESSION signal — same baseline both times, so "unchanged to the digit across
+> 274 conversions" still holds — but it is **not** a fidelity measurement. See
+> "What the 5.31% figure is" below.
+
 **Read this as a good result.** The app renders its own deterministic seed while
 the prototype renders its own sample rows, so **a large share of every number
 above is DATA, not layout** — different issue IDs, different titles, different
@@ -1795,6 +1800,72 @@ tranche 2. **Owner:** Frontend Lead.]**
 | issues list | 66,147 | 5.74% |
 | workspace detail | 52,926 | 4.59% |
 | create issue | 54,969 | 4.77% |
+
+### ⚠️ 2026-08-26 — WHAT THE 5.31% FIGURE IS, NOW THAT THE PROTOTYPE IT MEASURED IS SUPERSEDED
+
+`measure-prototype-delta.mjs` — like `fidelity-gate.mjs` and
+`fidelity-capture.mjs` — reads
+`…/pqms-bundled-page-2026-08-16/PQMS_SE.html`, **dated 2026-08-11 and two design
+generations behind** the canonical prototype now named in `00-core-rules.md`.
+That changes what the number above supports, and the change is precise rather
+than fatal. **Two claims were being made with one figure. Only one of them
+survives.**
+
+#### ✅ STILL VALID — it is a regression signal, and a good one
+
+**"Unchanged to the digit across 274 token conversions" still holds and still
+means what it meant.** The claim is a *difference between two runs*, and both
+runs used the **same baseline**. A stale baseline is still a fixed baseline:
+
+- 70,536 / 66,147 / 52,926 / 54,969 before the conversions,
+- the same four integers after.
+
+Whatever `PQMS_SE.html` is, the app's rendered distance from it **did not move by
+one pixel** across 274 conversions. That is exactly the property the measurement
+was taken for — *did this refactor change anything?* — and it is unaffected by
+which artefact sits on the other side. **Nothing about the token work needs
+re-verifying.**
+
+#### ❌ NO LONGER SUPPORTED — it is not a fidelity measurement
+
+**"4.6–6.1% means the port is structurally close to the prototype" is withdrawn.**
+It measures distance from the **wrong artefact**, and the differences between the
+two artefacts are structural, not incidental:
+
+| | `PQMS_SE.html` (measured) | Canonical (not measured) |
+|---|---|---|
+| Sixth KPI tile | "Resolved", green | **"Closed"**, dark grey |
+| KPI tiles | static read-outs | **status filters**, with a selection border |
+| Relationship column | **present**, default-visible, with a cell | **removed** |
+| KPI icons | `triangle-alert` / `flame` | `workflow` / `focus` |
+| Issue list rows | flat | **grouped** — Parent rows with nested children |
+
+**The app matches the canonical file on three of those five.** So part of the
+5.31% is the app being *correct* — penalised for implementing the current design
+against a picture of an older one. The number is therefore **not a lower bound,
+not an upper bound, and not comparable to any future measurement taken against
+the canonical file.**
+
+#### The distinction, stated once so it is not lost
+
+> **A regression signal needs a *fixed* baseline. A fidelity measurement needs a
+> *correct* one.** The same figure can be the first and not the second, and this
+> one is. They are different claims and only one is supported.
+
+#### How to quote it until the harness is repointed
+
+- ✅ *"app-vs-`PQMS_SE.html`, unchanged across 274 conversions"* — correct, useful,
+  and the reason the token work is trustworthy.
+- ❌ *"the port is 94.7% faithful to the UX prototype"* — **not supported by any
+  measurement this project has taken.** No app-vs-canonical figure exists.
+
+**[PLACEHOLDER — an app-vs-canonical fidelity number does not exist.** It requires
+repointing the harness, which is the open item recorded below: the canonical
+`.dc.html` resolves `support.js` / `lucide-local.js` / `_ds/` by relative path and
+cannot be loaded as a `file://` URL, so it needs the static-server capture shape
+`dc-compare.mjs` already uses. **Owner:** Frontend Lead. **Trigger:** the next
+time a *fidelity* claim — as opposed to a regression claim — is made.]**
+
 
 **Method:** both halves in ONE browser context — same viewport (1280×900), same
 `timezoneId`, same browser build, back to back. The previous harness captured
@@ -2296,3 +2367,259 @@ with no data needs orientation and a "New issue" action; a user whose filters
 exclude everything needs recovery and a "Clear filters" action — and offering
 "New issue" there is actively wrong. Recorded as UNSPECIFIED with an owner rather
 than resolved by analogy.
+
+---
+
+## 2026-08-26 — the canonical prototype is settled, and pass 4's first screen was withdrawn and re-run
+
+### What was wrong
+
+The entry immediately above reasoned about *"the live `.dc.html`"* as though the
+repository held one. **It holds nine distinct ISM candidates across four
+directories**, two of them byte-identical duplicates of two others. The first
+screen description named the 2026-08-11 flattened export; its "corrections"
+against "the live file" were reasoning about a *third* file nobody had
+identified.
+
+### What is settled — full disposition in `00-core-rules.md`
+
+> **`docs/ux-prototype/ism-qir-se-role/ISM + QIR SE Role - P_C.dc.html`**,
+> md5 `8dca6a22f65b5dda7906a77945c12435`, Claude Design project Kia N-PQMS V4-V5,
+> synced 2026-08-24.
+
+**Established by content lineage, deliberately not by date** — this file is the
+only candidate carrying `PRI_MATRIX`, `_resetPageState`, `_priorityInherited` and
+`caretStyle()`, the delta against the previous sync is diffed hunk by hunk in
+`issues/ism-v4-v5-gap-analysis.md`, and **the app already implements three of
+those items**. This file's own rule against mtime inference (17's Prototype
+register) is why none of that argument uses a modification date.
+
+### The corrections to the entry above
+
+| Above says | Canonical source |
+|---|---|
+| KPI "Resolved" — *"app is probably right"* | **App is right, and now proven.** Sixth tile is `closed` / "Closed". And the tiles are **status filters** (`_kpiSel`), which no reading had noticed |
+| Relationship column — *"the live prototype agrees with the app"* | **True, for the wrong reason.** The column was **removed** in V4–V5: no header, no cell, and `colGroupDefault` omits it from the Columns chooser. `colRelationship` occurs 3× in the export and **1×** in the canonical — the state binding alone |
+| "Showing 7 of 33" | **Unchanged, and now recorded as D-6** with the fix and the mechanism: there are **two** "Showing" strings with **different denominators**, and the app gets the footer right and the band wrong |
+
+### Three findings that only a SOURCE read could produce
+
+Recorded because each one a render would have hidden:
+
+1. **The Issue List is a grouped table.** One top-level row per group, anchored
+   on the Parent, others nested, filters matching at group level. The rule is
+   stated in a source comment and appears in no pixel. **The app implements none
+   of it.**
+2. **The prototype is not single-role.** Three role-dependent subtitles on the
+   list and a **seventh, role-gated tab** (`Sharing`, ASM/PQM) on the workspace —
+   **unreachable in the rendered file**, because the prototype ships no role
+   switch.
+3. **`_loadCols()` restores column visibility from `sessionStorage`.** What a
+   browser shows depends on that browser's history, which is why the first
+   reading's "correction" about the Columns chooser was itself wrong.
+
+**Rule, now in `00`:** structural questions are answered from the source, never
+from a render.
+
+### The consequence for the fidelity harness
+
+**`fidelity-gate.mjs`, `measure-prototype-delta.mjs` and `fidelity-capture.mjs`
+all point at `PQMS_SE.html`** — the 2026-08-11 export, two generations behind.
+Every app-vs-prototype number they have produced is inflated by design changes
+the app **correctly** implemented.
+
+**Not repointed in the same change, and the reason is recorded in both scripts:**
+the canonical file resolves `support.js` / `lucide-local.js` / `_ds/` by relative
+path, so it cannot be loaded as a `file://` URL the way the flattened export can.
+It needs a static server — the shape `dc-compare.mjs` already uses on `:8123` —
+which is a capture-harness change, not a path edit.
+
+**[PLACEHOLDER — repoint the fidelity harness at the canonical prototype.**
+**Owner:** Frontend Lead. **Trigger:** the next time a fidelity number is quoted
+in a decision. Until then those numbers are quoted as app-vs-`PQMS_SE.html`, and
+both scripts say so at the top.]**
+
+### Two escalations, both lifecycle contracts, both open
+
+1. **The relationship model** — BRD `FR-LST-001` asserts a link-count column; the
+   canonical prototype removed that column and expresses relationship as **row
+   hierarchy**. It spans the Issue List (renders it) and Create Issue (creates
+   the groups, and holds two rules the list does not express: a new issue can
+   only ever be a **Child**, and a future-dated linked member **blocks
+   registration**). `RECONCILIATION-issue-list.md`.
+2. **The status vocabulary does not contain its own lifecycle's values.**
+   `proposeDisposition` writes `pending` and `approveDisposition` writes
+   `disposed`; the seven-value `STATUS` map contains **neither**, and
+   `statusBits()` falls back to `STATUS.open` — so an issue awaiting approval
+   **renders as "Open"** and is counted by **no KPI tile**. The app models this
+   as a boolean flag instead, which may be the better design and is exactly why
+   it must be decided rather than inherited. **This also unsettles the
+   2026-08-23 directive**, which adopted the prototype's status vocabulary
+   verbatim from the same file that writes outside it.
+   `RECONCILIATION-workspace-and-create.md`.
+
+### What pass 4 has established about `INVENTORY.md`, over three screens
+
+**49 components implied, 42 confirmed (86%), 7 added, 4 not confirmed, 3 reshaped
+into 2 questions.** Per screen: list 12/15, workspace 16/19, create 14/15.
+
+- **Existence prediction is reliable and improves as screens get less
+  structural** — 80% → 84% → 93%.
+- **All seven misses are layout-adjacent and named by no requirement.** Seven for
+  seven; this is now a rule rather than a hypothesis.
+- **Both shape disagreements are lifecycle questions**, not component questions.
+- **The confidence rating was retired**, on evidence: `LinkedCountCell` was
+  Medium and its subject no longer exists; `BaseStepRail`, `BaseFileDropzone` and
+  `CorrelationSuggestionCard` are all **High** and all unconfirmed; `BaseDrawer`
+  was **Low** and was answered outright by one line of source. It is replaced by
+  a `Confirmed` field with three states, populated **only** by a reconciliation.
+
+### The reassessment of the remaining screens, with three screens of evidence
+
+**Size does not predict value; owning a lifecycle contract does.** Create Issue is
+a 15-component screen that produced **no new** question, because its rules belong
+to a contract already open.
+
+| Screen | Writes domain state? | Decision |
+|---|---|---|
+| **Admin** | **yes — scoring weights, aging thresholds, source on/off, a second approval workflow** | **full description** |
+| Notifications | no — a read-marker map | component derivation |
+| Dashboard / Overview | no — aggregation and navigation | component derivation |
+
+**Admin is reclassified upward and it is not close.** It holds
+`weights:{claimFreq:35, repairCost:30, claimsCount:20, detect:15}` — the inputs
+to the severity score every other screen renders — `sources.fpqr:false`, meaning
+Create Issue's seven channels are a **configured** set rather than a fixed one,
+and `approveCr()`, which substitutes `ASM` when the acting role is `SE`.
+
+---
+
+## 2026-08-26 (later) — pass 4 complete, and two corrections to the entry above
+
+### Two things the entry above got wrong
+
+**1 · "The app models it as `pendingApproval?: boolean`" — wrong, and the truth is
+stronger.** `pendingApproval?: boolean` is a field on **`ClassificationNode`**,
+the taxonomy-proposal flag behind the *Pending Admin Approval* badge. It has
+nothing to do with issue status, and nothing on `Issue` uses it. The app's actual
+mechanism is `proposedStatus` / `proposalRationale` / `proposedBy`, cleared on
+approve or reject — **which is `DEC-01`'s mitigation implemented exactly**, not
+merely something adjacent to it. Recorded in
+`DECISION-REQUEST-status-vocabulary.md`.
+
+**2 · "`approveCr()` is on the Admin screen" — wrong.** It keys on `fid`, a
+*finding* id, mutates `_mutFindings` and logs to `crLog[issueId]`. **It is the
+Issue Workspace's Investigation tab.** Admin's own approval surface is the
+taxonomy queue, a different mechanism. The consequence is worse than the
+mislocation: **the Issue Workspace has two approval workflows with contradictory
+rules**, and `screen-descriptions/issue-workspace.md` covered only one of them.
+
+### The status contradiction is escalated, not resolved
+
+**`PQMS_docs/DECISION-REQUEST-status-vocabulary.md`** — self-contained, to the
+architect and the domain owner. It is the third decision document and, like the
+others, **must not be resolved in the repository**.
+
+It records a fourth authority nobody had cited: **the vendored design system's
+own colour tokens carry an eight-status list of their own** — `--status-draft`,
+`--status-pending`, `--status-disposed` among them, captioned *"The 8 canonical
+N-PQMS workflow statuses"*. **It has colours for exactly the two values the
+prototype writes and the prototype's own status map lacks**, and **no** colour
+for two values the app does render (`topissue`, `outofscope`). So the open
+placeholder in `06` asks the designer for hues for two `DEC-01` names this
+application does not use — that placeholder cannot be actioned until the
+vocabulary question is answered.
+
+**Blast radius: `02`'s union, `17`'s table, `06`'s colour mapping and its hue
+placeholder, `statusMap.ts`, every KPI tile that filters by status, and
+`StatusChangeDialog` — which cannot be specified at all** while two lifecycle
+values sit outside the vocabulary. `02` and `17` already disagree with the
+shipped code today.
+
+### Admin — the scope boundary runs through the middle of a screen
+
+Reclassified from *component derivation* to *full description*, and it earned it.
+`screen-descriptions/admin.md`.
+
+**Checked directly, as the weights are inputs to a number every screen renders.
+The result was not the expected one:** the app's weights do not *differ* from the
+prototype's — **the app has no severity scoring at all.**
+`apps/portal/src/data/types.ts` records it as out of scope, `autoScore` appears
+nowhere, `IssueWorkspaceScreen.tsx` contains zero occurrences of "severity".
+
+The prototype devotes a gated, audited, reset-able section to it: four weights
+(`claimFreq 35 · repairCost 30 · claimsCount 20 · detect 15`) that **must total
+exactly 100** before the save enables, with their own change history. The app
+ships §1, §3, §4, §5 and §6 of that screen and simply **has no §2**.
+
+**The finding is not "the weights are wrong". It is that a scope boundary runs
+through the middle of a screen and nothing says so** — and it invalidates a
+**High**-confidence `INVENTORY.md` row (`ScoreBreakdown`) that three earlier
+screens left standing. **[UNSPECIFIED — is severity scoring in scope, and if not
+does §2 render at all?** A 1:1 port and "no severity scoring" cannot both be true
+of this screen. **Owner:** Frontend Lead, with the architect. **Trigger:** before
+`ScoreBreakdown` or `BaseSeverityIndicator` is specified.]**
+
+Two smaller Admin facts that reach other screens:
+
+- **`sources.fpqr:false`.** Create Issue's seven channels are a **vocabulary**;
+  the **available set** is whatever Admin last saved. The app already models the
+  toggle (`sourceOn` seeds `fpqr:false`) but Create Issue does not read it. The
+  pinned seven-source test therefore asserts the vocabulary correctly and the
+  rendered set only accidentally — **it will fail, correctly, the day Create Issue
+  honours the toggle**, and the note in the test says not to re-enable `fpqr` to
+  make it pass.
+- **The app adds an `ADMIN` role gate the prototype has no role for.** The
+  prototype's `USERS` has SE / ASM / PQM and attributes every Admin action to
+  *"M. Singh (Admin)"* — a person outside its own user model. That is a **fourth**
+  role set (Vue's, the BRD's five, the prototype's three, the app's four) and it
+  is the requirements half of **D-4** (`/admin` has no route guard).
+
+### A second approval workflow, contradicting the first, on the same screen
+
+| | Disposition approval | Field change-request approval |
+|---|---|---|
+| Who may approve | **ASM or PQM only** — an SE never sees the bar | **anyone, including an SE** — no gate |
+| Recorded actor | the acting role | **`(role==='SE') ? 'ASM' : role`** |
+| Reject | no comment required | **comment required** |
+| Audit | one entry | **two** — `approved` by the actor, then `applied` by `'N-PQMS'`/`System` |
+
+**When an SE approves a change request, the audit trail records Park Soo-jin
+(ASM).** Fifty lines away the same file refuses to *show* an SE the disposition
+approval bar. **Both cannot be the intended rule**, and an audit entry naming
+someone other than the actor is a compliance question in a system feeding TSBs
+and safety campaigns. The charitable reading — demo scaffolding for a
+single-role prototype — is plausible and does not settle it; distinguishing
+scaffolding from specification is exactly what `00` case 2 says the prototype
+cannot do for us. **[UNSPECIFIED — owner: architect with the domain owner.
+Trigger: before the Investigation tab's change-request surface is specified.]**
+**Not filed as an application defect** — the app implements neither the flow nor
+the substitution.
+
+### Pass 4's final numbers, six screens
+
+| Screen | Implied | Confirmed | Added | Not confirmed | Reshaped |
+|---|---:|---:|---:|---:|---:|
+| Issue List | 15 | 12 (80%) | 3 | 1 | 2 *(one question)* |
+| Issue Workspace | 19 | 16 (84%) | 3 | 0 | 1 |
+| Create Issue | 15 | 14 (93%) | 1 | 3 | 0 |
+| Admin | 15 | 12 (80%) | 3 | 1 | 0 |
+| Notifications | 5 | 4 (80%) | 1 | 0 | 0 |
+| Dashboard | 7 | 4 (57%) | 2 | 1 | 0 |
+| **Total** | **76** | **62 (82%)** | **13** | **6** | **3 → 2 questions** |
+
+- **All thirteen additions are layout-adjacent and named by no requirement.**
+  Thirteen for thirteen — a law of this list, not a tendency.
+- **Both shape disagreements came from lifecycle-owning screens.** Create Issue,
+  Admin, Notifications and Dashboard produced none between them, despite two of
+  them being large. **Size was the wrong predictor; owning a lifecycle contract
+  was the right one** — and Admin, which owns configuration rather than
+  lifecycle, produced no component reshape but **two requirements questions**,
+  which a derivation would have missed.
+- **Five distinct chip vocabularies** surfaced: issue status, severity tier,
+  priority letter (A/B/C), urgency (Critical/High/Medium/**Routine**) and job
+  status. Severity and urgency share three of four labels and are **different
+  scales**. **Merging them is a domain error that looks like a refactor.**
+
+`INVENTORY.md` now carries 82 rows, 63 with a `Confirmed` state. QIR is
+deliberately unread — the app ships no QIR screens.

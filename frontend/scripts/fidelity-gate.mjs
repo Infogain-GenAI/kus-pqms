@@ -48,6 +48,29 @@ const root = join(here, '..')
 const OUT = join(root, '.pixel-baseline')
 const DIFFS = join(OUT, '_diff')
 
+//
+// ⚠️ THIS POINTS AT A SUPERSEDED PROTOTYPE. RECORDED 2026-08-26, NOT YET FIXED.
+// `PQMS_SE.html` is dated 2026-08-11 and is TWO design generations behind the
+// canonical file that 00-core-rules.md now names:
+//     docs/ux-prototype/ism-qir-se-role/ISM + QIR SE Role - P_C.dc.html
+//     md5 8dca6a22f65b5dda7906a77945c12435
+// Measured differences that reach the pixels: the sixth KPI tile reads
+// "Resolved" here and "Closed" there; the KPI tiles are static here and are
+// status filters there; and this file still renders a Relationship column that
+// the V4-V5 generation REMOVED. The app matches the canonical file, so every
+// app-vs-prototype number this script produces is inflated by design changes the
+// app correctly implemented.
+//
+// WHY IT IS NOT REPOINTED IN THE SAME CHANGE: the canonical file is a .dc.html
+// that resolves support.js / lucide-local.js / _ds/ by RELATIVE path, so it
+// cannot be loaded as a file:// URL the way this one can — it needs a static
+// server, which is a different capture shape (see scripts/dc-compare.mjs, which
+// already serves it on :8123). That is a real piece of work, not a path edit.
+//
+// READ THE NUMBERS AS app-vs-PQMS_SE.html UNTIL THIS IS DONE.
+// OWNER: Frontend Lead. TRIGGER: the next time a fidelity number is quoted in a
+// decision — not before, because the numbers are already documented as "NOT a
+// gate".
 // DEFECT 1 REPAIRED — was hardcoded to `file:///D:/workspace-II/...`, a drive that
 // exists on no current machine. Resolved relatively from this file instead, so it
 // works from any checkout.

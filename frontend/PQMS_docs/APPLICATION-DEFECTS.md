@@ -342,6 +342,102 @@ exercising nothing because of it.
 
 **Owner:** Frontend Lead. **Blocked on:** nothing.
 
+---
+
+## D-6 · The result band's denominator changes with scope, so on "My Issues" it reads "7 of 7"
+
+**Severity: user-facing. Unambiguous — a fix is proposed, and it is one branch.**
+
+### What it is
+
+The band above the table renders:
+
+```tsx
+Showing <b>{filtered.length}</b> of {tab === 'my' ? myIssues.length : issues.length} issues
+//                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//                                   IssueListScreen.tsx:395 — the denominator follows the scope
+```
+
+The canonical prototype does not:
+
+```js
+const totalCount = s.issues.length;      // the WHOLE dataset, always
+// template: Showing {{ dResultCount }} of {{ totalCount }} issues
+```
+
+So on **My Issues** with no filters, the app renders **"Showing 7 of 7 issues"**
+where the prototype renders **"Showing 7 of 33 issues"**.
+
+### Why "7 of 7" is worse than it looks
+
+**A ratio whose two halves are always equal carries no information.** The
+sentence exists to tell the user *how much of the data they are currently
+seeing*, and under the app's denominator it can only ever say "all of it" the
+moment no filter is set — including the case where the scope itself is the
+narrowing.
+
+The user's actual question on this screen is **"are these 7 all the issues, or a
+slice?"** The prototype answers it. The app answers a different question the user
+did not ask, using the same words, which is worse than not answering.
+
+### There are TWO "Showing" strings and they have DIFFERENT denominators
+
+This is the mechanism, and it is why the defect is easy to introduce and easy to
+miss:
+
+| Where | Prototype string | Denominator | App |
+|---|---|---|---|
+| **Band, above the table** | `Showing {dResultCount} of {totalCount} issues` | **`s.issues.length`** — the whole dataset | ❌ scope-dependent (`:395`) |
+| **Pagination footer** | `Showing {from}–{to} of {dResultCount} issues` | the **result set** | ✅ correct (`:421`) |
+
+The app gets the footer right. The two strings look interchangeable, they sit
+about twenty lines apart in the same file, and only one of them is wrong.
+
+### Reproduce
+
+1. Open `/issues`. The **My Issues** tab is selected by default.
+2. Band reads **"Showing 7 of 7 issues"**.
+3. Switch to **All Issues** — the band reads "Showing 33 of 33 issues".
+4. The prototype reads **"Showing 7 of 33"** and "Showing 33 of 33" for the same
+   two states.
+
+### Who it affects
+
+Every user on first load, because My Issues is the default tab. It is the first
+sentence on the screen that carries a number, and it is the one a triaging SE
+uses to decide whether to widen scope.
+
+### Proposed fix
+
+Delete the branch. The denominator is the dataset, not the scope:
+
+```tsx
+// IssueListScreen.tsx:395
+- Showing <b>{filtered.length}</b> of {tab === 'my' ? myIssues.length : issues.length} issues
++ Showing <b>{filtered.length}</b> of {issues.length} issues
+```
+
+**Do not "fix" the footer to match.** The two strings are supposed to differ —
+`00`'s source precedence puts copy under the prototype, and the prototype
+deliberately uses the result-set count in the footer, where the range
+`{from}–{to}` is already relative to the result set.
+
+**One caveat that belongs to whoever applies it.** The prototype's numerator is
+`topRows.length` — **grouped top-level rows**, not issues (see
+`screen-descriptions/issue-list.md` §4). The app has no grouping today, so
+`filtered.length` is currently equivalent. **If grouping is implemented, the
+numerator changes with it and this line must be revisited** — that is tracked as
+the escalated grouping question in
+`component-specs/RECONCILIATION-issue-list.md`, not here.
+
+### Relationship to D-5
+
+**Distinct, and both are about the user's sense of position in a result set.**
+D-5 is *which* rows you are shown after the results change; D-6 is *how many
+exist*. Neither fix touches the other's code path.
+
+**Owner:** Frontend Lead. **Blocked on:** nothing.
+
 ## Summary
 
 | # | Defect | Kind | Owner | Fix proposed? |
@@ -351,9 +447,14 @@ exercising nothing because of it.
 | **D-3** | `approveProposal` no-ops silently | domain question | architect + domain | No |
 | **D-4** | `/admin` has no route guard | blocked on auth model | architect | No — prerequisite of the auth work |
 | **D-5** | list does not reset to page 1 on sort/search/clear | **user-facing bug** | Frontend Lead | **Yes** — three call sites already do it |
+| **D-6** | result band reads "7 of 7" — denominator follows scope | **user-facing bug** | Frontend Lead | **Yes** — delete one ternary |
 
-**D-1 and D-5 are the two to action.** Both are unambiguous, both affect users,
-and D-5 is blocked on nothing at all.
+**D-1, D-5 and D-6 are the three to action.** All three are unambiguous and
+affect users; D-5 and D-6 are blocked on nothing at all, and D-6 is a one-line
+change.
+
+**D-6 is the cheapest defect in this document and the most visible** — it is the
+first number on the default view of the default screen.
 
 **D-1**  It is unambiguous, it affects users, and the only
 open question is a small one that the domain owner can answer in a sentence.

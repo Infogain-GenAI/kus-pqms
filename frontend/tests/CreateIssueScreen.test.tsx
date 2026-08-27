@@ -82,8 +82,31 @@ describe('the classification "Request New" affordance', () => {
 
 describe('the issue-source chip row', () => {
   it('renders the prototype\'s source vocabulary', () => {
-    // These are the seven sources the prototype shows. Pinned as a set because
-    // adding or renaming one is a domain change, not a styling change.
+    // These are the seven sources the prototype shows.
+    //
+    // ⚠️ WHAT THIS PINS, AND WHAT IT DOES NOT — CORRECTED 2026-08-26.
+    // It was written as though seven were a FIXED vocabulary. Reading the canonical
+    // prototype source shows it is not: the Admin screen carries
+    //     sources: { warranty:true, …, fpqr:FALSE, … }
+    // and that section's own subtitle is "Control which channels are available in
+    // the Issue Entry source dropdown." The app already models this — AdminScreen's
+    // `sourceOn` seeds `fpqr: false`, matching the prototype.
+    //
+    // So there are TWO things here and only one is pinned:
+    //   - the VOCABULARY — the seven keys that may exist. A domain fact. Adding or
+    //     renaming one is a domain change. THIS is what the test pins, correctly.
+    //   - the AVAILABLE SET — which of the seven the dropdown offers today. ADMIN
+    //     CONFIGURATION, not a domain fact, and it can legitimately be fewer.
+    //
+    // This test asserts all seven render because Create Issue does not yet read the
+    // admin configuration. WHEN IT DOES, THIS TEST WILL FAIL — with `fpqr` disabled
+    // in the seed, six will render. That failure is CORRECT and the fix is to pin
+    // the vocabulary against the source map and the rendered set against the config,
+    // NOT to re-enable fpqr to make the test pass.
+    //
+    // (`INVENTORY.md`'s `SourceEvidencePanel` row says EIGHT variants against BRD
+    // Appendix C. Seven versus eight is unresolved — see
+    // PQMS_docs/component-specs/RECONCILIATION-workspace-and-create.md.)
     renderCreate()
     for (const src of ['Warranty', 'Weibull', 'Comeback', 'Techline', 'FPQR', 'EWS', 'GQIS']) {
       expect(btn(new RegExp(`^${src}$`, 'i'))).toBeTruthy()

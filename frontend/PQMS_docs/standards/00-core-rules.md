@@ -1,6 +1,6 @@
 # 00 — Core Rules
 **Tier:** 0
-**Status:** APPROVED — REVISION 13
+**Status:** APPROVED — REVISION 15
 
 ## Purpose
 Non-negotiable rules that apply to all React code generation in this
@@ -373,6 +373,190 @@ for something it does not govern. So the first question on any apparent
 conflict is not "which wins" but "which of these actually governs this
 kind of thing". That question resolves most of them, and the five cases
 below are what it looks like when applied.
+
+### 0. WHICH FILE IS THE PROTOTYPE — settled 2026-08-26
+
+The bullet above says the prototype governs visual structure and copy. It
+did not say **which file**, and it deferred to 17's Prototype register,
+which names `ISM SE Role.html` in a `requirements/` folder that no longer
+exists. That gap produced measurable damage: two false findings in the
+first screen reconciliation, and four fidelity scripts pointed at a
+superseded artefact. It is closed here, in Tier 0, because every screen
+description depends on it.
+
+#### The canonical prototype
+
+> **`docs/ux-prototype/ism-qir-se-role/ISM + QIR SE Role - P_C.dc.html`**
+> — 1,837,340 bytes, md5 `8dca6a22f65b5dda7906a77945c12435`.
+> Exported from Claude Design project **Kia N-PQMS V4-V5**
+> (`6a717b29-4059-4d43-b115-34f7a7936c8e`), synced 2026-08-24.
+> It ships with its runtime in the same folder — `support.js`,
+> `lucide-local.js`, `_ds/` — and resolves them by relative path, so it
+> renders only from that directory.
+
+**What makes it canonical is content lineage, not its date.** This file
+carries `PRI_MATRIX`, `_resetPageState`, `_priorityInherited` and the
+`caretStyle()` helper; **no other candidate in this repository contains any
+of them.** The delta against the previous sync was split into template and
+logic halves and diffed hunk by hunk in
+`issues/ism-v4-v5-gap-analysis.md` — +6,243 bytes of template across 28
+hunks, +14,172 of logic across 34 — so the relationship between the two is
+established exhaustively rather than asserted.
+
+**And the app has already implemented three of those items** — the Issue
+Priority tab (`apps/portal/src/features/issues/PriorityTab.tsx`,
+`data/priorityMatrix.ts`), the QIR gate on saved priority, and the header
+priority chip. A screen description written from any other candidate would
+describe an application that no longer exists.
+
+**This deliberately does not use modification dates.** 17 records that an
+earlier prototype-identity analysis reached a wrong conclusion by ranking
+candidates on mtime, and that a `git pull` rewrites mtimes wholesale. The
+determination above rests on markers present in one file and absent from
+all others, on a hunk-level diff, and on which features the application
+already ships. Every one of those survives a `git pull`.
+
+#### Superseded — named, so nobody opens one again
+
+| File | What it is | Why it is not canonical |
+|---|---|---|
+| `_bmad-output/planning-artifacts/ux/design-source/exports/kia-npqms-v4-v5/ISM + QIR SE Role - P-C.dc.html` | The **previous sync** of the same design file (2026-08-22, 1,816,882 B, md5 `232c8800…`) | Superseded by the canonical; delta fully enumerated in `issues/ism-v4-v5-gap-analysis.md`. No Priority matrix. **Still the file `dc-compare.mjs`, `extract-dc-data.mjs` and `extract-dc-source.mjs` read** |
+| `_bmad-output/planning-artifacts/ux/design-source/prototypes/ISM SE+QIR Role (latest, V4-V5).dc.html` | **Byte-identical duplicate** of the row above (same md5) | Not a distinct candidate. Its filename says "latest" and it is not — the word is misleading, which is why it is named here |
+| `docs/ux-prototype/ism-qir-se-role/exports/ISM-QIR-SE-Role-PC-standalone.html` | Self-contained flattening (6,839,504 B, md5 `b6556c6b…`) | **Flattened from the 2026-08-22 generation, not the canonical** — carries no `PRI_MATRIX`. Convenient to open, wrong to read |
+| `docs/ux-prototype/PQMS.html/PQMS.html` | **Byte-identical duplicate** of the standalone above (same md5) | Not a distinct candidate. A directory named `PQMS.html` containing a file named `PQMS.html` is an unpacking artefact |
+| `_bmad-output/planning-artifacts/ux/design-source/exports/pqms-bundled-page-2026-08-16/PQMS_SE.html` | Flattened bundled page, **2026-08-11** — the oldest ISM candidate, in a folder whose name says 08-16 | Two generations behind. **This is the file that produced the false findings** — see the table below. **Read by `fidelity-gate.mjs`, `measure-prototype-delta.mjs` and `fidelity-capture.mjs`** |
+| `…/pqms-bundled-page-2026-08-16/PQMS_SEM.html` | The SEM-role sibling of the row above | Same generation, different role. Not the SE prototype |
+| `…/exports/kia-npqms-v2-v3/ISM SE Role.dc.html` and its byte-identical twin `…/prototypes/ISM SE Role (ISM-only, V2-V3).dc.html` | The **V2–V3** design generation | Superseded by V4–V5 wholesale. No `MC_MASTER`, no relationship vocabulary |
+| `…/kia-npqms-v4-v5/_boot-admin.dc.html` | **Not a prototype.** A side effect written by `dc-compare.mjs`, committed in `fa25e69` | Tracked by accident. Untracking it is an open placeholder in 18 |
+| `…/Admin Module Prototype.dc.html`, `ISM ASM Role.dc.html`, `ISM SEM Role - P_C.dc.html`, `SingleDatePicker.dc.html`, `ISM-print-*.dc.html` | Other modules and roles | **Siblings, not successors** — 17's rule. None is the SE prototype |
+
+#### What reading the wrong file already cost
+
+Both findings in the first screen reconciliation that were attributed to a
+BRD/prototype disagreement came from `PQMS_SE.html`, and both are settled
+by reading the canonical source:
+
+| Question | `PQMS_SE.html` (2026-08-11) | **Canonical (2026-08-24)** | The app today |
+|---|---|---|---|
+| Sixth KPI tile | `{key:'resolved', label:'Resolved', accent:'#1F8A5B'}` | `{key:'closed', label:'Closed', accent:'#344049'}` | **Closed** — matches canonical |
+| KPI tiles as filters | **absent** — tiles are static, no `_kpiSel` | `_kpiSel` selects a single status; the tile takes a selection border | clickable — matches canonical |
+| Relationship column | Default-visible column; the cell renders `Standalone` with tooltip *"Standalone issue. Click to view history."* (`relLabel`/`relTooltip`/`relStandalone`/`relClickable`) | **The column does not exist.** No header, no cell, and `colGroupDefault` omits it from the Columns chooser. `visibleCols.relationship:true` survives as **dead state** | no Relationship column |
+| QIR / Top Issue KPI icons | `triangle-alert` / `flame` | `workflow` / `focus` | still `triangle-alert` / `flame` — a known open gap |
+
+The Relationship row is the important one, and it is worth stating
+precisely because the first reading got it wrong twice. The column is not
+hidden-by-default and it is not behind the Columns chooser: **the V4–V5
+generation removed it.** `colRelationship` appears three times in
+`PQMS_SE.html` — header, cell, binding, exactly like every other column —
+and **once** in the canonical, the binding alone.
+
+#### Rules that follow
+
+1. **Every screen description and every reconciliation cites the canonical
+   file by path and md5.** A description that names a different file is
+   evidence about a superseded design, and is withdrawn rather than
+   corrected.
+2. **Read the source, not a render, for anything structural.** The live
+   `.dc.html` restores column visibility from `sessionStorage`
+   (`npqms.issueCols.v3`), so what a browser shows depends on that
+   browser's history. `DEFAULT_COLS()` in the source does not.
+3. **The fidelity scripts are pointed at a superseded artefact, so their
+   app-vs-prototype numbers are not evidence about the current design.**
+   Repointing them is tracked in 18; until it happens, quote those numbers
+   only as app-vs-`PQMS_SE.html`.
+4. **A new sync does not silently become canonical.** It supersedes this
+   entry only once its delta is diffed the way `ism-v4-v5-gap-analysis.md`
+   diffs this one, and this section is updated with the new md5.
+
+### 0b. A STRUCTURAL QUESTION IS ANSWERED FROM THE SOURCE, NEVER FROM A RENDER
+
+The rule above says *which file*. This one says *how to read it*, and it is the
+half that was missing.
+
+> **A structural question is answered from the prototype's source. Never from a
+> render, a screenshot, or a running copy.**
+
+**Structural** means anything that is *specified* rather than *displayed*: which
+columns exist, which statuses exist, what a default is, what a validation rule
+requires, which regions are conditional and on what. A render answers *"what did
+this browser show me"*. A specification needs *"what does the design specify"*.
+Those are different questions, and the gap between them is not small.
+
+#### The worked example, because this is the kind nobody predicts
+
+`FIDELITY-REPORT.md` round 4 recorded, as a resolved finding, that the Issue
+List's **Relationship column is hidden by default and offered through the Columns
+chooser**. That statement is false in both halves:
+
+- `colGroupDefault` — the chooser's own list — **omits `relationship` entirely**.
+  It is not offered.
+- The column has **no header and no cell** in the template. `colRelationship`
+  appears three times in the superseded export (header, cell, binding) and
+  **once** in the canonical file — the binding alone.
+
+**The column was removed. It is not hidden.**
+
+**Where the false claim came from.** It came from looking at a rendered page. And
+the render is not deterministic:
+
+```js
+_loadCols(){ try{ const raw = sessionStorage.getItem('npqms.issueCols.v3');
+                  if(raw){ … this.setState({ visibleCols:{ …DEFAULT_COLS(), …JSON.parse(raw) } }) } }
+             catch(e){} }
+```
+
+**Column visibility is restored from `sessionStorage`.** What the prototype shows
+depends on what that browser did earlier. `DEFAULT_COLS()` in the source does
+not.
+
+#### Why this failure mode is worse than being wrong
+
+**A render-derived finding is reproducible for the person who made it and false
+for everyone else.** An ordinary mistake fails the moment somebody checks it.
+This one *passes* when its author re-checks — same browser, same session storage,
+same wrong picture — and fails silently for every reader who cannot reproduce the
+state. It survives review by being locally true.
+
+**And it did survive review.** This is the **second** time a render-derived claim
+has been recorded as fact in this project, and the **first time one survived a
+correction pass**: the first screen description read a superseded file, was
+corrected — and the correction *itself* was a render-derived claim about "the
+live file", which then had to be corrected a second time. Two of the three
+findings in the first reconciliation were artefacts, and the fix for one of them
+was a third artefact.
+
+#### What this rule requires in practice
+
+1. **Cite the symbol, not the screenshot.** A structural claim names the
+   construct that carries it — `DEFAULT_COLS()`, `STATUS`, `kpiDefs`,
+   `validateForm()`, `tabDefs`. A claim that cannot name one is an observation
+   about a render and is recorded as such.
+2. **Counting occurrences is evidence.** *"`colRelationship` occurs 3× in the
+   superseded file and 1× in the canonical, where every other column occurs 3×"*
+   is checkable by anyone, on any machine, forever. *"I opened it and the column
+   was not there"* is not.
+3. **Suspect any browser-persisted state.** `sessionStorage`, `localStorage`,
+   cookies and URL state all make a render depend on history. This prototype uses
+   `npqms.issueCols.v3` for columns and `npqms.issueFilters.v5` for filters —
+   **both** silently reshape what a reader sees.
+4. **A render still answers rendering questions.** Colour, spacing, type,
+   alignment, what something *looks* like — those are what pixels are for, and
+   the fidelity harness exists for exactly them. The rule is a boundary, not a
+   ban.
+
+#### What a render could not have found, in one pass
+
+Recorded as the positive case, because the rule reads as pure caution otherwise.
+Reading the source produced, in a single pass:
+
+- **The Issue List is a grouped table** — one row per group, anchored on the
+  Parent, filters matching at group level. Stated in a source comment; present in
+  no pixel.
+- **The prototype is not single-role** — three role-dependent subtitles and a
+  seventh, role-gated tab, all **unreachable in the rendered file**, because the
+  prototype ships no role switch.
+- **The status vocabulary omits two values its own workflow writes**, which the
+  render actively conceals by falling back to "Open".
 
 ### 1. Prototype component names are labels, not code names
 The prototype was produced in Claude Design, and its bundle carries a
