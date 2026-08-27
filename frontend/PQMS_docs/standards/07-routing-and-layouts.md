@@ -127,11 +127,59 @@ independently. Renders the same app header and the same
   viewport tall.
 - **`<main>` scrolls internally.** The window itself does not scroll.
 
-**This is a real UI requirement, not a workaround.** Issue Entry is a
-long multi-section form with a persistent action row; that row has to
-stay visible while the form body scrolls. Stating it as a requirement
-matters because the temptation is to treat it as a variant of
-`DefaultLayout` and add a prop.
+**This is a real UI requirement, not a workaround.** A screen that pins
+its own chrome while a region inside it scrolls has to have somewhere for
+that scroll container to live. Stating it as a requirement matters
+because the temptation is to treat it as a variant of `DefaultLayout` and
+add a prop.
+
+### Which screen gets it — RESOLVED, and this file contradicted itself
+**Two passages of this file named two different screens, and neither was
+right for the N-PQMS ISM port.** Recorded rather than silently corrected,
+because both readings were acted on before the conflict was noticed:
+
+- This section previously named **Issue Entry** ("a long multi-section
+  form with a persistent action row"), and the route tree below attaches
+  `FixedHeightLayout` to `/issue-management/new` accordingly.
+- "Layouts: how many, and the registry" below names the **issue list**
+  ("the issue list is the screen that needs it", "Use it for the issue
+  list").
+
+**Verified against the port on 2026-08-27: neither screen has the
+property either passage describes.** `CreateIssueScreen.tsx` contains no
+`sticky`, no `position`, no `100vh` and no `overflow` rule — it has no
+persistent action row. `IssueListScreen.tsx`'s only internal scroll is
+its filter drawer, not the table; the list is pure document scroll with
+no sticky header. So this file justified a layout by pointing at
+behaviour that does not exist in the application it governs.
+
+**The screen that actually needs it is the Issue Workspace**
+(`/issues/:id`), per a requirement from Yogesh, 2026-08-27:
+
+> "Navigating to a Workspace section resets scroll to the top of the
+> scrolling region. Only the workspace body scrolls; the page itself
+> never does."
+
+That is a genuine viewport-lock: the Workspace shell — breadcrumb, header
+card, tab strip, approval banner — stays pinned while the section content
+scrolls, which is exactly the "pins its own chrome, scrolls a region
+inside it" shape. It also depends on the section child routes this file
+specifies: **the scrolling region is the section `<Outlet />`**, so the
+layout cannot be attached before the shell/section split exists — there
+would be nothing to own the scroll.
+
+**Implementation note that belongs with the requirement.** React Router's
+`<ScrollRestoration />` operates on the **window**, so it does nothing for
+a scroll container inside `<main>`. The scroll-reset-on-section-change
+must be a ref on the scrolling region plus an effect keyed on the section
+pathname. Verify it by scrolling a long section and switching tabs, not
+by assuming the component did it.
+
+The issue list and Issue Entry both stay on `DefaultLayout` until one of
+them grows a real scroll region. Per
+`decisions/0005-no-page-host-layer-in-this-application.md`'s reasoning
+applied to layouts: a structure signalling a property the code does not
+have is worse than its absence.
 
 **Do not do that — keep it a separate layout.** Provenance for why the
 warning is this emphatic: in `kus-pqms`, this behaviour was first
@@ -699,6 +747,17 @@ focus behaviour, sticky positioning and `scrollIntoView` everywhere at once.
 
 **Decide this before the issue list is built**, because the issue list is the
 screen that needs it.
+
+> **⚠️ SUPERSEDED — the issue list is NOT the screen that needs it.** Verified
+> against the port on 2026-08-27: `IssueListScreen.tsx` has no sticky header and
+> no internal scroll region (its only `overflow-y` is the filter drawer), so the
+> premise above is false for this application. The screen that needs
+> `FixedHeightLayout` is the **Issue Workspace**. See "Which screen gets it —
+> RESOLVED, and this file contradicted itself" under "The layout components"
+> above, which also records that this passage and that one named two different
+> screens. The paragraphs below about scroll-container relocation remain correct
+> and are why this is a separate layout rather than a prop — only the choice of
+> screen was wrong.
 
 **RESOLVED — a fourth layout, not a variant.**
 

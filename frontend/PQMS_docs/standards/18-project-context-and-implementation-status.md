@@ -2243,9 +2243,29 @@ see the approval affordance**. Now pinned: an SE sees "Change status" and does
 **not** see Approve/Reject; override roles do; the affordance disables once a
 proposal exists.
 
-Also pinned: **tab state is local, not routed** — 07 records this as a deliberate
-divergence, so if the tabs ever become routes the test says what changed rather
-than the change being invisible.
+Also pinned: **the five Workspace sections are child routes**, and a section is
+deep-linkable — which is BRD `NAV-01`'s actual requirement and was unreachable at
+any URL before the routing pass of 2026-08-27. The **Priority** tab remains local
+component state and deliberately does not change the URL, pending the PQM ruling
+on Scoring's shape recorded elsewhere in this file; the test pins that asymmetry
+in both directions, so if Priority ever silently becomes a route it fails and
+says so.
+
+**This corrects a false claim that stood here, and the correction is worth
+recording rather than quietly overwriting.** The previous text read: "tab state
+is local, not routed — **07 records this as a deliberate divergence**". **07
+records no such thing.** Its Divergence table enumerates eight rows, every one a
+path-naming, QIR/TSB-scope or layout matter and none about tab state; and its
+"Workspace sections are a route segment, not component state" section requires
+the exact opposite, unqualified. The claim was unsupported when written, and the
+same false citation had propagated into `tests/IssueWorkspaceScreen.test.tsx`'s
+pinned comment, where it was enforcing a "divergence" no standard had ever
+granted. Both are now fixed.
+
+The lesson generalises past this instance: **a citation naming a file and a
+concept is not evidence — only the cited file's current text is.** This one
+survived multiple readings because it was plausible, specific, and pointed at a
+real document that really does discuss divergences.
 
 **CreateIssueScreen (7 tests)** — the other draft/commit form. Typing does not
 touch the store; Clear discards; model code gates the dependent selects; the

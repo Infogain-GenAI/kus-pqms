@@ -2,7 +2,7 @@
 //
 // WHY ZERO AND NOT A TOLERANCE
 // Measured on this project: same machine, same browser, back-to-back capture is
-// **0.0000% different across all nine screens — byte-identical**. So there is no
+// **0.0000% different across all screens — byte-identical**. So there is no
 // noise floor to clear, and **any non-zero diff is signal**.
 //
 // A tolerance was proposed and rejected on evidence. Cross-machine drift against
@@ -11,6 +11,22 @@
 // to absorb the first swallows the second — but that drift is an artefact of
 // BASELINE PROVENANCE, not of the method. Fix the provenance (pin the browser,
 // regenerate locally) and the correct threshold is zero.
+//
+// ONE DOCUMENTED EXCEPTION — READ THIS IF A CAPTURE IS FAILING BY A FEW PIXELS.
+// The zero threshold stands and everything above remains true. There is exactly
+// one known, accepted, non-zero behaviour in this application: a few pixels on
+// the ROUNDED CARD CORNERS at the Issue Workspace's pinned/scroll boundary,
+// caused by a sub-pixel layout origin. It is explained, measured and justified in
+// the scroll-region comment of
+// apps/portal/src/features/issues/IssueWorkspaceScreen.tsx — go there rather than
+// re-deriving it, and do not restate the mechanism here.
+//
+// The discriminator, which is what you need mid-failure: a few pixels ON CARD
+// CORNERS AT THAT BOUNDARY is the known artefact. Anything larger, or anywhere
+// else on any screen, is a regression — treat it as signal exactly as above.
+// This is not a tolerance and must not become one: nothing is subtracted, no
+// threshold is relaxed, and the gate still exits non-zero. It is a named
+// exception with an address, not a noise floor.
 //
 // THE CONDITION THIS RESTS ON, and it is not optional:
 //   - `playwright` is pinned EXACTLY in package.json (no caret). The version
@@ -88,14 +104,32 @@ const VIEWPORT = { width: 1280, height: 900 }
 const MODE = process.argv.includes('--write') ? 'write' : 'check'
 const WITH_PROTO = process.argv.includes('--proto')
 
+// THE FOUR WORKSPACE SECTIONS ARE NOW REACHED BY URL, NOT BY CLICKING A TAB.
+// Changed 2026-08-27 with the Workspace section split, and it was FORCED rather
+// than preferred: the sections became child routes, so the tab strip is now five
+// `NavLink`s (`<a>` elements, `aria-current`) instead of `role="tab"` buttons. The
+// old `page.getByRole('tab', { name })` selectors below matched nothing after that
+// change and every one of these four captures would have failed.
+//
+// Navigating directly is also the better capture: it exercises the same
+// deep-linkable URL a user would paste, removes a click and its implicit wait from
+// the capture path, and cannot silently capture the wrong section if a label moves.
+//
+// SCREEN COUNT IS UNCHANGED AT TEN, and the `name` keys are unchanged, so every
+// existing baseline file still corresponds to the same screen. The `tab:` support
+// in the capture loop below is deliberately LEFT IN PLACE rather than deleted —
+// nothing else uses it today, but removing a working capability while changing
+// call sites is how a harness quietly loses reach.
 const APP_SCREENS = [
   { name: 'app-01-dashboard', go: '/dashboard' },
   { name: 'app-02-issues', go: '/issues' },
+  // `/issues/:id` itself redirects to `/detail`, so this row also covers the
+  // index redirect. Left as the bare id deliberately, to keep that path tested.
   { name: 'app-03-ws-detail', go: '/issues/HV-260101' },
-  { name: 'app-04-ws-investigation', go: '/issues/HV-260101', tab: 'Investigation' },
-  { name: 'app-05-ws-resolution', go: '/issues/HV-260101', tab: 'Resolution' },
-  { name: 'app-06-ws-communication', go: '/issues/HV-260101', tab: 'Communication' },
-  { name: 'app-07-ws-history', go: '/issues/HV-260101', tab: 'History' },
+  { name: 'app-04-ws-investigation', go: '/issues/HV-260101/investigation' },
+  { name: 'app-05-ws-resolution', go: '/issues/HV-260101/resolution' },
+  { name: 'app-06-ws-communication', go: '/issues/HV-260101/communication' },
+  { name: 'app-07-ws-history', go: '/issues/HV-260101/history' },
   { name: 'app-08-create', go: '/issues/new' },
   { name: 'app-09-admin', go: '/admin' },
   { name: 'app-10-notifications', go: '/notifications' },

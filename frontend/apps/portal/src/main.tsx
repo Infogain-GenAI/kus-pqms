@@ -14,7 +14,6 @@ import './styles/global.css'
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
@@ -22,14 +21,21 @@ import { StoreProvider } from '@/data/store'
 const el = document.getElementById('root')
 if (!el) throw new Error('#root not found in index.html')
 
+// NO <BrowserRouter> HERE ANY MORE. App.tsx is now a data router
+// (`createBrowserRouter` + `RouterProvider`), which supplies its own history —
+// wrapping it in a BrowserRouter would nest two routers.
+//
+// THE PROVIDERS STAY OUTSIDE THE ROUTER, and that is safe rather than incidental:
+// neither RoleProvider nor StoreProvider imports anything from react-router
+// (verified), so neither needs router context. Keeping them above the router also
+// means role and store state survives every navigation, which is the behaviour
+// the app already had.
 createRoot(el).render(
   <StrictMode>
-    <BrowserRouter>
-      <RoleProvider>
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      </RoleProvider>
-    </BrowserRouter>
+    <RoleProvider>
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    </RoleProvider>
   </StrictMode>,
 )
