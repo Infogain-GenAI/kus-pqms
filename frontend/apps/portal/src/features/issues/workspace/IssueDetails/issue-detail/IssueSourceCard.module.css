@@ -1,0 +1,102 @@
+/*
+ * Ported from `IssueSourceCard.vue`'s scoped styles.
+ *
+ * The read view is a list of per-channel cards, each with a collapsible header
+ * carrying a 28x28 channel icon badge. The React card this replaces had one
+ * collapsible header for the single source and no icon badge at all.
+ *
+ * Values: the 11px card radius has no token (--radius-xl at 12px is nearest and
+ * is what the Vue file settled on, so the same approximation is kept here rather
+ * than a third value); the header's #FAFBFC IS an exact match for --neutral-25;
+ * the 28px badge has no token; the accent tint pair matches --accent-50 /
+ * --accent-600 exactly.
+ */
+
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+}
+
+/* Retained from the card this replaces: when an issue has no captured evidence
+   at all, the primary channel is still named, with the call to action inline. */
+.emptyRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.emptyCta {
+  color: var(--text-secondary);
+  font-weight: var(--fw-semibold);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.channel {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.channelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: var(--neutral-25);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.channelNameGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.channelIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-md);
+  background: var(--accent-50);
+  color: var(--accent-600);
+}
+
+.channelName {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+}
+
+.chevron {
+  color: var(--text-muted);
+  flex: none;
+}
+
+.channelBody {
+  padding: var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+/* A channel whose fields are all still blank would otherwise render an empty
+   panel that reads as a rendering fault rather than as "nothing captured yet". */
+.channelEmpty {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+}

@@ -1,0 +1,230 @@
+import { useMemo, useRef, useState } from 'react'
+import { Check, CircleX } from 'lucide-react'
+import { Button, Icon, Input, Textarea } from '@pqms/ui-library'
+import { ULabel } from '@/app/chrome'
+import { useStore } from '@/data/store'
+import type { SourceChannel } from '@/data/sourceChannels'
+import type { Issue } from '@/data/types'
+import { LinkIssuesSection } from '../../../LinkIssuesSection'
+import { ModelCodeYearPicker, type ModelCodeSelection } from '../../../ModelCodeYearPicker'
+import { SystemClassificationPicker, type ClassificationValue } from '../../../SystemClassificationPicker'
+import { EditSourcesForm, type EditSourcesHandle } from '../issue-detail/EditSourcesForm'
+import styles from './IssueEditForm.module.css'
+
+/**
+ * Full-page Edit-issue mode.
+ *
+ * Ported from `IssueEditForm.vue`.
+ *
+ * IT IS NOT A MODAL, AND THAT IS THE POINT. It replaces the section body and the
+ * shell suppresses the right rail while it is mounted. The three-field modal
+ * this supersedes could hold title, description and DTC and nothing more; this
+ * form is five sections and would be unusable in a dialog — which is exactly why
+ * the Vue implementation moved it out of one.
+ *
+ * REUSES, RATHER THAN FORKS, THE PICKERS. `ModelCodeYearPicker` and
+ * `LinkIssuesSection` already exist here and their own doc comments say they are
+ * shared with "Issue Detail's in-tab edit mode" — this is that consumer finally
+ * arriving. The Vue file records the same lesson learned the hard way: its
+ * sections were once hand-rolled markup that drifted from Issue Entry's, and two
+ * of its panels were suppressed on the false assumption that this form had its
+ * own working versions. It did not, and the clicks silently did nothing.
+ *
+ * `EditSourcesForm` is the same component the section-scoped "Add / edit sources"
+ * flow mounts; only the chrome around it differs. It must be validated here too,
+ * or a required source field left blank in this form would save silently.
+ *
+ * DIRTY TRACKING gates Save: an unchanged form cannot be submitted, so the
+ * button state answers "is there anything to save" rather than "is the form
+ * valid", which is the question a user actually has at that moment.
+ */
+export function IssueEditForm({
+  issue,
+  channels,
+  disabled = false,
+  onCancel,
+  onSave,
+}: {
+  issue: Issue
+  channels: SourceChannel[]
+  disabled?: boolean
+  onCancel: () => void
+  onSave: (payload: {
+    title: string
+    description: string
+    dtcCodes: string[]
+    modelCodes: string[]
+    modelYear: number
+    system?: string
+    subSystem?: string
+    component?: string
+    symptom?: string
+    channels: SourceChannel[]
+  }) => void
+}) {
+  const store = useStore()
+  const sourcesRef = useRef<EditSourcesHandle>(null)
+
+  // ── 1 · Vehicle information ───────────────────────────────────────────────
+  const initialVehicle: ModelCodeSelection = useMemo(() => {
+    const codes = issue.modelCodes?.length ? issue.modelCodes : [issue.modelCode]
+    return { codes, yearsByCode: Object.fromEntries(codes.map((c) => [c, [String(issue.modelYear)]])) }
+  }, [issue])
+  const [vehicle, setVehicle] = useState<ModelCodeSelection>(initialVehicle)
+
+  /** Every selected code must keep at least one year. Gates Save. */
+  const codesWithNoYear = vehicle.codes.filter((c) => (vehicle.yearsByCode[c] ?? []).length === 0)
+
+  // ── 2 · System classification ─────────────────────────────────────────────
+  // Labels, not ids — that is what `Issue` stores, and the picker resolves the
+  // cascade internally. See SystemClassificationPicker for why.
+  const initialClass: ClassificationValue = useMemo(
+    () => ({
+      system: issue.system,
+      subSystem: issue.subSystem,
+      component: issue.component,
+      symptom: issue.symptom,
+    }),
+    [issue],
+  )
+  const [classification, setClassification] = useState<ClassificationValue>(initialClass)
+
+  // ── 3 · Related issues ────────────────────────────────────────────────────
+  // The Vue form gates unlinking behind a justification prompt. That is not
+  // reproduced: this app has no justification capture anywhere, and inventing
+  // one here would put a half-specified version in front of the real decision.
+  // Linking still applies immediately through the store, as the shell's Manage
+  // Related Issues modal already does.
+  const linked = issue.linkedIssueIds ?? []
+
+  // ── 4 · Issue information ─────────────────────────────────────────────────
+  const [title, setTitle] = useState(issue.title)
+  const [description, setDescription] = useState(issue.description)
+  const [dtc, setDtc] = useState((issue.dtcCodes ?? []).join(', '))
+
+  // ── Dirty tracking ────────────────────────────────────────────────────────
+  const dirty =
+    title !== issue.title ||
+    description !== issue.description ||
+    dtc !== (issue.dtcCodes ?? []).join(', ') ||
+    JSON.stringify(vehicle) !== JSON.stringify(initialVehicle) ||
+    JSON.stringify(classification) !== JSON.stringify(initialClass)
+
+  const titleValid = title.trim().length >= 5
+  const canSave = !disabled && dirty && titleValid && codesWithNoYear.length === 0
+
+  const submit = () => {
+    if (!canSave) return
+    // Same gate the section-scoped save applies — see EditSourcesForm.
+    if (sourcesRef.current?.validate() === false) return
+    const years = vehicle.codes.flatMap((c) => vehicle.yearsByCode[c] ?? []).map(Number).filter(Number.isFinite)
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : [],
+      modelCodes: vehicle.codes,
+      modelYear: years.length ? Math.max(...years) : issue.modelYear,
+      system: classification.system,
+      subSystem: classification.subSystem,
+      component: classification.component,
+      symptom: classification.symptom,
+      channels: sourcesRef.current?.getDraft() ?? channels,
+    })
+  }
+
+  return (
+    <section className={styles.form} data-testid="issue-edit-form">
+      <header className={styles.header}>
+        <h2 className={styles.title}>Edit Issue</h2>
+        <div className={styles.actions}>
+          <Button variant="secondary" iconLeft={<Icon icon={CircleX} size={16} />} onClick={onCancel} data-testid="edit-form-cancel">
+            Cancel
+          </Button>
+          <Button disabled={!canSave} iconLeft={<Icon icon={Check} size={16} />} onClick={submit} data-testid="edit-form-save">
+            Save changes
+          </Button>
+        </div>
+      </header>
+
+      {/* 1 — Vehicle information */}
+      <div className={styles.section} data-section="vehicle-information">
+        <h3 className={styles.sectionTitle}>Vehicle Information</h3>
+        <ModelCodeYearPicker value={vehicle} onChange={setVehicle} disabled={disabled} />
+        {codesWithNoYear.length > 0 && (
+          <p className={styles.error} role="alert">
+            Select at least one model year for {codesWithNoYear.join(', ')}.
+          </p>
+        )}
+      </div>
+
+      {/* 2 — System classification. System stays governance-locked, matching the
+          Vue form's `system-field-read-only`: changing an issue's system is a
+          request, not an edit, and that request flow does not exist here yet —
+          so the link is rendered disabled rather than wired to nothing. */}
+      <div className={styles.section} data-section="system-classification">
+        <h3 className={styles.sectionTitle}>System Classification</h3>
+        <SystemClassificationPicker
+          value={classification}
+          onChange={setClassification}
+          modelCodes={vehicle.codes}
+          disabled={disabled}
+          systemReadOnly
+        />
+      </div>
+
+      {/* 3 — Same existing issues */}
+      <div className={styles.section} data-section="same-existing-issues">
+        <h3 className={styles.sectionTitle}>Same existing issues</h3>
+        <LinkIssuesSection
+          linkedIds={linked}
+          excludeId={issue.id}
+          onLink={(id) => store.linkIssue(issue.id, id, { name: 'You', role: 'SE' })}
+          onUnlink={(id) => store.unlinkIssue(issue.id, id, { name: 'You', role: 'SE' })}
+        />
+      </div>
+
+      {/* 4 — Issue information */}
+      <div className={styles.section} data-section="issue-information">
+        <h3 className={styles.sectionTitle}>Issue Information</h3>
+        <div>
+          <ULabel>Issue title *</ULabel>
+          <Input
+            value={title}
+            disabled={disabled}
+            placeholder="e.g. EV6 — HV battery rapid SOC drop under cold soak"
+            error={title.length > 0 && !titleValid ? 'Title must be at least 5 characters.' : undefined}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <div>
+          <ULabel>Description *</ULabel>
+          <Textarea
+            rows={4}
+            value={description}
+            disabled={disabled}
+            placeholder="Symptoms, reproduction steps, environmental conditions, frequency, and any safety implications…"
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        <div>
+          <ULabel>DTC / trouble codes</ULabel>
+          <Input
+            value={dtc}
+            disabled={disabled}
+            placeholder="e.g. P0A0F, C1234, B1020"
+            onChange={(e) => setDtc(e.target.value)}
+          />
+          <p className={styles.hint}>
+            Comma-separated. P·Powertrain B·Body C·Chassis U·Network.
+          </p>
+        </div>
+      </div>
+
+      {/* 5 — Issue source: the same component the section-scoped flow uses. */}
+      <div className={styles.section} data-section="issue-source">
+        <h3 className={styles.sectionTitle}>Issue Source</h3>
+        <EditSourcesForm ref={sourcesRef} channels={channels} disabled={disabled} />
+      </div>
+    </section>
+  )
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, useLocation, useParams } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeftRight, Calendar, Car, ClipboardPlus, FileText, PenSquare, Settings2 } from 'lucide-react'
 import { Avatar, Button, SOURCE, StatusBadge } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
@@ -7,7 +7,7 @@ import { MetaChip, PageContainer, PageCrumb, SectionCard, TagChip } from '@/app/
 import { PriorityTab } from './PriorityTab'
 import { ApprovalBanner } from './workspace/ApprovalBanner'
 import { WorkspaceTabStrip } from './workspace/WorkspaceTabStrip'
-import { ChangeStatusModal, CreateQirModal, EditIssueModal, ManageLinksModal } from './workspace/modals'
+import { ChangeStatusModal, CreateQirModal, ManageLinksModal } from './workspace/modals'
 import type { WorkspaceContext, WorkspaceModal } from './workspace/context'
 import { PRIORITY_BANDS } from '@/data/priorityMatrix'
 import { useRole } from '@/data/roles'
@@ -67,10 +67,27 @@ import { fmtMDY, modelCodeLabel } from '@/data/util'
 export function IssueWorkspaceScreen() {
   const { id = '' } = useParams()
   const loc = useLocation()
+  const nav = useNavigate()
   const { user, can } = useRole()
   const store = useStore()
   const issue = store.getIssue(id)
   const [modal, setModal] = useState<WorkspaceModal>('')
+
+  /**
+   * FULL-PAGE EDIT MODE for the Detail section, held here rather than in the
+   * section for the reason recorded on `WorkspaceContext.editing`: it is entered
+   * from this header and suppresses this header's own button, so both ends read it.
+   *
+   * The effect closes it on any navigation away from Detail — the same mechanism,
+   * and the same reason, as `priorityOpen` below. Keyed on `pathname` so browser
+   * Back and programmatic navigation close it too, which a click handler on the
+   * tab strip would miss. Without it, leaving Detail mid-edit and returning would
+   * drop the user back into a form holding stale draft state.
+   */
+  const [editing, setEditing] = useState(false)
+  useEffect(() => {
+    if (!loc.pathname.endsWith('/detail')) setEditing(false)
+  }, [loc.pathname])
 
   /**
    * ISSUE PRIORITY IS THE ONE TAB THAT IS STILL LOCAL STATE, by explicit
@@ -146,6 +163,8 @@ export function IssueWorkspaceScreen() {
     canQir,
     comments,
     openModal: setModal,
+    editing,
+    onEditingChange: setEditing,
   }
 
   return (
@@ -251,7 +270,10 @@ export function IssueWorkspaceScreen() {
               </span>
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <Button variant="secondary" size="sm" disabled={!canEditIssue} iconLeft={<Icon icon={PenSquare} size={14} />} onClick={() => setModal('edit')}>Edit issue</Button>
+              {/* Edit is a MODE of the Detail section, not a modal and not a route.
+                  So the button navigates to Detail first — editing from any other
+                  section would otherwise set a flag nothing on screen reads. */}
+              <Button variant="secondary" size="sm" disabled={!canEditIssue || editing} iconLeft={<Icon icon={PenSquare} size={14} />} onClick={() => { nav(`/issues/${id}/detail`); setEditing(true) }}>Edit issue</Button>
               <Button variant="secondary" size="sm" disabled={!!issue.proposedStatus} iconLeft={<Icon icon={ArrowLeftRight} size={14} />} onClick={() => setModal('status')}>Change status</Button>
               <Button variant="secondary" size="sm" disabled={!canQir} iconLeft={<Icon icon={ClipboardPlus} size={14} />} onClick={() => setModal('qir')}>Create QIR</Button>
             </div>
@@ -352,7 +374,6 @@ export function IssueWorkspaceScreen() {
 
       <ChangeStatusModal open={modal === 'status'} issue={issue} canApprove={can('approve')} onClose={() => setModal('')} />
       <CreateQirModal open={modal === 'qir'} issue={issue} onClose={() => setModal('')} />
-      <EditIssueModal open={modal === 'edit'} issue={issue} onClose={() => setModal('')} />
       <ManageLinksModal open={modal === 'links'} issue={issue} onClose={() => setModal('')} />
     </div>
   )

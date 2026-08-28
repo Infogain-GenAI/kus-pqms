@@ -1,0 +1,73 @@
+/*
+ * Ported from `VehicleInformationCard.vue`'s scoped styles.
+ *
+ * The Vue version renders this as a real <table> with a <thead>, and that is
+ * carried over rather than flattened into the two-column grid the previous
+ * React card used: one row per model code, each carrying its own model years,
+ * is tabular data, and the grid version could only ever show a single row.
+ *
+ * The uppercase column headers keep the prototype's disabled-gray / bold /
+ * tracked micro-label treatment — the same one `ULabel` applies everywhere else
+ * on this tab, so the values come from the same tokens rather than being
+ * restated.
+ */
+
+.table {
+  width: 100%;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.table th {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  background: var(--neutral-50);
+  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.year {
+  display: inline-flex;
+  align-items: center;
+  height: var(--icon-lg);
+  margin-right: var(--space-2);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--neutral-50);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+}
+
+/* A code with no years recorded still renders its row — an empty cell would
+   read as "no data at all" rather than "this code has no years yet". */
+.noYears {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+}

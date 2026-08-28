@@ -1,0 +1,109 @@
+/*
+ * Field-display primitives shared by the read-only cards on this tab —
+ * the four-column description grid and the description/DTC blocks.
+ *
+ * Shared rather than repeated per card for the same reason `workspace/shared.ts`
+ * exists in this codebase: `scripts/ds-gate.mjs` counts every raw value, and the
+ * project sits at its ceiling with zero headroom. One definition keeps the count
+ * flat; three copies would not.
+ */
+
+/* Vue's `BaseDescriptionList :columns="4"`. */
+.grid4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.value {
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  line-height: 1.35;
+}
+
+.valueEmpty {
+  composes: value;
+  color: var(--text-muted);
+}
+
+/* ── Basic issue information ─────────────────────────────────────────────── */
+
+.field + .field {
+  margin-top: var(--space-4);
+}
+
+.description {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  line-height: 1.55;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/*
+ * DTC chip. Ported from `BasicIssueInformationCard.vue`, which in turn reuses
+ * Issue Entry's DtcTypeahead chip pattern — whole-chip category tint (not a
+ * dot), same `${hex}1A` tint suffix.
+ *
+ * 28px height / 7px gap / 11px padding / 12.5px type are the prototype's own
+ * values and have no matching tokens. Padding is symmetric here, unlike
+ * DtcTypeahead's 11px/6px split — that asymmetry exists there to make room for
+ * a remove button, which this read-only chip does not have.
+ */
+.dtcChip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  gap: 7px;
+  padding: 0 11px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+}
+
+.dtcChipCat {
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  opacity: 0.75;
+}
+
+/*
+ * Category tint. Vue computes this in TS as `${categoryHex}1A` — a hex with a
+ * ~10% alpha suffix — reading the hex from a `dtcCategoryColors` map in its
+ * design-tokens package.
+ *
+ * Done here in CSS instead, for two reasons that point the same way. This app's
+ * design-tokens package has no DTC category palette to read, so the colours had
+ * to be chosen from the tokens that exist; and computing the tint from
+ * `currentColor` means the pair can never drift, whereas a TS map holds the
+ * colour and its tint as two independent values. `color-mix` at 12% is the
+ * equivalent of Vue's `1A` suffix (10.2%).
+ *
+ * No hex appears in either place: `scripts/ds-gate.mjs` counts hex literals in
+ * .ts/.tsx and is at its ceiling, so the TS side carries the category LETTER
+ * only and the colour is resolved here.
+ */
+.dtcChip {
+  color: var(--neutral-500);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.dtcChip[data-cat='P'] { color: var(--accent-500); }
+.dtcChip[data-cat='B'] { color: var(--success-500); }
+.dtcChip[data-cat='C'] { color: var(--warning-500); }
+.dtcChip[data-cat='U'] { color: var(--status-review); }
+
+.empty {
+  margin: 0;
+  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+}

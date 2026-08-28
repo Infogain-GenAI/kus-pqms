@@ -1,0 +1,79 @@
+/*
+ * Ported from `IssueEditForm.vue`'s scoped styles.
+ *
+ * The form is ONE card with a sticky-feeling header and five sections divided by
+ * rules — the same "sections inside one surface" treatment the Issue Detail tab
+ * uses, so the two read as the same object in view and in edit.
+ *
+ * Every value here resolves to a token. The Vue file's only raw value in this
+ * stylesheet was an error-colour fallback, which this app has as --danger-500.
+ */
+
+.form {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xs);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.section + .section {
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.error {
+  width: 100%;
+  margin: 0;
+  color: var(--danger-500);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+}
