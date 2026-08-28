@@ -5,6 +5,8 @@ import type {
   AppNotification,
   AuditEntry,
   ClassificationNode,
+  ActivityChangeRequest,
+  ChangeRequestField,
   ClassLevel,
   Comment,
   CommEntryType,
@@ -72,6 +74,8 @@ interface StoreValue {
   partsFor: (issueId: string) => PartRequest[]
   commentsFor: (issueId: string) => Comment[]
   activitiesFor: (issueId: string) => InvestigationActivity[]
+  /** Change requests raised against an activity, newest first. */
+  changeRequestsFor: (activityId: string) => ActivityChangeRequest[]
   auditFor: (issueId: string) => AuditEntry[]
   classChildren: (parentId?: string) => ClassificationNode[]
   classByLevel: (level: ClassLevel, parentId?: string) => ClassificationNode[]
@@ -122,9 +126,43 @@ interface StoreValue {
   rejectProposal: (id: string, remark: string, actor: Actor) => void
   bulkStatus: (ids: string[], status: StatusKey, reason: string, actor: Actor) => void
   addComment: (issueId: string, type: CommEntryType, body: string, actor: Actor) => void
-  addActivity: (issueId: string, type: ActivityType, summary: string, actor: Actor) => void
-  addPart: (issueId: string, input: { partNumber: string; description: string; cost: number; qty: number; urgency: PartUrgency; neededBy?: string }, actor: Actor) => void
-  setPartStatus: (partId: string, status: PartStatus) => void
+  /**
+   * `extra` carries the type-conditional fields the Add-activity form captures
+   * (evaluation type, parts, VINs, dealer code, members, attachments). Optional
+   * and defaulted, so the original four-argument call still compiles and behaves
+   * identically — the five original activity types capture none of these.
+   */
+  addActivity: (
+    issueId: string,
+    type: ActivityType,
+    summary: string,
+    actor: Actor,
+    extra?: Partial<Pick<InvestigationActivity, 'evaluationType' | 'parts' | 'vins' | 'dealerCode' | 'members' | 'attachments'>>,
+  ) => void
+  addPart: (
+    issueId: string,
+    input: { partNumber: string; description: string; cost: number; qty: number; urgency: PartUrgency; neededBy?: string; reason?: string; attachments?: string[] },
+    actor: Actor,
+  ) => void
+  /**
+   * ─── The activity change-request flow ───────────────────────────────────────
+   *
+   * A recorded activity is EVIDENCE and is never edited in place. A correction
+   * is proposed, reviewed, and applied only by an approval — which is why these
+   * are three separate mutators rather than an `updateActivity`.
+   *
+   * `currentValue` is captured on the request, not read from the activity at
+   * decision time: an approval that lands after another change would otherwise
+   * record a "before" that was never true.
+   */
+  requestActivityChange: (
+    input: { activityId: string; issueId: string; field: ChangeRequestField; currentValue: string; proposedValue: string; reason: string },
+    actor: Actor,
+  ) => void
+  approveActivityChange: (requestId: string, actor: Actor) => void
+  /** `comment` is mandatory — the requester is told why, and it lands in the audit trail. */
+  rejectActivityChange: (requestId: string, comment: string, actor: Actor) => void
+  setPartStatus: (partId: string, status: PartStatus, actor?: Actor) => void
   savePriority: (issueId: string, scores: Record<string, number>, selIdx: Record<string, number>, manualFinal: PriorityLetter | null, actor: Actor) => void
   markAllRead: () => void
   markRead: (id: string) => void
@@ -137,6 +175,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [parts, setParts] = useState<PartRequest[]>(PARTS)
   const [comments, setComments] = useState<Comment[]>(COMMENTS)
   const [activities, setActivities] = useState<InvestigationActivity[]>(ACTIVITIES)
+  const [changeRequests, setChangeRequests] = useState<ActivityChangeRequest[]>([])
   const [audit, setAudit] = useState<AuditEntry[]>(AUDIT)
   const [notifications, setNotifications] = useState<AppNotification[]>(NOTIFICATIONS)
   const [classification] = useState<ClassificationNode[]>(CLASSIFICATION)
@@ -153,6 +192,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const partsFor = useCallback((issueId: string) => parts.filter((p) => p.issueId === issueId), [parts])
   const commentsFor = useCallback((issueId: string) => comments.filter((c) => c.issueId === issueId), [comments])
   const activitiesFor = useCallback((issueId: string) => activities.filter((a) => a.issueId === issueId), [activities])
+  const changeRequestsFor = useCallback(
+    (activityId: string) =>
+      changeRequests.filter((r) => r.activityId === activityId).sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)),
+    [changeRequests],
+  )
   const auditFor = useCallback((issueId: string) => audit.filter((a) => a.issueId === issueId), [audit])
   const classChildren = useCallback((parentId?: string) => classification.filter((c) => c.parentId === parentId), [classification])
   const classByLevel = useCallback(
@@ -279,8 +323,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const addActivity = useCallback<StoreValue['addActivity']>((issueId, type, summary, actor) => {
-    setActivities((a) => [...a, { id: newId('a'), issueId, type, summary, author: actor.name, createdAt: now() }])
+  const addActivity = useCallback<StoreValue['addActivity']>((issueId, type, summary, actor, extra) => {
+    setActivities((a) => [
+      ...a,
+      { id: newId('a'), issueId, type, summary, author: actor.name, authorRole: actor.role, createdAt: now(), ...extra },
+    ])
     appendAudit(issueId, actor, 'Logged activity', `${type}: ${summary}`)
   }, [appendAudit])
 
@@ -290,9 +337,75 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     appendAudit(issueId, actor, 'Parts request', `${input.partNumber} ×${input.qty} (${input.urgency})`)
   }, [appendAudit])
 
-  const setPartStatus = useCallback<StoreValue['setPartStatus']>((partId, status) => {
-    setParts((p) => p.map((x) => (x.id === partId ? { ...x, status } : x)))
-  }, [])
+  const setPartStatus = useCallback<StoreValue['setPartStatus']>((partId, status, actor) => {
+    setParts((p) => {
+      const target = p.find((x) => x.id === partId)
+      // Audited like every other state change. Done inside the updater so the
+      // part's issue id and number are read from the row being changed rather
+      // than looked up separately and possibly staler.
+      if (target && actor) appendAudit(target.issueId, actor, 'Part request updated', `${target.partNumber} → ${status}`)
+      return p.map((x) => (x.id === partId ? { ...x, status } : x))
+    })
+  }, [appendAudit])
+
+  // ---- Activity change requests ----
+
+  const requestActivityChange = useCallback<StoreValue['requestActivityChange']>((input, actor) => {
+    setChangeRequests((r) => [
+      ...r,
+      {
+        id: newId('cr'),
+        activityId: input.activityId,
+        issueId: input.issueId,
+        field: input.field,
+        currentValue: input.currentValue,
+        proposedValue: input.proposedValue,
+        reason: input.reason,
+        status: 'pending',
+        requestedBy: actor.name,
+        requestedAt: now(),
+      },
+    ])
+    appendAudit(input.issueId, actor, 'Activity change requested', `${input.field}: ${input.reason}`)
+  }, [appendAudit])
+
+  const approveActivityChange = useCallback<StoreValue['approveActivityChange']>((requestId, actor) => {
+    setChangeRequests((list) => {
+      const req = list.find((r) => r.id === requestId)
+      // Only a pending request can be decided — a double-click must not
+      // re-apply a value that was already written.
+      if (!req || req.status !== 'pending') return list
+      const decidedOn = now()
+
+      // THE APPROVAL IS WHAT MUTATES THE ACTIVITY. Nothing else writes these
+      // fields, which is what makes the change request the complete record of
+      // how a recorded activity came to differ from what was first entered.
+      setActivities((acts) =>
+        acts.map((a) => {
+          if (a.id !== req.activityId) return a
+          const patch =
+            req.field === 'details' ? { summary: req.proposedValue }
+            : req.field === 'activityDate' ? { activityDate: req.proposedValue }
+            : { parts: req.proposedValue.split(',').map((s) => s.trim()).filter(Boolean) }
+          return { ...a, ...patch, updatedAt: decidedOn }
+        }),
+      )
+      appendAudit(req.issueId, actor, 'Activity change approved', `${req.field}: "${req.currentValue}" → "${req.proposedValue}"`)
+      return list.map((r) => (r.id === requestId ? { ...r, status: 'approved' as const, decidedBy: actor.name, decidedOn } : r))
+    })
+  }, [appendAudit])
+
+  const rejectActivityChange = useCallback<StoreValue['rejectActivityChange']>((requestId, comment, actor) => {
+    setChangeRequests((list) => {
+      const req = list.find((r) => r.id === requestId)
+      if (!req || req.status !== 'pending') return list
+      // The activity is untouched — that is the whole point of a rejection.
+      appendAudit(req.issueId, actor, 'Activity change rejected', `${req.field}: ${comment}`)
+      return list.map((r) =>
+        r.id === requestId ? { ...r, status: 'rejected' as const, decidedBy: actor.name, decidedOn: now(), adminComment: comment } : r,
+      )
+    })
+  }, [appendAudit])
 
   // ---- Issue Priority ----
   const EMPTY_PRIORITY: IssuePriority = { scores: {}, selIdx: {}, manualFinal: null, scored: false }
@@ -348,10 +461,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: StoreValue = {
     issues, classification, notifications, unreadCount,
-    getIssue, partsFor, commentsFor, activitiesFor, auditFor, classChildren, classByLevel, correlations,
+    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, correlations,
     priorityFor, priorityResult, savePriority,
     createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
-    addComment, addActivity, addPart, setPartStatus, markAllRead, markRead,
+    addComment, addActivity, addPart, setPartStatus,
+    requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

@@ -7,6 +7,9 @@ import { CardHead, Modal, PageContainer, PageCrumb, SectionCard, ULabel } from '
 import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { LinkIssuesSection } from './LinkIssuesSection'
+import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
+import { errorFor, validateIssueEntry } from './issue-entry/validation'
+import entryStyles from './issue-entry/issue-entry.module.css'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
 
@@ -25,6 +28,12 @@ export function CreateIssueScreen() {
   const [description, setDescription] = useState('')
   const [dtc, setDtc] = useState('')
   const [source, setSource] = useState<SourceKey | ''>('')
+  const [clearOpen, setClearOpen] = useState(false)
+  // Set only once Register has been pressed, so an untouched form shows no
+  // errors — and clears field-by-field as each is fixed, because the errors are
+  // derived from the draft rather than frozen at the moment of the attempt.
+  const [attempted, setAttempted] = useState(false)
+  const [created, setCreated] = useState<{ id: string; title: string } | null>(null)
 
   const systems = store.classByLevel('system')
   const subs = useMemo(() => (sysId ? store.classChildren(sysId) : []), [sysId, store])
@@ -41,15 +50,36 @@ export function CreateIssueScreen() {
   const symptomLabel = pendingSymptom || (symId ? label(symptoms, symId) : undefined)
   const correlated = useMemo(() => (symptomLabel ? store.issues.filter((i) => i.symptom === symptomLabel).slice(0, 5) : []), [symptomLabel, store.issues])
 
-  const canRegister = !!source && vehicle.codes.length > 0 && title.trim().length >= 5 && description.trim().length > 0
+  /**
+   * Every outstanding requirement, always computed — see `issue-entry/validation.ts`
+   * for the two rules this adds over the old single `canRegister` flag (symptom
+   * is required at submit; every selected model code must keep a year).
+   *
+   * Register stays ENABLED even while invalid. A disabled button cannot tell you
+   * why it is disabled; pressing this one produces the list.
+   */
+  const errors = validateIssueEntry({
+    vehicle,
+    system: sysId ? label(systems, sysId) : undefined,
+    subSystem: subId ? label(subs, subId) : undefined,
+    component: compId ? label(comps, compId) : undefined,
+    symptom: symptomLabel,
+    title,
+    description,
+    source,
+  })
+  const shown = attempted ? errors : []
+  const err = (key: string) => errorFor(shown, key)
 
   const clearAll = () => {
     setVehicle({ codes: [], yearsByCode: {} }); setLinkedIds([]); setSysId(''); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('')
     setTitle(''); setDescription(''); setDtc(''); setSource('')
+    setAttempted(false)
   }
 
   const register = () => {
-    if (!canRegister || !source) return
+    setAttempted(true)
+    if (errors.length > 0 || !source) return
     const created = store.createIssue(
       {
         title: title.trim(),
@@ -71,7 +101,10 @@ export function CreateIssueScreen() {
       },
       { name: user.name, role: user.role },
     )
-    nav(`/issues/${created.id}`)
+    // Confirm with the record rather than redirecting: the ID was just minted
+    // and the user has not seen it, and "carry on with this issue" versus "log
+    // the next one" are different jobs a redirect would decide for them.
+    setCreated({ id: created.id, title: created.title })
   }
 
   const pathSteps: { label: string; done: boolean }[] = [
@@ -89,16 +122,21 @@ export function CreateIssueScreen() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
         <h1 style={{ margin: 0, font: 'var(--fw-bold) 30px/1.15 var(--font-display)', letterSpacing: 'var(--ls-h1)', color: 'var(--text-primary)' }}>New issue</h1>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={15} />} onClick={clearAll}>Clear</Button>
-          <Button iconLeft={<Icon icon={Send} size={15} />} disabled={!canRegister} onClick={register}>Register Issue</Button>
+          {/* Clear now asks first — it resets three sections and every linked
+              issue, with no undo, and sits beside Register. */}
+          <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={15} />} onClick={() => setClearOpen(true)}>Clear</Button>
+          <Button iconLeft={<Icon icon={Send} size={15} />} onClick={register}>Register Issue</Button>
         </div>
       </div>
+
+      <ValidationBanner errors={shown} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         {/* Vehicle Information */}
         <SectionCard>
           <CardHead title="Vehicle Information" />
           <ModelCodeYearPicker value={vehicle} onChange={setVehicle} />
+          {err('modelCode') && <p className={entryStyles.fieldError}>{err('modelCode')}</p>}
         </SectionCard>
 
         {/* System Classification */}
@@ -127,14 +165,17 @@ export function CreateIssueScreen() {
             <div>
               <ULabel>System *</ULabel>
               <Select aria-label="System" value={sysId} placeholder={anchorCode ? 'Search system… (e.g. “Bat”, “Electrical”)' : 'Select model code first'} disabled={!anchorCode} options={systems.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => { setSysId(e.target.value); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('') }} />
+              {err('system') && <p className={entryStyles.fieldError}>{err('system')}</p>}
             </div>
             <div>
               <ULabel>Sub-system *</ULabel>
               <Select aria-label="Sub-system" value={subId} placeholder={sysId ? 'Search sub-system…' : 'Select a system first'} disabled={!sysId} options={subs.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => { setSubId(e.target.value); setCompId(''); setSymId(''); setPendingSymptom('') }} />
+              {err('subsystem') && <p className={entryStyles.fieldError}>{err('subsystem')}</p>}
             </div>
             <div>
               <ULabel>Component *</ULabel>
               <Select aria-label="Component" value={compId} placeholder={subId ? 'Search component…' : 'Select a sub-system first'} disabled={!subId} options={comps.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => { setCompId(e.target.value); setSymId(''); setPendingSymptom('') }} />
+              {err('component') && <p className={entryStyles.fieldError}>{err('component')}</p>}
             </div>
             <div>
               <ULabel>Symptom *</ULabel>
@@ -145,6 +186,7 @@ export function CreateIssueScreen() {
                   <Badge tone="warning" size="sm">Pending Approval</Badge>
                 </div>
               )}
+              {err('symptom') && <p className={entryStyles.fieldError}>{err('symptom')}</p>}
             </div>
           </div>
         </SectionCard>
@@ -155,11 +197,11 @@ export function CreateIssueScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             <div>
               <ULabel>Issue title *</ULabel>
-              <Input aria-label="Issue title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. EV6 — HV battery rapid SOC drop under cold soak" error={title && title.length < 5 ? 'Enter an issue title.' : undefined} />
+              <Input aria-label="Issue title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. EV6 — HV battery rapid SOC drop under cold soak" error={err('title')} />
             </div>
             <div>
               <ULabel>Description *</ULabel>
-              <Textarea aria-label="Description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Symptoms, reproduction steps, environmental conditions, frequency, and any safety implications…" />
+              <Textarea aria-label="Description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Symptoms, reproduction steps, environmental conditions, frequency, and any safety implications…" error={err('description')} />
             </div>
             <div>
               <ULabel>DTC / trouble code <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>· optional · comma-separated</span></ULabel>
@@ -183,6 +225,7 @@ export function CreateIssueScreen() {
                   )
                 })}
               </div>
+              {err('source') && <p className={entryStyles.fieldError}>{err('source')}</p>}
             </div>
           </div>
         </SectionCard>
@@ -238,6 +281,18 @@ export function CreateIssueScreen() {
         <ULabel>New symptom value * {compId ? '' : '(select a component first)'}</ULabel>
         <Input aria-label="New symptom" value={requestValue} onChange={(e) => setRequestValue(e.target.value)} placeholder="e.g. Latch fails to release" disabled={!compId} />
       </Modal>
+
+      <ClearFormConfirmModal open={clearOpen} onClose={() => setClearOpen(false)} onConfirm={clearAll} />
+
+      {created && (
+        <SubmitConfirmationModal
+          open
+          issueId={created.id}
+          issueTitle={created.title}
+          onBackToList={() => nav('/issues')}
+          onOpenWorkspace={() => nav(`/issues/${created.id}`)}
+        />
+      )}
     </PageContainer>
   )
 }

@@ -1,0 +1,174 @@
+/*
+ * Issue Entry — the submit-confirmation modal and the validation banner.
+ *
+ * Ported from `SubmitConfirmationModal.vue` and `ClearFormConfirmModal.vue`.
+ *
+ * The success modal's measurements are the design's own and have no matching
+ * tokens: a 60px success disc, an 18px gap beneath it, a 12px-radius summary
+ * card with hairline-divided rows, and 44px-tall action buttons. They are
+ * reproduced rather than snapped to the nearest step — this is the one screen a
+ * user sees exactly once per issue, and it is worth getting right.
+ */
+
+/* ── Success modal ────────────────────────────────────────────────────────── */
+
+.success {
+  text-align: center;
+}
+
+.successDisc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 18px;
+  border-radius: var(--radius-full);
+  background: var(--success-50);
+  color: var(--success-500);
+}
+
+.successTitle {
+  margin: 0 0 7px;
+  font-family: var(--font-body);
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.successBody {
+  margin: 0 0 var(--space-5);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* The summary card. Rows are divided by a hairline rather than spaced apart, so
+   the three facts read as one record instead of three separate statements. */
+.summary {
+  margin-bottom: 22px;
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--neutral-25);
+  text-align: left;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 11px 0;
+}
+
+.summaryRow + .summaryRow {
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.summaryLabel {
+  flex: none;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.summaryId {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.summaryTitle {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+/* A dot and a label — the dot is what makes this read as a live status rather
+   than another text field. */
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-50);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--accent-500);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent-500);
+}
+
+/* Both actions share the row equally: neither "go back to the list" nor "open
+   what you just made" is the obviously-correct next step, so neither is made to
+   look like the default. */
+.successActions {
+  display: flex;
+  gap: 11px;
+}
+
+.successActions > * {
+  flex: 1;
+}
+
+/* ── Validation banner ────────────────────────────────────────────────────── */
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--danger-500);
+  border-radius: var(--radius-lg);
+  background: var(--danger-50);
+  color: var(--danger-600);
+}
+
+.bannerIcon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.bannerTitle {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.bannerList {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.6;
+}
+
+/* Field-level error, shown at the control it belongs to. */
+.fieldError {
+  margin: 6px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--danger-500);
+}

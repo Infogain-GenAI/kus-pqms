@@ -1,0 +1,135 @@
+/*
+ * Change-request cards inside an expanded activity.
+ *
+ * Ported from `FindingChangeRequestPanel.vue`.
+ *
+ * THEY SIT ABOVE THE FACTS, not below them. A pending correction changes how
+ * every fact beneath it should be read, so it has to be seen first — putting it
+ * under the values it disputes would let someone read the record and leave
+ * without knowing a correction was outstanding.
+ *
+ * The header is one pipe-separated row: kind │ what │ when, then the status
+ * pushed right.
+ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--neutral-25);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+
+.kind {
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.sep {
+  color: var(--neutral-300);
+}
+
+.stamp {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.status[data-status='pending']  { background: var(--warning-50); color: var(--warning-600); }
+.status[data-status='approved'] { background: var(--success-50); color: var(--success-600); }
+.status[data-status='rejected'] { background: var(--danger-50);  color: var(--danger-600); }
+
+/* Current beside proposed, so the change is read as a diff rather than as two
+   unrelated values. */
+.values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.values dt {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.values dd {
+  margin: 3px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.4;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.proposed {
+  color: var(--text-primary);
+  font-weight: var(--fw-semibold);
+}
+
+.decision,
+.comment {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.comment {
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--border-subtle);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Shown to a non-approver in place of the buttons: the request is visible to
+   everyone, but only an approver decides it — and saying so beats a pair of
+   disabled buttons with no explanation. */
+.notApprover {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-style: italic;
+  color: var(--text-muted);
+}

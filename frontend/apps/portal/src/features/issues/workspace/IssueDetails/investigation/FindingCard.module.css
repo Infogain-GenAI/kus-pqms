@@ -1,0 +1,174 @@
+/*
+ * One activity in the timeline: a collapsed row that is always rendered, and an
+ * expanded body beneath it.
+ *
+ * Ported from `FindingCard.vue`. The collapsed row is the design's real unit of
+ * scanning — badge, author, date, then the actions pushed right — and it stays
+ * rendered at every expansion state so the list's rhythm never changes.
+ */
+
+.card {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.creator {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.sep {
+  color: var(--neutral-300);
+}
+
+.date {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.request {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--accent-600);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.request:hover:not(:disabled),
+.request:focus-visible:not(:disabled) {
+  text-decoration: underline;
+}
+
+.request:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--neutral-100);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+}
+
+.chevron {
+  display: inline-flex;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-3) var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
+  padding-top: var(--space-4);
+}
+
+/* The facts grid — the activity type's own field set, plus any field outside it
+   that actually holds a value. The second half is a rule, not padding: an
+   activity that carries a dealer code should show it even if its type does not
+   normally ask for one, because the value is there and hiding it would be a lie
+   about what was recorded. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.facts dt {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.facts dd {
+  margin: 3px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+/* Part numbers and VINs are compared character by character against a printed
+   label — monospaced so a 0/O or 1/l mix-up is visible. The rest is prose. */
+.mono {
+  font-family: var(--font-mono);
+}
+
+.detailsLabel {
+  margin: 0 0 4px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.detailsText {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.55;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.evidenceItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 7px;
+  background: var(--neutral-50);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}

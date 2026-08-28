@@ -1,0 +1,119 @@
+/*
+ * Attachments dropzone, ported from `AttachmentsDropzone.vue`.
+ *
+ * Deliberately the FULL panel treatment (dashed box, cloud icon, hint line),
+ * not the single dashed attach button the source-channel fields use. The two
+ * are different affordances in the prototype and both are kept: this one is the
+ * primary way evidence reaches an activity, so it is the larger target; that one
+ * trails a single text field, where a panel would dominate the field it belongs
+ * to.
+ */
+
+.zone {
+  border: 1.5px dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  text-align: center;
+  background: var(--surface-card);
+  transition: border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
+}
+
+.zoneActive {
+  border-color: var(--interactive);
+  background: var(--neutral-50);
+}
+
+.zoneDisabled {
+  background: var(--neutral-50);
+}
+
+.icon {
+  color: var(--text-disabled);
+}
+
+.hint {
+  margin-top: 6px;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.browse {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  color: var(--accent-600);
+  cursor: pointer;
+}
+
+.browse:hover:not(:disabled),
+.browse:focus-visible:not(:disabled) {
+  text-decoration: underline;
+}
+
+.browse:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.constraints {
+  display: block;
+}
+
+/* Visually hidden but still focusable — not `display: none`. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+}
+
+.fileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.remove {
+  display: inline-flex;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.remove:hover {
+  color: var(--danger-500);
+}

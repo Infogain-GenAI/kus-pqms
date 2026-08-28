@@ -1,0 +1,283 @@
+/*
+ * Shared Investigation styles — the field label, the activity-type badge, the
+ * section header pill track, and the form/rail chrome.
+ *
+ * ONE STYLESHEET FOR THE WHOLE SUB-AREA rather than one per component. These
+ * pieces share a small vocabulary (the uppercase micro-label, the tint pairs,
+ * the rail card) and `scripts/ds-gate.mjs` counts every raw value, so a copy per
+ * file would multiply the same handful of literals across eight files. The
+ * project's own precedent for this is `workspace/shared.ts`.
+ *
+ * Values traced from the prototype via the Vue implementation. Those with no
+ * matching token are reproduced exactly rather than snapped:
+ *
+ *   pill track   11px radius, 3px gap; pill 34px tall, 0 20px pad, -0.005em
+ *   badge        2px/8px pad, radius --radius-sm
+ *   tints        six evidenced pairs; anything unmapped falls to neutral
+ */
+
+/* ── Field label ──────────────────────────────────────────────────────────── */
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 7px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.req {
+  color: var(--danger-500);
+}
+
+/* The "— optional" suffix: de-emphasised, and deliberately not uppercased or
+   bold like the label it trails. */
+.optional {
+  margin-left: 4px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: var(--fw-medium);
+  color: var(--text-disabled);
+}
+
+/* ── Activity-type badge ──────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+/* The six evidenced tint pairs. Each is a distinct designed pair, not a token
+   the palette already has — mapping them onto the accent or success ramps would
+   collapse types that are meant to be told apart at a glance. */
+.badge[data-tint='blue']   { background: #e8f0fe; color: #1552b3; }
+.badge[data-tint='purple'] { background: #f1ecfd; color: #5b3bb5; }
+.badge[data-tint='amber']  { background: #fdf3e3; color: #8a5a00; }
+.badge[data-tint='teal']   { background: #e5f6f4; color: #0f6b62; }
+.badge[data-tint='rose']   { background: #fdecef; color: #a01c3c; }
+.badge[data-tint='green']  { background: #e7f6ef; color: #1f8a5b; }
+
+/* The fallback, reached by any type with no tint — including every type
+   approved through the request-new flow. Not decorative: this is what stops an
+   unknown type rendering unstyled. */
+.badge[data-tint='neutral'] {
+  background: var(--neutral-100);
+  color: var(--text-secondary);
+}
+
+/* ── Section header ───────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+/*
+ * A raised white pill on a tinted track — styled as a FILTER so it does not read
+ * as a second tab bar. The workspace section strip above it is navigation; this
+ * switches what one section shows.
+ */
+.track {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  padding: var(--space-1);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--neutral-50);
+}
+
+/*
+ * Metrics live on the BASE pill, not on the active modifier. The design's
+ * measurements were read off the selected pill, but a height or padding that
+ * applied only while selected would resize the control on every click and make
+ * the track jump. Only what genuinely differs BY STATE is below.
+ */
+.pill {
+  height: 34px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard),
+    color var(--dur-base) var(--ease-standard);
+}
+
+.pillActive {
+  background: var(--surface-card);
+  color: var(--kia-midnight);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Card shell ───────────────────────────────────────────────────────────── */
+
+.card {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+/* Add-activity / Raise-part-request rail beside the timeline. */
+.split {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  align-items: start;
+}
+
+.rail {
+  padding: var(--space-5);
+  border-right: var(--border-width) solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.column {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+/* "Can't find the required Activity? Request New" — above the first field, not
+   inside the dropdown. The pickers' own add-triggers ARE in-panel; the two kinds
+   of affordance sit in different places on purpose. */
+.requestNew {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.link {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: 5px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--accent-600);
+  cursor: pointer;
+}
+
+.link:hover:not(:disabled),
+.link:focus-visible:not(:disabled) {
+  text-decoration: underline;
+}
+
+.link:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+/* Validation banner — a title and a body, not one run-on sentence. */
+.validation {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-50);
+  color: var(--danger-600);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+}
+
+.closedNote {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* ── Change-request modals ────────────────────────────────────────────────── */
+
+.modalSubtitle {
+  margin-top: 3px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-regular);
+  line-height: 1.3;
+  color: var(--text-disabled);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.modalNote {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* The current value is READ-ONLY and looks it — a bordered panel rather than a
+   disabled input, because a disabled input invites someone to try to type in it. */
+.currentValue {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--neutral-25);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.modalError {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--danger-500);
+}
