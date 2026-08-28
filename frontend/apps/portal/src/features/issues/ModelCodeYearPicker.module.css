@@ -1,0 +1,226 @@
+/*
+ * Model Code combobox + the "Model year(s) per model code" panel.
+ *
+ * Structure and values traced from the prototype via the Vue app's
+ * `VehicleInformationForm.vue`. None of the panel's measurements has a matching
+ * token, and each is reproduced rather than snapped to the nearest one:
+ *
+ *   panel        10px radius, 13px/9px header pad
+ *   column grid  186px fixed first column, then 1fr
+ *   col headers  10.5px bold, 0.04em tracking, 13px/7px pad
+ *   row          13px/11px left cell, 13px/9px right cell
+ *   year chip    28px tall, 7px radius, 12.5px type, 15px checkbox
+ *   divider      1px x 18px rule between "All" and the year chips
+ *
+ * The 50%-width first column is deliberate and is why the row below it is a
+ * grid, not a flex wrap: the trigger's width must not change when a value is
+ * selected, or the whole section shifts on every pick.
+ */
+
+.row {
+  display: flex;
+  gap: 14px;
+}
+
+.col {
+  flex: 1;
+  min-width: 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* ── Model year(s) per model code ─────────────────────────────────────────── */
+
+.panel {
+  margin-top: -6px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-card);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  background: var(--neutral-25);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.panelTitle {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.summary {
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--text-disabled);
+}
+
+.colHeads {
+  display: grid;
+  grid-template-columns: 186px 1fr;
+  background: var(--neutral-25);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.colHead {
+  padding: 7px 13px;
+}
+
+.colHeadFirst {
+  composes: colHead;
+  border-right: var(--border-width) solid var(--border-subtle);
+}
+
+.yearRow {
+  display: grid;
+  grid-template-columns: 186px minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.yearRow + .yearRow {
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.rowCode {
+  padding: 11px 13px;
+  border-right: var(--border-width) solid var(--border-subtle);
+  min-width: 0;
+}
+
+.rowCodeTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.rowModel {
+  margin-top: 2px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--text-disabled);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remove {
+  border: none;
+  background: none;
+  padding: 2px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.remove:hover {
+  color: var(--danger-500);
+}
+
+.rowYears {
+  padding: 9px 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Year / All chip. Selection changes fill and weight only — never the box — so
+   the row never reflows as chips are toggled. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px 0 8px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 7px;
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chipOn {
+  background: var(--accent-50);
+  color: var(--text-primary);
+  font-weight: var(--fw-semibold);
+}
+
+.chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.chipBox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text-inverse);
+}
+
+.chipBoxOn {
+  border-color: var(--kia-midnight);
+  background: var(--kia-midnight);
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle);
+}
+
+/* Inline, and the LAST child of the chip row rather than a block of its own, so
+   it wraps onto its own line only when the row runs out of width. */
+.rowError {
+  margin-left: 2px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--danger-500);
+}
+
+.label {
+  display: block;
+  margin-bottom: 7px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}

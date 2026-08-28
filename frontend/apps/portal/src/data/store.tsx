@@ -16,6 +16,7 @@ import type {
   PartStatus,
   PartUrgency,
 } from './types'
+import { reportDataSource } from '@/config/data-source'
 import { ACTIVITIES, AUDIT, CLASSIFICATION, COMMENTS, ISSUES, NOTIFICATIONS, PARTS, PRIORITIES } from './seed'
 import { assertSeedAnchors } from './assertSeed'
 import { newId } from './util'
@@ -24,6 +25,16 @@ import { findPriorityItem, priorityLetter, priorityTotal, type PriorityLetter } 
 // Fail fast (dev server, preview build and every fidelity capture) if the dataset's
 // date anchor or its pinned rows ever drift from the export's _todayBase().
 assertSeedAnchors()
+
+/**
+ * Announce which data source is in effect (`VITE_USE_FIXTURES`).
+ *
+ * This store IS the fixture source, so it is the honest place to say so. The
+ * call is a no-op while fixtures are on; it warns exactly once when the env asks
+ * for the real API, because there is no API layer to hand over to yet. See
+ * `config/data-source.ts` for why that is a warning rather than silence.
+ */
+reportDataSource()
 
 export interface Actor {
   name: string
@@ -74,7 +85,36 @@ interface StoreValue {
   startInvestigation: (id: string, actor: Actor) => void
   /** Direct status change (override roles / hand-off actions) with mandatory reason. */
   setStatus: (id: string, status: StatusKey, reason: string, actor: Actor, action?: string, outcome?: DispositionOutcome) => void
-  updateIssue: (id: string, patch: Partial<Pick<Issue, 'title' | 'description' | 'dtcCodes' | 'source'>>, actor: Actor) => void
+  /**
+   * Widened for the full-page Edit-issue form, which captures more than the old
+   * three-field modal did: the vehicle rows (`modelCodes`/`modelYear`), the
+   * classification path, and the per-channel source evidence.
+   *
+   * `sources` and `sourceChannels` move together and `source` stays the primary
+   * — the list screen and every badge still read `source`, so the edit form
+   * writes all three rather than leaving the single-key field stale.
+   */
+  updateIssue: (
+    id: string,
+    patch: Partial<
+      Pick<
+        Issue,
+        | 'title'
+        | 'description'
+        | 'dtcCodes'
+        | 'source'
+        | 'sources'
+        | 'sourceChannels'
+        | 'modelCodes'
+        | 'modelYear'
+        | 'system'
+        | 'subSystem'
+        | 'component'
+        | 'symptom'
+      >
+    >,
+    actor: Actor,
+  ) => void
   linkIssue: (id: string, otherId: string, actor: Actor) => void
   unlinkIssue: (id: string, otherId: string, actor: Actor) => void
   proposeTransition: (id: string, target: StatusKey, rationale: string, actor: Actor, outcome?: DispositionOutcome) => void

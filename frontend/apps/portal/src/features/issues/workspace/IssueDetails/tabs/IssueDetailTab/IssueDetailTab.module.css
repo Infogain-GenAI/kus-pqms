@@ -1,0 +1,17 @@
+/*
+ * Ported from `IssueDetailTab.vue`'s scoped style.
+ *
+ * ONE SURFACE HOLDING ALL FOUR SECTIONS. This is the layout change that
+ * distinguishes this tab from the four separate cards it replaces: the sections
+ * divide themselves with a rule (see IssueDetailSection.module.css), so there is
+ * no gap between them and no per-section border — hence `overflow: hidden` here,
+ * which is what keeps the first and last section's corners inside the radius.
+ */
+
+.cards {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}

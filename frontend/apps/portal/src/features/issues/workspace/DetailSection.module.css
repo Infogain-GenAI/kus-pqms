@@ -1,0 +1,105 @@
+/*
+ * Issue Detail section layout: the tab body plus the right rail.
+ *
+ * The two-column split and the rail are THIS APP'S, not the Vue app's — Vue's
+ * Issue Detail tab has no rail, and its related-issues affordance lives
+ * elsewhere. Keeping it is deliberate: it is the only place in this app that
+ * shows linked-issue count, titles and statuses at a glance, so dropping it to
+ * match Vue's column count would lose a real capability.
+ *
+ * In EDIT MODE the rail is suppressed and the form spans the full width — the
+ * behaviour the Vue shell has, and the reason its edit mode could stop being a
+ * modal at all.
+ */
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.layoutEditing {
+  display: block;
+}
+
+.railHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--icon-md);
+  height: var(--icon-md);
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--success-50);
+  color: var(--success-600);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+}
+
+.manage {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--accent-700);
+}
+
+.railEmpty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+}
+
+.railList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.railItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.railId {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--accent-700);
+}
+
+.railTitle {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  line-height: 1.2;
+  color: var(--text-primary);
+}

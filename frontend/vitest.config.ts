@@ -51,6 +51,10 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['tests/**/*.test.{ts,tsx}'],
     globals: true,
+    // Raises Testing Library's `waitFor` budget above the default 1s. The route
+    // tree is lazily loaded end to end, and 1s measures machine load rather than
+    // the app once ten checks run concurrently — see the file for the numbers.
+    setupFiles: ['./tests/support/setup.ts'],
     coverage: {
       provider: 'v8',
       include: [

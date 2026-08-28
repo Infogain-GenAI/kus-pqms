@@ -1,0 +1,276 @@
+/*
+ * Ported from `EditSourcesForm.vue`'s scoped styles.
+ *
+ * Nearly every number below was traced from the prototype and has no matching
+ * token — the Vue file records each one individually. They are reproduced
+ * exactly rather than snapped to the nearest token, because "nearest token" is
+ * how a design drifts one pixel at a time:
+ *
+ *   tile grid gap 10   no --space-10 (scale jumps 8/12/16)
+ *   tile gap      11   no --space-11
+ *   tile padding  13/14 asymmetric, no single token
+ *   tile radius   10   scale is 4/6/8/12/999/50%
+ *   tile icon     34   no token
+ *   icon radius   9    no token
+ *   check box     22, 1.5px border   no token for either
+ *   tile name     13/600  both ARE tokens (--fs-body-sm/--fw-semibold)
+ *   tile desc     11   no token (caption and label are both 12px)
+ *   panel pad     16/16/18  top+sides are --space-4; only bottom is raw
+ *   panel icon    24, radius 7, #EEF2FB   a distinct tint from --accent-50
+ *   date input    42 tall, 9 radius, 13.5px  matches this app's field chrome
+ *
+ * SELECTION MUST NOT CHANGE THE TILE'S BOX. The ring is an inset shadow, not a
+ * thicker border — growing the border would take a pixel per edge out of the
+ * content box and shift the whole grid on every toggle.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Channel picker ──────────────────────────────────────────────────────── */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* Present for assistive tech; the design shows no visible legend. */
+.legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 14px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: 10px;
+  background: var(--surface-card);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.tileSelected {
+  border-color: var(--kia-midnight);
+  box-shadow: inset 0 0 0 1px var(--kia-midnight);
+  background: var(--neutral-100);
+}
+
+.tileIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: var(--neutral-50);
+  color: var(--neutral-500);
+}
+
+.tileSelected .tileIcon {
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+}
+
+.tileText {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tileName {
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.tileDesc {
+  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-size: 11px;
+}
+
+.tileCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.tileSelected .tileCheck {
+  border-color: var(--kia-midnight);
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+  box-shadow: 0 1px 3px rgba(5, 20, 31, 0.28);
+}
+
+/* ── Evidence panels ─────────────────────────────────────────────────────── */
+
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+}
+
+.panel {
+  padding: var(--space-4) var(--space-4) 18px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--neutral-50);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.panelHeadingGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.panelIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  background: #eef2fb;
+  color: var(--accent-600);
+}
+
+.panelTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.panelCode {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Textarea fields span both columns, matching the prototype's own grouping
+   rather than squeezing a multi-line control into half a row. */
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+/*
+ * One label treatment for every control type, rather than each control's own.
+ * The select and the native date input have no label/required/error support of
+ * their own, so splitting the convention across four controls would guarantee
+ * they diverge.
+ */
+.fieldLabel {
+  color: var(--text-disabled);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fieldRequired {
+  color: var(--danger-500);
+}
+
+/* "· optional" / "· auto · writeback" / "· auto · INT-02 sync" / "· read-only" —
+   deliberately not uppercased or bold like the label itself. */
+.fieldMeta {
+  text-transform: none;
+  font-weight: var(--fw-regular);
+  color: var(--text-disabled);
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--danger-500);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+}
+
+/*
+ * No date control exists in this ui-library (`Input`'s own type union has no
+ * "date"), so this is a plain native input hand-styled to match the library's
+ * field chrome — the same call the Vue file made, for the same reason.
+ */
+.dateInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 42px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.dateInput:focus {
+  border-color: var(--interactive);
+  box-shadow: var(--shadow-focus);
+}
+
+.dateInput:disabled {
+  cursor: not-allowed;
+  background: var(--neutral-50);
+  color: var(--text-disabled);
+}
+
+.dateInputError {
+  border-color: var(--danger-500);
+}

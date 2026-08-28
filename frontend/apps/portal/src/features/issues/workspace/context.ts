@@ -39,6 +39,22 @@ export interface WorkspaceContext {
   /** Visible comments only (hidden ones filtered), shared with the tab-strip badge. */
   comments: Comment[]
   openModal: (modal: WorkspaceModal) => void
+  /**
+   * Whether the Detail section is in full-page edit mode.
+   *
+   * THIS IS SHELL STATE, NOT SECTION STATE, and that is why it is here rather
+   * than a `useState` inside DetailSection. Edit is entered from the shell's own
+   * header button, and while it is open the shell suppresses that button — so
+   * both ends need to read it. A flag owned by the section could be set by the
+   * shell but never read back by it.
+   *
+   * It is deliberately NOT a route. The five sections are routes because a
+   * section is a place; edit is a mode of one section, and giving it a URL would
+   * mean a bookmark could land a user in an editor for an issue they may no
+   * longer be allowed to edit.
+   */
+  editing: boolean
+  onEditingChange: (editing: boolean) => void
 }
 
 /**

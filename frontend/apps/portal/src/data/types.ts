@@ -3,6 +3,7 @@
 // V4-V5 added it to the Issue Workspace as the source of truth for QIR priority.
 import type { SourceKey, StatusKey } from '@pqms/ui-library'
 import type { PriorityLetter } from './priorityMatrix'
+import type { SourceChannel } from './sourceChannels'
 
 export type Cap = 'read' | 'override' | 'admin'
 export type RoleKey = 'SE' | 'ASM' | 'PQM' | 'ADMIN'
@@ -101,6 +102,16 @@ export interface Issue {
   linkedIssueIds?: string[]
   /** Channel-specific origin evidence shown on the Issue source card. */
   sourceEvidence?: { label: string; value: string }[]
+  /**
+   * Per-channel evidence carrying the full typed field schema, as captured by
+   * the Add / edit sources form.
+   *
+   * OPTIONAL AND ADDITIVE. `sourceEvidence` above is untouched and still the
+   * only thing the seed sets — `resolveSourceChannels()` derives a channel list
+   * from `source`/`sources` and folds that flat evidence into it, so every issue
+   * that predates this field renders exactly as it did before.
+   */
+  sourceChannels?: SourceChannel[]
   // propose → approve gate
   proposedStatus?: StatusKey
   proposalRationale?: string

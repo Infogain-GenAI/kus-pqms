@@ -1,0 +1,143 @@
+/*
+ * System Classification — PATH breadcrumb, request link, and the four cascading
+ * comboboxes.
+ *
+ * Traced from the prototype via `SystemClassificationForm.vue`. Values with no
+ * matching token, reproduced exactly:
+ *
+ *   path bar     #F1F6FE fill / #D6E0F5 border / 10px radius / 13px x 10px pad
+ *   PATH label   9.5px bold, 0.06em tracking
+ *   segment      12.5px, 9px/3px pad, 6px radius
+ *   filled pill  white fill, #CBD9EE border, 0 1px 2px rgba(5,20,31,.05)
+ *
+ * The two blues here are NOT --accent-50. #F1F6FE and #D6E0F5 are a distinct,
+ * paler pair the prototype uses only for this bar, and flattening them onto the
+ * nearest accent token would change the one element on the form whose whole job
+ * is to sit quietly behind the fields.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* ── PATH breadcrumb ──────────────────────────────────────────────────────── */
+
+/* Always visible, including before a model code is chosen — it is the map of
+   what the four fields below will fill in, so hiding it until they are usable
+   removes it exactly when it explains the most. */
+.path {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 13px;
+  border: var(--border-width) solid #d6e0f5;
+  border-radius: 10px;
+  background: #f1f6fe;
+}
+
+.pathLabel {
+  flex: none;
+  margin-right: 3px;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  color: var(--text-disabled);
+}
+
+.sep {
+  flex: none;
+  color: var(--neutral-300);
+}
+
+.seg {
+  padding: 3px 9px;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--neutral-500);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-medium);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.segFilled {
+  border-color: #cbd9ee;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-weight: var(--fw-semibold);
+  box-shadow: 0 1px 2px rgba(5, 20, 31, 0.05);
+}
+
+/* ── Hint + request link ──────────────────────────────────────────────────── */
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--text-disabled);
+}
+
+.requestRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.requestLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--accent-600);
+  cursor: pointer;
+}
+
+.requestLink:hover,
+.requestLink:focus-visible {
+  text-decoration: underline;
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+}
+
+.label {
+  display: block;
+  margin-bottom: 7px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.error {
+  margin: 6px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--danger-500);
+}
