@@ -1,0 +1,107 @@
+/*
+ * Selected-value chips beneath a picker, plus the in-panel "add" trigger.
+ *
+ * Ported from the Vue pickers (`PartsPicker` / `VinsPicker` /
+ * `TeamMembersPicker` / `DealerCodePicker`, all four built on
+ * `SearchablePicker.vue`).
+ *
+ * THE ADD TRIGGER SITS UNDER THE FIELD, not above the form. That placement is
+ * from the source and is the opposite of the Add-activity form's own "Request
+ * New" link: a picker's escape hatch belongs to the picker, while requesting a
+ * new ACTIVITY TYPE changes what the whole form is, so it sits above everything.
+ */
+
+/* Manual-entry input — matches the Combobox trigger's chrome exactly, so
+   switching into manual entry does not resize the field it replaces. */
+.manualInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 42px;
+  padding: 0 13px;
+  border: var(--border-width) solid var(--interactive);
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 6px 0 10px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 7px;
+  background: var(--neutral-50);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-medium);
+}
+
+/* Part numbers and VINs are read character by character against a printed
+   label, so they are monospaced — a 0/O or 1/l mix-up has to be visible. */
+.chipMono {
+  font-family: var(--font-mono);
+}
+
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.chipRemove:hover {
+  color: var(--danger-500);
+}
+
+.chipRemove:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.addRow {
+  margin-top: 6px;
+}
+
+.addLink {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--accent-600);
+  cursor: pointer;
+}
+
+.addLink:hover:not(:disabled),
+.addLink:focus-visible:not(:disabled) {
+  text-decoration: underline;
+}
+
+.addLink:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.invalid {
+  margin: 6px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--danger-500);
+}

@@ -33,6 +33,14 @@ export interface PartRequest {
   neededBy?: string
   requestedBy: string
   requestedAt: string
+  /**
+   * "Reason / comments" — why this part is needed for the investigation.
+   * Optional and additive: every request that predates the field is still valid,
+   * and the history row simply omits the line when it is absent.
+   */
+  reason?: string
+  /** Files attached to the request. Names only — there is no upload endpoint. */
+  attachments?: string[]
 }
 
 export type CommEntryType = 'Internal' | 'External' | 'Email'
@@ -48,16 +56,61 @@ export interface Comment {
   hidden?: boolean
 }
 
-export type ActivityType = 'Field Inspection' | 'Bench Test' | 'Data Analysis' | 'Supplier Review' | 'Note'
+/**
+ * Open by construction — see `data/investigation.ts`. A user can request a NEW
+ * activity type, so no closed union can hold the set. The five original members
+ * are still offered (`ACTIVITY_TYPES`); they are no longer the only ones the
+ * type permits.
+ */
+export type { ActivityType } from './investigation'
+
+/** One file recorded against an activity or a finding. */
+export interface ActivityEvidence {
+  id: string
+  name: string
+  kind: 'Attachment' | 'Image' | 'Diagnostic log' | 'Report' | 'Document' | 'Video'
+  sizeLabel: string
+  /** Uploader. */
+  by: string
+}
 
 export interface InvestigationActivity {
   id: string
   issueId: string
-  type: ActivityType
+  type: string
   summary: string
   author: string
+  authorRole?: string
   createdAt: string
   attachments?: string[]
+  /**
+   * ─── The per-type field set, all OPTIONAL and all additive ────────────────
+   *
+   * Which of these an activity carries depends on its type — see
+   * `activityTypeForm()`. They are optional rather than required because the
+   * five original activity types capture none of them, and an activity recorded
+   * before this existed is still a valid activity.
+   */
+  evaluationType?: string
+  /** Cited part numbers. MAY include manually entered parts with no part request behind them. */
+  parts?: string[]
+  vins?: string[]
+  dealerCode?: string
+  /** Team members involved. */
+  members?: string[]
+  measurements?: { label: string; value: string }[]
+  evidence?: ActivityEvidence[]
+  /**
+   * The activity's OWN date — not `createdAt`.
+   *
+   * A correction can move this ("the inspection happened on the 3rd, not the
+   * 5th"), which a creation stamp must never do. Optional: nothing captures it
+   * on entry today, so it defaults to the creation date at the render site and
+   * becomes real the first time a change request sets it.
+   */
+  activityDate?: string
+  /** Set when an approved change request rewrites a field. */
+  updatedAt?: string
 }
 
 export interface AuditEntry {
@@ -68,6 +121,35 @@ export interface AuditEntry {
   action: string
   detail?: string
   timestamp: string
+}
+
+/**
+ * A field-level correction proposed against a recorded activity.
+ *
+ * ACTIVITIES ARE IMMUTABLE. Nothing edits one in place — a correction is
+ * proposed, reviewed, and only applied by an approval. That is the whole reason
+ * this record exists rather than an "edit activity" mutator, and it is why the
+ * before/after values are stored on the request itself: the audit trail has to
+ * survive the approval that changes the activity.
+ */
+export type ChangeRequestField = 'details' | 'activityDate' | 'partNumber'
+export type ChangeRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export interface ActivityChangeRequest {
+  id: string
+  activityId: string
+  issueId: string
+  field: ChangeRequestField
+  currentValue: string
+  proposedValue: string
+  reason: string
+  status: ChangeRequestStatus
+  requestedBy: string
+  requestedAt: string
+  decidedBy?: string
+  decidedOn?: string
+  /** Required on reject — the requester is told why. */
+  adminComment?: string
 }
 
 export type DispositionOutcome = 'Resolved' | 'No Action' | 'Monitoring'

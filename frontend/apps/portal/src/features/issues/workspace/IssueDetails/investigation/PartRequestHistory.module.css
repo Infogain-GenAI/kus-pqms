@@ -1,0 +1,79 @@
+/*
+ * Part request history rows, ported from `PartRequestHistory.vue`.
+ *
+ * A stacked CARD per request, not a table row. The previous panel used a fixed
+ * five-column grid, which had no room for the reason text and truncated the
+ * description — and a request's reason is the thing a reviewer actually reads.
+ */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.partNumber {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.date {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.description {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  color: var(--text-secondary);
+}
+
+.meta {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.advance {
+  margin-top: var(--space-1);
+}
+
+/* Set off from the meta line so it reads as the requester's own words rather
+   than another system-generated field. */
+.reason {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--border-subtle);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}

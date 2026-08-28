@@ -57,8 +57,26 @@ describe('the form is a draft until Register Issue', () => {
   })
 })
 
-describe('Clear discards the draft', () => {
-  it('Clear empties the text inputs', () => {
+describe('Clear discards the draft — but asks first', () => {
+  // CHANGED 2026-08-28: Clear used to reset immediately. It wipes three sections
+  // and every linked issue, has no undo, and sits directly beside Register
+  // Issue — the control a user reaches for when the form is at its fullest. It
+  // now confirms. This test asserts BOTH halves: the guard, and that confirming
+  // still does what Clear always did.
+  it('Clear alone does not empty the form', () => {
+    renderCreate()
+    const boxes = screen.getAllByRole('textbox')
+    if (!boxes[0]) return
+    fireEvent.change(boxes[0], { target: { value: 'something typed' } })
+
+    fireEvent.click(btn(/^Clear$/i))
+
+    // Still there — the confirm is open, nothing has been discarded yet.
+    expect((screen.getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('something typed')
+    expect(body()).toContain('Clear all entered information?')
+  })
+
+  it('confirming empties the text inputs', () => {
     renderCreate()
     const boxes = screen.getAllByRole('textbox')
     if (!boxes[0]) return
@@ -66,8 +84,50 @@ describe('Clear discards the draft', () => {
     expect((boxes[0] as HTMLInputElement).value).toBe('something typed')
 
     fireEvent.click(btn(/^Clear$/i))
+    fireEvent.click(btn(/^Clear form$/i))
 
     expect((screen.getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('')
+  })
+
+  it('cancelling keeps the draft', () => {
+    renderCreate()
+    const boxes = screen.getAllByRole('textbox')
+    if (!boxes[0]) return
+    fireEvent.change(boxes[0], { target: { value: 'something typed' } })
+
+    fireEvent.click(btn(/^Clear$/i))
+    fireEvent.click(btn(/^Cancel$/i))
+
+    expect((screen.getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('something typed')
+  })
+})
+
+describe('Register Issue reports what is missing', () => {
+  // The button used to be DISABLED while invalid, which tells a user nothing
+  // about which of ten fields is at fault. It is now always enabled and pressing
+  // it lists every outstanding requirement.
+  it('an empty form reports its blocking fields instead of doing nothing', () => {
+    renderCreate()
+    fireEvent.click(btn(/Register Issue/i))
+
+    expect(body()).toContain('Cannot register this issue')
+    expect(body()).toContain('Select a model code.')
+    expect(body()).toContain('Enter an issue title.')
+    expect(body()).toContain('Select the issue source.')
+  })
+
+  it('symptom is required at submit', () => {
+    // Not covered by the old `canRegister` flag at all — an issue could be
+    // registered with no symptom, which is the field the correlation panel
+    // matches on.
+    renderCreate()
+    fireEvent.click(btn(/Register Issue/i))
+    expect(body()).toContain('Select a symptom.')
+  })
+
+  it('shows no errors before Register is pressed', () => {
+    renderCreate()
+    expect(body()).not.toContain('Cannot register this issue')
   })
 })
 
@@ -120,5 +180,63 @@ describe('the issue-source chip row', () => {
     // Still on the form — the chip is a toggle, not a link.
     expect(btn(/^Register Issue$/i)).toBeTruthy()
     expect(body().length).toBeGreaterThan(before - 200)
+  })
+})
+
+describe('the happy path — a complete form registers and confirms', () => {
+  /**
+   * Fills every gate the validator checks, in the order the form presents them.
+   * The classification selects are a CASCADE, so each must be set before the next
+   * has any options at all — which is why this walks them rather than setting
+   * four values at once.
+   */
+  function fillCompleteForm() {
+    // Vehicle — pick the first model code from the combobox.
+    const codeBox = screen.getByRole('combobox', { name: /model code/i })
+    fireEvent.focus(codeBox)
+    const firstCode = screen.getAllByRole('option')[0]
+    if (firstCode) fireEvent.mouseDown(firstCode)
+
+    // Classification — walk the cascade top-down.
+    for (const name of [/^System$/i, /^Sub-system$/i, /^Component$/i, /^Symptom$/i]) {
+      const select = screen.getByRole('combobox', { name }) as HTMLSelectElement
+      const option = Array.from(select.options).find((o) => o.value !== '')
+      if (option) fireEvent.change(select, { target: { value: option.value } })
+    }
+
+    // Issue information.
+    fireEvent.change(screen.getByRole('textbox', { name: /issue title/i }), {
+      target: { value: 'EV6 — HV battery rapid SOC drop under cold soak' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: /^description$/i }), {
+      target: { value: 'Reproduces below 0°C after an overnight soak.' },
+    })
+    fireEvent.click(btn(/^Warranty$/i))
+  }
+
+  it('commits and shows the created record instead of redirecting', () => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(btn(/Register Issue/i))
+
+    // No validation banner — the form was complete.
+    expect(body()).not.toContain('Cannot register this issue')
+
+    // The confirmation names the record rather than navigating away silently.
+    expect(body()).toContain('Issue created successfully')
+    expect(body()).toContain('Submitted · Open')
+    expect(btn(/Back to Issue List/i)).toBeTruthy()
+    expect(btn(/Open Issue Workspace/i)).toBeTruthy()
+
+    // The commit is proved by the ID: the modal is only reachable after
+    // `store.createIssue` returns, and the ID it renders was minted by it.
+    //
+    // NOT asserted against a `renderHook(useStore)` handle, deliberately —
+    // that builds its OWN StoreProvider, so its issue list is a different array
+    // from the screen's and would never move no matter what the screen did.
+    // (The same blind spot makes this file's earlier "typing does not create an
+    // issue" test pass trivially; left alone as it is outside this change.)
+    const idCell = document.querySelector('[data-testid="created-issue-id"]')
+    expect(idCell?.textContent).toMatch(/^[A-Z]{2,4}-\d+/)
   })
 })
