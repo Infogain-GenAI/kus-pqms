@@ -182,3 +182,12 @@
   font-size: var(--fs-body-sm);
   color: var(--text-secondary);
 }
+
+/* Help text — a SIBLING of `.wrap`, never inside it (see the component for why
+   that matters to the panel's anchor). Values are the design's own. */
+.help {
+  margin-top: 6px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--text-disabled);
+}

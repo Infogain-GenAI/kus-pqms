@@ -156,7 +156,14 @@ export function DtcChipInput({
   }, [showSuggestions])
 
   return (
-    <div className={styles.wrap}>
+    // ⚠️ TWO SIBLINGS, NOT ONE WRAPPER. `.wrap` is the panel's positioning
+    // context and must contain the control ALONE. The help text is a sibling
+    // outside it, because `.panel` anchors at `top/bottom: calc(100% + 5px)` of
+    // `.wrap` — fold the help text in and 100% grows to include it, pushing the
+    // panel down the page (opening) or leaving a gap (flipped). The Vue
+    // implementation records making exactly this mistake and reverting it.
+    <>
+      <div className={styles.wrap}>
       {/*
         Clicking anywhere in the field focuses the input, including the padding
         between chips — without this the control has dead zones that look
@@ -198,7 +205,11 @@ export function DtcChipInput({
           value={draft}
           disabled={disabled}
           aria-label={ariaLabel}
-          placeholder={codes.length === 0 ? 'e.g. P0A0F, C1234, B1020' : undefined}
+          // UNCONDITIONAL, in both references — the prototype's markup has no
+          // condition on it and Vue binds `t('placeholder')` outright. Ours hid
+          // it once a chip existed, so the input went blank as it shrank and
+          // stopped saying what it wanted.
+          placeholder="e.g. P0A0F, C1234, B1020"
           onChange={(e) => setDraft(e.target.value)}
           onFocus={() => setFocused(true)}
           // Committing on blur rather than discarding: a half-typed code that
@@ -241,6 +252,18 @@ export function DtcChipInput({
           ))}
         </div>
       )}
-    </div>
+      </div>
+
+      {/*
+        The help text is not decoration: it does two jobs the control cannot do
+        for itself. It tells the user that free entry is allowed alongside search
+        — otherwise a code absent from the catalogue looks unenterable — and it is
+        the ONLY place the four category letters are explained. Without it the
+        coloured "Powertrain"/"Body" tags on the chips have no legend.
+      */}
+      <p className={styles.help}>
+        Type to search codes, or enter your own separated by commas. P·Powertrain B·Body C·Chassis U·Network.
+      </p>
+    </>
   )
 }
