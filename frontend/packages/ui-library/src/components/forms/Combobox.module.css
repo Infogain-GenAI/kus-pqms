@@ -25,7 +25,10 @@
   box-sizing: border-box;
   height: 42px;
   padding: 0 36px 0 13px;
-  border: var(--border-width) solid var(--border-default);
+  /* #DDE3E9, not `--border-default` (#C3CBD2). Uniform across every combobox in
+     the design, so this is a correction to the shared control rather than one
+     consumer's preference. */
+  border: var(--border-width) solid #dde3e9;
   border-radius: 9px;
   background: var(--surface-card);
   color: var(--text-primary);
@@ -36,14 +39,77 @@
   transition: border-color var(--dur-fast) var(--ease-standard);
 }
 
+/* ⚠️ `--interactive` IS CORRECT. DO NOT "FIX" THIS TO `--kia-midnight`.
+ *
+ * Reading the prototype's source will tell you this should be the brand
+ * near-black. `cbModelCode.inputStyle` — and the same generator behind every
+ * other combobox — literally builds
+ *     border:1px solid ${open ? 'var(--kia-midnight)' : '#DDE3E9'}
+ * as an INLINE style. That string is real. IT NEVER TAKES EFFECT.
+ *
+ * The prototype also ships a global stylesheet rule:
+ *     input:focus, textarea:focus, select:focus {
+ *       border-color: var(--accent-500) !important;
+ *       box-shadow: 0 0 0 3px rgba(42,111,219,.14) !important;
+ *     }
+ * `!important` outranks an inline declaration, so the focused border RENDERS as
+ * #2A6FDB — `--accent-500`, which `--interactive` resolves to. Measured, not
+ * inferred: `getComputedStyle` on the model-code combobox returns
+ * `rgb(42,111,219)` in the prototype and did so for our original value too.
+ *
+ * THIS WAS CHANGED TO `--kia-midnight` ONCE, ON THE STRENGTH OF THAT SOURCE
+ * STRING, AND IT WAS A REGRESSION — caught only by rendering both screens side
+ * by side. Two independent readings of the generator reached the same wrong
+ * answer, because the question cannot be settled by reading: it is a cascade
+ * conflict, and only a browser adjudicates a cascade.
+ *
+ * The rule above also carries a 3px focus ring that this control does not yet
+ * reproduce. That is tracked separately — it is an accessibility gap (WCAG 2.4.7
+ * Focus Visible), not a colour choice, since `outline: none` here is currently
+ * replaced by nothing but a 1px border-colour change. */
 .triggerOpen {
   border-color: var(--interactive);
 }
 
+/* ── Focus ring ───────────────────────────────────────────────────────────────
+ *
+ * THIS IS AN ACCESSIBILITY FIX, NOT A FIDELITY ONE. `.trigger` sets
+ * `outline: none`, and until now the only replacement was a 1px border-colour
+ * change — which is not a sufficient focus indicator and puts this control in
+ * breach of WCAG 2.4.7 (Focus Visible). `Input`, `Textarea`, `Select`,
+ * `SearchField`, `Checkbox` and `Radio` all already carry `--shadow-focus`;
+ * `Combobox` was the one form control that did not.
+ *
+ * Bound to `:focus`, not to `.triggerOpen`, deliberately. The panel being open
+ * and the input being focused are different states — a keyboard user tabbing
+ * through a closed combobox still needs to see where they are.
+ *
+ * ⚠️ THE ALPHA DOES NOT MATCH THE PROTOTYPE, AND CANNOT BE CHANGED HERE.
+ * The design's rule is `rgba(42,111,219,.14)`; `--shadow-focus` is the same
+ * colour and geometry at **0.30**. That token is vendored and listed in
+ * `packages/design-tokens/design-system-manifest.json`, so its value is enforced
+ * by `tokens:check` / `tokens:drift` — editing it locally fails those gates, and
+ * it is shared by ten other components, so a change would move every focus ring
+ * in the application rather than this one.
+ *
+ * Note the direction before "correcting" it: 0.30 is MORE visible than 0.14, so
+ * matching the prototype would REDUCE focus contrast. That is a fidelity change
+ * with an accessibility cost, not an improvement — which is a reason to route it
+ * through the design system rather than around it. Tracked with the upstream
+ * question in `PQMS_docs/DECISION-REQUEST-design-tokens.md`. */
+.trigger:focus {
+  box-shadow: var(--shadow-focus);
+}
+
+/* The disabled state changes its BORDER too. Previously only background and text
+   moved, so a disabled combobox kept a live-looking outline and read as an empty
+   enabled field rather than a closed one. Background keeps its token — the
+   design's #F4F6F8 IS `--neutral-50`, exactly. */
 .trigger:disabled {
   cursor: not-allowed;
+  border-color: #eaeef1;
   background: var(--neutral-50);
-  color: var(--text-disabled);
+  color: #aeb7bf;
 }
 
 .triggerError {
@@ -71,6 +137,25 @@
   top: 48px;
   z-index: var(--z-dropdown);
   padding: 5px;
+  /*
+   * ⚠️ LATENT, NOT ABSENT: this panel can be clipped by an ancestor scroll port.
+   *
+   * It is absolutely positioned in-document, so any ancestor with `overflow-y:
+   * auto` clips whatever falls outside its box. `DtcChipInput` hit exactly this
+   * on Issue Entry inside `FixedHeightLayout`'s scroll port — 168px of a 216px
+   * panel cut off, leaving a 48px sliver that read as "the dropdown doesn't
+   * appear". That component now measures room on open and flips above its row.
+   *
+   * THIS COMPONENT DOES NOT, and that was a deliberate decision rather than an
+   * oversight: its consumers place it high in their forms, so it reaches the
+   * danger zone only on a short viewport or an unusual scroll position. The
+   * exposure is identical in construction; only the likelihood differs.
+   *
+   * If you are here because a panel is being cut off: that is this, and
+   * `DtcChipInput`'s flip is the worked fix. Note that reproducing it needs a
+   * MID-scroll position — scrolling a port fully to either end tends to leave
+   * the field with room and reports a false all-clear.
+   */
   max-height: 240px;
   overflow: auto;
   border: var(--border-width) solid var(--border-subtle);
@@ -120,9 +205,26 @@
   background: var(--neutral-50);
 }
 
+/* ⚠️ BACKGROUND ONLY — NO FONT-WEIGHT. Do not add one back.
+   This used to also set `--fw-semibold`. The design does not: its model-code
+   combobox is `_cbOptCss + ';background:#F1F4F7'`, background and nothing else.
+   Its classification comboboxes DO add `font-weight:600` — the prototype is
+   internally inconsistent here — and that inconsistency was NOT carried forward:
+   the ruling was no weight change on selection in either.
+   Weight is the wrong signal for selection in a list regardless: 600 is wider
+   than 500, so option rows re-measure and shift as you select down the list.
+
+   #F1F4F7 rather than `--neutral-100` (#ECEFF2, darker and greyer). It is the
+   design's general selected/active surface — reused across many controls, not
+   one screen's grey — and no token matches it. That makes it a correction to the
+   shared control rather than a caller's preference.
+
+   Deliberately NOT stating how many times it occurs: a count in a comment rots,
+   and nobody re-greps before trusting it. An earlier version of this note said
+   "42 times" and the real figure was 65. The property is what the decision rests
+   on, and the property does not go stale. */
 .optionSelected {
-  background: var(--neutral-100);
-  font-weight: var(--fw-semibold);
+  background: #f1f4f7;
 }
 
 /* Keyboard highlight is an inset ring, not a background swap, so it stays

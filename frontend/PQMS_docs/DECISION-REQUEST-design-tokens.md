@@ -242,6 +242,50 @@ so this resolves a handful of that row's instances in a single file. **The rest 
 Category B, the whole of Category A, and the blocking question are exactly as open
 as before.**
 
+**Updated later the same day: eight, not six.** A second pass on the same
+component's combobox header added `#6B7681` (the "Clear selection" label) and
+`#B4BDC5` (both bulk actions when disabled). `#F0F2F5` was also identified as the
+prototype's divider colour but is NOT resolved — see the note below.
+
+Both new values reinforce the first observation rather than adding a new one: the
+nearest tokens were `--text-secondary` and `--text-disabled` (#9AA5AE), and using
+them had made the panel's primary action — "Select all" — render identically to
+its secondary one. **Snapping did not merely shift a shade here; it erased a
+distinction the design was drawing.** That is a stronger argument than "the greys
+look slightly off", and worth weighing when this request is answered.
+
+Counting the other way is equally instructive: in the same component,
+`--accent-600`, `--neutral-50`, `--border-subtle` and `--border-default` were each
+found to match the prototype EXACTLY and were kept. The system is right more often
+than it is wrong here; the problem is that nothing recorded which was which.
+
+### Second update — a full control-by-control sweep, and a third failure mode
+
+An exhaustive style diff of the whole Issue Entry screen (every declaration, every
+state) found **27 differences across 11 controls**, of which **15 needed literals**:
+seven in the Model Code panel, four in the shared `Combobox`, four in the PATH bar.
+
+That sweep separated the failures into three kinds, and **the third was not visible
+before**:
+
+1. **No token exists** — reproduce as a literal. (e.g. `#F4F7FB`, `#8A97A3`.)
+2. **A token exists and matches exactly** — keep it. Eleven such cases were found
+   and kept across the screen.
+3. **THE WRONG TOKEN WAS USED WHERE A RIGHT ONE EXISTED.** Three cases:
+   `--text-secondary` (#4A555F) where the design wanted `--text-muted` (#6B7681);
+   `--interactive` (#2A6FDB) where it wanted `--kia-midnight`; `--neutral-100`
+   (#ECEFF2) where it wanted the design's general selected surface.
+
+**Category 3 is the one that matters for this request**, because it is invisible to
+the "353 hard-coded values" framing entirely: nothing is hard-coded, no count moves,
+the gate stays green, and the screen is still wrong. Two of the three were in the
+shared `Combobox` and so affected every consumer, not one screen.
+
+It also cuts against reading this request as "the system is too small". At least as
+often, the right value was already there and the wrong one was reached for. Whatever
+answers the blocking question should probably say something about **how a value is
+chosen**, not only about which values exist.
+
 Two things worth carrying into whatever answers this request:
 
 - **Snapping is not a neutral default.** It happened silently here and produced

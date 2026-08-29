@@ -1,5 +1,5 @@
 import { Suspense, lazy, useRef, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, PenSquare, Radio } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, FileText, PenSquare, Radio } from 'lucide-react'
 import { Button, Icon, SOURCE, Spinner } from '@pqms/ui-library'
 import { MetaChip, ULabel } from '@/app/chrome'
 import type { SourceChannel } from '@/data/sourceChannels'
@@ -106,8 +106,21 @@ export function IssueSourceCard({
       ) : channels.length === 0 ? (
         // Retained from the card this replaces — it names the primary channel
         // and puts the call to action inline, which the Vue empty state does not.
+        //
+        // ⚠️ TWO DIFFERENT EMPTY STATES REACH THIS BRANCH, and conflating them
+        // is what made it crash. An issue can have zero channels because its
+        // source is known but carries no evidence rows, OR because it has no
+        // source at all — the latter is now normal, since Issue Entry does not
+        // capture one and the design attributes origin later. `SOURCE[undefined]`
+        // is `undefined`, so reading `.icon` off it threw; and the route in is
+        // exactly `resolveSourceChannels` degrading a sourceless issue to zero
+        // channels, which is why "it does not throw" was never sufficient.
         <div className={styles.emptyRow}>
-          <MetaChip icon={SOURCE[issue.source].icon}>{SOURCE[issue.source].label}</MetaChip>
+          {issue.source ? (
+            <MetaChip icon={SOURCE[issue.source].icon}>{SOURCE[issue.source].label}</MetaChip>
+          ) : (
+            <MetaChip icon={FileText}>No source assigned</MetaChip>
+          )}
           <span className={styles.empty}>
             No source channels recorded for this issue yet. Select{' '}
             <b className={styles.emptyCta}>Add / edit sources</b> to capture where it originated.

@@ -1,17 +1,23 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Info, Link2, RotateCcw, Send } from 'lucide-react'
-import { Badge, Button, Input, Select, SOURCE, SOURCE_KEYS, SourceBadge, StatusBadge, Textarea, type SourceKey } from '@pqms/ui-library'
+import { ChevronRight, CopyCheck, Info, Link2, RotateCcw, Send } from 'lucide-react'
+// `SOURCE`, `SOURCE_KEYS` and `SourceKey` are gone with the source selector.
+// `SourceBadge` STAYS — the suggested-issues list renders it for OTHER issues,
+// which is unrelated to whether this form captures a source.
+import { Badge, Button, Input, Select, SourceBadge, StatusBadge, Textarea } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
-// No `SectionCard` here any more: the three form sections live inside one
-// `.formCard` and must not each carry their own border, radius and shadow.
-import { CardHead, Modal, PageContainer, PageCrumb, ULabel } from '@/app/chrome'
+// No `SectionCard` and no `CardHead`. The three sections live inside one
+// `.formCard` and must not each carry their own border, radius and shadow; and
+// the section headings are 15px against `CardHead`'s inline `--fs-h4` (17px),
+// which a stylesheet cannot override — so they are local `<h2>`s instead.
+import { Modal, PageContainer, PageCrumb, ULabel } from '@/app/chrome'
 import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { LinkIssuesSection } from './LinkIssuesSection'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { relatedRank } from './issue-entry/relatedRank'
+import { DtcChipInput } from './issue-entry/DtcChipInput'
 import entryStyles from './issue-entry/issue-entry.module.css'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
@@ -29,8 +35,7 @@ export function CreateIssueScreen() {
   const [requestValue, setRequestValue] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [dtc, setDtc] = useState('')
-  const [source, setSource] = useState<SourceKey | ''>('')
+  const [dtcCodes, setDtcCodes] = useState<string[]>([])
   const [clearOpen, setClearOpen] = useState(false)
   // Set only once Register has been pressed, so an untouched form shows no
   // errors — and clears field-by-field as each is fixed, because the errors are
@@ -82,13 +87,13 @@ export function CreateIssueScreen() {
               symptom: symptomLabel,
               title,
               description,
-              dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : undefined,
+              dtcCodes: dtcCodes.length ? dtcCodes : undefined,
               modelCode: anchorCode,
             },
             store.issues,
           ).slice(0, 8)
         : [],
-    [symptomLabel, systemLabel, subSystemLabel, componentLabel, title, description, dtc, anchorCode, store.issues],
+    [symptomLabel, systemLabel, subSystemLabel, componentLabel, title, description, dtcCodes, anchorCode, store.issues],
   )
 
   /**
@@ -107,25 +112,25 @@ export function CreateIssueScreen() {
     symptom: symptomLabel,
     title,
     description,
-    source,
   })
   const shown = attempted ? errors : []
   const err = (key: string) => errorFor(shown, key)
 
   const clearAll = () => {
     setVehicle({ codes: [], yearsByCode: {} }); setLinkedIds([]); setSysId(''); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('')
-    setTitle(''); setDescription(''); setDtc(''); setSource('')
+    setTitle(''); setDescription(''); setDtcCodes([])
     setAttempted(false)
   }
 
   const register = () => {
     setAttempted(true)
-    if (errors.length > 0 || !source) return
+    if (errors.length > 0) return
     const created = store.createIssue(
       {
         title: title.trim(),
         description: description.trim(),
-        source,
+        // NO SOURCE. Registration does not capture one — the design attributes
+        // origin later, on the edit path. See `Issue['source']`.
         model: modelNameFor(anchorCode) ?? anchorCode,
         modelCode: anchorCode,
         modelCodes: vehicle.codes,
@@ -137,7 +142,7 @@ export function CreateIssueScreen() {
         subSystem: subSystemLabel,
         component: componentLabel,
         symptom: symptomLabel,
-        dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : undefined,
+        dtcCodes: dtcCodes.length ? dtcCodes : undefined,
         submit: true,
       },
       { name: user.name, role: user.role },
@@ -223,12 +228,38 @@ export function CreateIssueScreen() {
         <PageCrumb backTo="/issues" trail={[{ label: 'Issue Management', to: '/issues' }, { label: 'Issue Entry' }]} />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
-          <h1 style={{ margin: 0, font: 'var(--fw-bold) 30px/1.15 var(--font-display)', letterSpacing: 'var(--ls-h1)', color: 'var(--text-primary)' }}>New issue</h1>
+          <h1 style={{ margin: 0, font: 'var(--fw-bold) 27px/1.15 var(--font-display)', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>New issue</h1>
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             {/* Clear now asks first — it resets three sections and every linked
-                issue, with no undo, and sits beside Register. */}
-            <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={15} />} onClick={() => setClearOpen(true)}>Clear</Button>
-            <Button iconLeft={<Icon icon={Send} size={15} />} onClick={register}>Register Issue</Button>
+                issue, with no undo, and sits beside Register.
+
+                ⚠️ DELIBERATE LOCAL OVERRIDE — DO NOT "FIX" THIS BY CHANGING
+                `Button`. The design's Issue Entry actions are 40px tall with a
+                9px radius; the shared `Button` md is `--control-md` 36px with
+                `--radius-md` 6px and backs every screen in the app. Rather than
+                move every button everywhere, these two are overridden here.
+
+                The cost is named rather than hidden: THESE TWO BUTTONS NO LONGER
+                MATCH THE REST OF THE APPLICATION. That trade — fidelity on this
+                screen against consistency across screens — was chosen knowingly.
+                If app-wide 40px is ever wanted, the fix is `Button`'s size scale
+                and these overrides should be DELETED, not copied to more call
+                sites. */}
+            <Button
+              variant="secondary"
+              iconLeft={<Icon icon={RotateCcw} size={15} />}
+              onClick={() => setClearOpen(true)}
+              style={{ height: 40, padding: '0 16px', borderRadius: 9, font: 'var(--fw-semibold) 13.5px/1 var(--font-body)' }}
+            >
+              Clear
+            </Button>
+            <Button
+              iconLeft={<Icon icon={Send} size={15} />}
+              onClick={register}
+              style={{ height: 40, padding: '0 18px', borderRadius: 9 }}
+            >
+              Register Issue
+            </Button>
           </div>
         </div>
 
@@ -265,22 +296,27 @@ export function CreateIssueScreen() {
         <div className={entryStyles.formCard}>
         {/* Vehicle Information */}
         <div className={entryStyles.section}>
-          <CardHead title="Vehicle Information" />
+          <h2 className={entryStyles.sectionHead}>Vehicle Information</h2>
           <ModelCodeYearPicker value={vehicle} onChange={setVehicle} />
           {err('modelCode') && <p className={entryStyles.fieldError}>{err('modelCode')}</p>}
         </div>
 
         {/* System Classification */}
         <div className={entryStyles.section}>
-          <CardHead title="System Classification" />
+          <h2 className={entryStyles.sectionHead}>System Classification</h2>
           {/* PATH bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--accent-50)', border: 'var(--border-width) solid var(--accent-100)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-3)', flexWrap: 'wrap' }}>
-            <span style={{ font: 'var(--fw-bold) 10px/1 var(--font-body)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Path</span>
+          {/* Styles in `issue-entry.module.css` under "PATH bar" — every value is
+              the design's own. The separators are siblings of the segments, not
+              nested with them, so the container's 7px gap spaces the whole
+              sequence evenly rather than clumping each chevron against its
+              preceding chip. */}
+          <div className={entryStyles.pathBar} style={{ marginBottom: 'var(--space-3)' }}>
+            <span className={entryStyles.pathLabel}>PATH</span>
             {pathSteps.map((s, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ font: `${s.set ? 'var(--fw-semibold)' : 'var(--fw-regular)'} var(--fs-body-sm)/1 var(--font-body)`, color: s.set ? 'var(--text-primary)' : 'var(--text-muted)' }}>{s.text}</span>
-                {i < pathSteps.length - 1 && <Icon icon={ChevronRight} size={13} style={{ color: 'var(--neutral-300)' }} />}
-              </span>
+              <Fragment key={i}>
+                {i > 0 && <Icon icon={ChevronRight} size={13} style={{ color: 'var(--neutral-300)', flex: 'none' }} />}
+                <span className={s.set ? entryStyles.pathSegSet : entryStyles.pathSeg}>{s.text}</span>
+              </Fragment>
             ))}
           </div>
           {!anchorCode && (
@@ -337,25 +373,49 @@ export function CreateIssueScreen() {
             form card. The prototype renders it as a bare
             `flex-column; gap:10px; margin-top:16px` list.
 
-            NO HEADING, matching the prototype: `sameCardsShow` opens straight
-            into the entry list with no title and no subtitle. We previously
-            rendered a `CardHead` with "Same Existing Issues" and an explanatory
-            subtitle, carried over from the Vue app.
+            ⚠️ THE HEADER IS UNCONDITIONAL — DO NOT PUT IT BEHIND A GUARD.
+            In the design its container has NO `sc-if` wrapper: it sits outside
+            the block that gates the cards / empty / all-linked states, so it
+            renders on first load, before any symptom is chosen and before any
+            search resolves. Only the green "N linked" badge inside it is
+            conditional. That is why it is rendered above the `symptomLabel`
+            guard here rather than inside it.
 
-            That was raised as a usability concern — an unlabelled list appearing
-            mid-form has to explain itself — and the concern was heard and
-            overruled in favour of matching the design. Recorded so the next
-            reader knows the heading was REMOVED deliberately and does not
-            helpfully restore it.
+            CORRECTING THE RECORD, because this file previously asserted the
+            opposite with confidence: an earlier note here claimed the prototype
+            has NO heading on this block, and the title and subtitle were removed
+            on that basis. THE CLAIM WAS WRONG. The header exists, and its title
+            and subtitle are character-for-character what had been there.
+
+            The error was a partial read, not a misreading: the search window was
+            the lines around the cards, and the header sits well above them
+            because the block opens near the top of the section while the cards
+            render further down. Searching a window and reporting an absence is
+            the failure; verify by content, not by proximity.
           */}
+          <div className={entryStyles.sameHead}>
+            <span className={entryStyles.sameHeadIcon} aria-hidden>
+              <Icon icon={CopyCheck} size={15} />
+            </span>
+            <div style={{ flex: 1 }}>
+              <div className={entryStyles.sameHeadTitle}>Same Existing Issues</div>
+              <div className={entryStyles.sameHeadSub}>
+                We found existing issues with similar system classification. Review the issue or issue group before linking.
+              </div>
+            </div>
+            {linkedIds.length > 0 && (
+              <span className={entryStyles.sameLinked}>{linkedIds.length} linked</span>
+            )}
+          </div>
+
           {symptomLabel && (
-            <div className={entryStyles.samePanel}>
+            <div>
               {correlated.length === 0 ? (
                 <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)' }}>No similar issues were found based on the current issue information.</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                <div className={entryStyles.sameList}>
                   {correlated.map(({ issue: i }) => (
-                    <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '9px 12px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                    <div key={i.id} className={entryStyles.sameCard}>
                       <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{i.id}</span>
                       <SourceBadge source={i.source} size="sm" />
                       <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{i.title}</span>
@@ -380,8 +440,8 @@ export function CreateIssueScreen() {
 
         {/* Issue Information */}
         <div className={entryStyles.section}>
-          <CardHead title="Issue Information" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <h2 className={entryStyles.sectionHead}>Issue Information</h2>
+          <div className={entryStyles.sectionStack}>
             <div>
               <ULabel>Issue title *</ULabel>
               <Input aria-label="Issue title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. EV6 — HV battery rapid SOC drop under cold soak" error={err('title')} />
@@ -391,28 +451,11 @@ export function CreateIssueScreen() {
               <Textarea aria-label="Description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Symptoms, reproduction steps, environmental conditions, frequency, and any safety implications…" error={err('description')} />
             </div>
             <div>
-              <ULabel>DTC / trouble code <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>· optional · comma-separated</span></ULabel>
-              <Input aria-label="DTC codes" value={dtc} onChange={(e) => setDtc(e.target.value)} placeholder="e.g. P0A0F, C1234, B1020" />
-            </div>
-            <div>
-              <ULabel>Issue source *</ULabel>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                {SOURCE_KEYS.map((k) => {
-                  const active = source === k
-                  const Meta = SOURCE[k]
-                  return (
-                    <button
-                      key={k}
-                      onClick={() => setSource(k)}
-                      aria-pressed={active}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px', borderRadius: 'var(--radius-md)', border: `1px solid ${active ? 'var(--kia-midnight)' : 'var(--border-default)'}`, background: active ? 'var(--kia-midnight)' : 'var(--surface-card)', color: active ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', font: `${active ? 'var(--fw-semibold)' : 'var(--fw-medium)'} var(--fs-body-sm)/1 var(--font-body)` }}
-                    >
-                      <Icon icon={Meta.icon} size={14} /> {Meta.label}
-                    </button>
-                  )
-                })}
-              </div>
-              {err('source') && <p className={entryStyles.fieldError}>{err('source')}</p>}
+              <ULabel>DTC / trouble code <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>· optional</span></ULabel>
+              {/* "comma-separated" is gone from the label because the control is
+                  no longer a comma-separated string — a comma still commits a
+                  chip, but it is one of several keys rather than the format. */}
+              <DtcChipInput aria-label="DTC codes" codes={dtcCodes} onChange={setDtcCodes} />
             </div>
           </div>
         </div>

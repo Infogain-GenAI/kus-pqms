@@ -158,7 +158,17 @@ export interface Issue {
   id: string
   title: string
   description: string
-  source: SourceKey
+  /**
+   * The origin channel — OPTIONAL, because registration does not capture it.
+   *
+   * Issue Entry deliberately does not ask for a source: the design's flow is
+   * two-stage, registering the issue first and attributing its origin later on
+   * the edit path (`EditSourcesForm`). The prototype states the resulting state
+   * outright in its own history text — "Registered from Issue Entry — no source
+   * assigned yet." So `undefined` here is a real, expected state, not missing
+   * data, and code reading it must handle that rather than assume a default.
+   */
+  source?: SourceKey
   /** Additional origin channels beyond `source`; list renders "+N" when present (per the UX). */
   sources?: SourceKey[]
   status: StatusKey

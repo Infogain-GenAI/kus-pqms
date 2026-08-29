@@ -257,7 +257,12 @@ export function IssueWorkspaceScreen() {
             <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
               <MetaChip icon={Car}>{modelCodeLabel(issue)}</MetaChip>
               {issue.system && <MetaChip icon={Settings2}>{issue.system}{issue.component ? ` / ${issue.component}` : issue.subSystem ? ` / ${issue.subSystem}` : ''}</MetaChip>}
-              <MetaChip icon={FileText}>{SOURCE[issue.source].label}</MetaChip>
+              {/* An issue registered through Issue Entry has no source yet —
+                  the design attributes origin later, on the edit path. Say so
+                  explicitly rather than dropping the chip: a missing chip reads
+                  as a rendering bug, whereas "No source assigned" reads as the
+                  state it is, and tells the user there is something to do. */}
+              <MetaChip icon={FileText}>{issue.source ? SOURCE[issue.source].label : 'No source assigned'}</MetaChip>
               <MetaChip icon={Calendar}>{fmtMDY(issue.reportedDate)}</MetaChip>
             </div>
           </div>

@@ -21,9 +21,9 @@
  *
  * COLOURS — reproduced as literals, per Yogesh's ruling. They were previously
  * snapped, which drifted the panel visibly; the selected chip in particular read
- * bluer than the design. Six literals, mapped PER ELEMENT rather than by
+ * bluer than the design. Mapped PER ELEMENT rather than by
  * substitution — this matters, because one token was standing in for several
- * different prototype values at once:
+ * different prototype values at once. SEVEN literals:
  *
  *   #F4F7FB  selected chip fill        (was --accent-50, visibly bluer)
  *   #DDE3E9  chip border               (was --border-subtle)
@@ -31,14 +31,22 @@
  *   #EDF0F3  col-head + row rules      (was --border-subtle, 4 declarations)
  *   #F7F9FB  panel head background     (was --neutral-25)
  *   #FBFCFD  col-head background       (was --neutral-25)
+ *   #B4BDC5  both bulk actions, disabled (was --text-disabled, #9AA5AE)
  *
- * TWO PLACES DELIBERATELY STILL USE TOKENS, because the token is CORRECT there:
+ * "Clear selection"'s label is NOT in that list: it is #6B7681, which is exactly
+ * `--text-muted`. The original code had `--text-secondary` (#4A555F) — the wrong
+ * token, not a missing one. Worth distinguishing, because the fix is different.
+ *
+ * FIVE PLACES DELIBERATELY STILL USE TOKENS, because the token is CORRECT there:
  * `.panelHead`'s bottom border and `.divider` are #E7ECF1 in the prototype,
- * which is exactly `--border-subtle`. A blanket find-and-replace would have
- * broken both. `--border-default` on the checkbox is likewise already exact
- * (#C3CBD2) and is untouched.
+ * which is exactly `--border-subtle`. The bulk actions' hover is #F4F6F8, which
+ * is exactly `--neutral-50`; and "Select all" names `var(--accent-600)` in the
+ * prototype itself, which we hold at the same #1F58B5. A blanket
+ * find-and-replace would have broken all four. `--border-default` on the
+ * checkbox is likewise already exact (#C3CBD2) and is untouched; and
+ * "Clear selection" is `--text-muted` per the note above.
  *
- * These six are part of the OPEN decision request in
+ * These are part of the OPEN decision request in
  * `PQMS_docs/DECISION-REQUEST-design-tokens.md` (Category B) — resolved here as
  * literals for this component only. The rest of that request is unaffected.
  *
@@ -308,28 +316,48 @@
  * button tells you the current state before you press it.
  */
 
+/* `flex: 1` is what makes the pair split the panel 50/50, and `text-align: left`
+   only becomes visible once they are wider than their content — which is why the
+   two belong together. Ours were `inline-flex` and sized to their text. */
 .bulkAction {
-  display: inline-flex;
+  display: flex;
+  flex: 1;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 9px;
+  gap: 7px;
+  padding: 7px 9px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 7px;
   background: none;
-  color: var(--text-secondary);
+  text-align: left;
   font-family: var(--font-body);
   font-size: 12.5px;
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-semibold);
   line-height: 1;
   cursor: pointer;
+  /* Secondary by default — "Clear selection". Note this is `--text-muted`
+     (#6B7681), NOT `--text-secondary` (#4A555F): the nearest-looking token was
+     the wrong one, but an exact token does exist, so this stays a token. */
+  color: var(--text-muted);
 }
 
+/* ⚠️ "Select all" IS THE PRIMARY ACTION AND MUST READ AS ONE.
+   Both buttons previously rendered `--text-secondary`, i.e. identically grey, so
+   the primary action looked like the secondary one. The prototype names
+   `var(--accent-600)` here — the same token we hold at #1F58B5 — so this is an
+   exact token match and stays a token rather than becoming a literal. */
+.bulkActionPrimary {
+  composes: bulkAction;
+  color: var(--accent-600);
+}
+
+/* Hover keeps its token: the prototype's #F4F6F8 IS `--neutral-50`, exactly. */
 .bulkAction:hover:not(:disabled) {
   background: var(--neutral-50);
 }
 
+/* Disabled is one shared grey for both buttons, lighter than either enabled
+   state. `--text-disabled` resolves to #9AA5AE, which is NOT this value. */
 .bulkAction:disabled {
-  color: var(--text-disabled);
+  color: #b4bdc5;
   cursor: not-allowed;
 }

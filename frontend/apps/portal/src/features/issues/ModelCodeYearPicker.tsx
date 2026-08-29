@@ -172,7 +172,7 @@ export function ModelCodeYearPicker({
               <>
                 <button
                   type="button"
-                  className={styles.bulkAction}
+                  className={styles.bulkActionPrimary}
                   disabled={disabled || codes.length === MODEL_CODES.length}
                   onMouseDown={(e) => { e.preventDefault(); selectAllCodes() }}
                 >
