@@ -1,5 +1,5 @@
 import { useId, useMemo } from 'react'
-import { Check, Trash2 } from 'lucide-react'
+import { Check, Trash2, X } from 'lucide-react'
 import { Combobox, Icon, type ComboboxOption } from '@pqms/ui-library'
 import { MODEL_CODES, modelYearsFor, type ModelCodeEntry } from '@/data/modelCodes'
 import styles from './ModelCodeYearPicker.module.css'
@@ -87,6 +87,26 @@ export function ModelCodeYearPicker({
     onChange({ codes: order(next), yearsByCode: nextYears })
   }
 
+  /**
+   * Bulk actions in the combobox panel header.
+   *
+   * "ALL" MEANS EVERY MODEL CODE, NOT THE CURRENT SEARCH RESULTS. The panel
+   * filters as you type, so the two readings genuinely differ — and selecting
+   * only what a transient query happens to match is the one that surprises. This
+   * is also why the behaviour lives here rather than in `Combobox`: the shared
+   * component cannot know which reading a given picker wants.
+   *
+   * Newly-added codes start fully year-selected, matching `toggleCode`.
+   */
+  const selectAllCodes = () => {
+    const nextYears = { ...yearsByCode }
+    for (const m of MODEL_CODES) nextYears[m.code] ??= modelYearsFor(m.code)
+    onChange({ codes: order(MODEL_CODES.map((m) => m.code)), yearsByCode: nextYears })
+  }
+
+  /** Clears codes AND their year selections — a code with no row has no years. */
+  const clearAllCodes = () => onChange({ codes: [], yearsByCode: {} })
+
   const removeRow = (code: string) => {
     const nextYears = { ...yearsByCode }
     delete nextYears[code]
@@ -139,6 +159,37 @@ export function ModelCodeYearPicker({
             aria-labelledby={labelId}
             placeholder={codes.length > 0 ? 'Search to add or remove…' : 'Search model code… (e.g. KA, DL, CV)'}
             emptyText="No matching model code."
+            header={
+              /*
+                `onMouseDown` with `preventDefault`, NOT `onClick` — the combobox
+                closes its panel on input blur, and a plain click blurs the input
+                before the handler runs, so the panel would shut on the first
+                press. Preventing the default keeps focus in the input and the
+                panel open, which is what makes "Select all then keep typing"
+                work. The prototype uses `sc-camel-on-mouse-down` here for the
+                same reason.
+              */
+              <>
+                <button
+                  type="button"
+                  className={styles.bulkAction}
+                  disabled={disabled || codes.length === MODEL_CODES.length}
+                  onMouseDown={(e) => { e.preventDefault(); selectAllCodes() }}
+                >
+                  <Icon icon={Check} size={15} />
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  className={styles.bulkAction}
+                  disabled={disabled || codes.length === 0}
+                  onMouseDown={(e) => { e.preventDefault(); clearAllCodes() }}
+                >
+                  <Icon icon={X} size={15} />
+                  Clear selection
+                </button>
+              </>
+            }
           />
         </div>
         <div className={styles.col} aria-hidden />
@@ -154,27 +205,19 @@ export function ModelCodeYearPicker({
             </span>
           </div>
 
+          {/* Three columns, matching the row grid below — the third sits over the
+              delete control and is deliberately empty and unlabelled, as in the
+              prototype. Without it the headers no longer line up with the rows. */}
           <div className={styles.colHeads}>
             <div className={styles.colHeadFirst}>Model code</div>
             <div className={styles.colHead}>Model year(s)</div>
+            <div className={styles.colHead} aria-hidden />
           </div>
 
           {rows.map(({ entry, sel, universe, allSelected }) => (
             <div key={entry.code} className={styles.yearRow}>
               <div className={styles.rowCode}>
-                <div className={styles.rowCodeTop}>
-                  <span className={styles.code}>{entry.code}</span>
-                  {!disabled && (
-                    <button
-                      type="button"
-                      className={styles.remove}
-                      onClick={() => removeRow(entry.code)}
-                      aria-label={`Remove model code ${entry.code}`}
-                    >
-                      <Icon icon={Trash2} size={13} />
-                    </button>
-                  )}
-                </div>
+                <span className={styles.code}>{entry.code}</span>
                 <div className={styles.rowModel}>{entry.name} · MY{entry.range}</div>
               </div>
 
@@ -190,6 +233,33 @@ export function ModelCodeYearPicker({
                 ))}
                 {sel.length === 0 && (
                   <span className={styles.rowError} role="alert">Select at least one model year.</span>
+                )}
+              </div>
+
+              {/*
+                THE DELETE CONTROL IS ITS OWN COLUMN, not an affordance tucked
+                beside the code. It was previously nested next to the code text in
+                column 1, which read as decoration on the label rather than an
+                action on the row.
+
+                BOTH `title` AND `aria-label`, deliberately. The prototype carries
+                only `title`, and `title` is not an accessible-name substitute —
+                it is unreliable for screen readers and invisible to keyboard and
+                touch users. Dropping the label to match the prototype exactly
+                would trade a real accessibility regression for fidelity on an
+                attribute nobody can see.
+              */}
+              <div className={styles.rowDelete}>
+                {!disabled && (
+                  <button
+                    type="button"
+                    className={styles.remove}
+                    onClick={() => removeRow(entry.code)}
+                    title="Delete model code"
+                    aria-label={`Remove model code ${entry.code}`}
+                  >
+                    <Icon icon={Trash2} size={15} />
+                  </button>
                 )}
               </div>
             </div>

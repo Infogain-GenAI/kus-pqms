@@ -147,8 +147,11 @@ export type ToggleSize = 'sm' | 'md'
  * renderers, so visual identity holds BY CONSTRUCTION rather than by inspection.
  *
  * There is a second, harder constraint that rules out the copy-paste version
- * outright: `scripts/ds-gate.mjs` sits at ZERO HEADROOM (values 333/333, numeric
- * 207/207). A duplicated pill would re-declare `gap: 7`, `padding: '0 14px'`,
+ * outright: `scripts/ds-gate.mjs` runs at zero headroom — the ceilings live in
+ * `.ds-ceilings.json` and are NOT quoted here on purpose, because the gate
+ * rewrites them downward automatically whenever a count drops, so any number
+ * copied into a comment rots by design. Read the file.
+ * A duplicated pill would re-declare `gap: 7`, `padding: '0 14px'`,
  * `borderRadius: 10`, `minWidth: 18`, `height: 18`, `padding: '0 5px'` and two
  * font literals — every one of which the gate counts. Copying the styles would
  * fail the build. Sharing them cannot.

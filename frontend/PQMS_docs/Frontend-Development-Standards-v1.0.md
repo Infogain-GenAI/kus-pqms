@@ -3900,13 +3900,35 @@ because both readings were acted on before the conflict was noticed:
   ("the issue list is the screen that needs it", "Use it for the issue
   list").
 
-**Verified against the port on 2026-08-27: neither screen has the
-property either passage describes.** `CreateIssueScreen.tsx` contains no
-`sticky`, no `position`, no `100vh` and no `overflow` rule — it has no
-persistent action row. `IssueListScreen.tsx`'s only internal scroll is
-its filter drawer, not the table; the list is pure document scroll with
-no sticky header. So this file justified a layout by pointing at
-behaviour that does not exist in the application it governs.
+**Checked against the port on 2026-08-27: neither screen had the property
+either passage describes.** `CreateIssueScreen.tsx` contained no
+`sticky`, no `position`, no `100vh` and no `overflow` rule.
+`IssueListScreen.tsx`'s only internal scroll is its filter drawer, not
+the table; the list is pure document scroll with no sticky header.
+
+**⚠️ THAT CHECK WAS RUN AGAINST THE WRONG ARTEFACT, AND HALF ITS
+CONCLUSION WAS WRONG. Corrected 2026-08-29.** It read the *implementation*
+and recorded the result as a fact about the *design*. Those are different
+questions, and this file governs the second one. Re-checked against the UX
+prototype (`docs/ux-prototype/PQMS.html`, Issue Entry screen, markup lines
+2091–2502 of the unpacked `__bundler/template` payload):
+
+- **Issue Entry DOES have the property, and this file was right about
+  it.** The prototype renders a sticky action row —
+  `position:sticky;top:42px;z-index:38`, carrying Clear and Register
+  Issue — above an internal scroll port, `data-createport` with
+  `overflow-y:auto`. That is precisely "pins its own chrome while a region
+  inside it scrolls". The port simply had not built it yet.
+- **The issue list verdict stands.** Nothing in the prototype contradicts
+  it, and it stays on `DefaultLayout`.
+
+So this section's original naming of Issue Entry was correct and was
+withdrawn on bad evidence. The reasoning that withdrew it was sound — a
+structure signalling a property the code does not have IS worse than its
+absence — but it was applied to a premise obtained by grepping our own
+source. **An absence in the implementation is evidence about the
+implementation, never about the design.** That is the durable lesson here,
+and it is why this correction is recorded rather than quietly applied.
 
 **The screen that actually needs it is the Issue Workspace**
 (`/issues/:id`), per a requirement from Yogesh, 2026-08-27:
@@ -3930,11 +3952,20 @@ must be a ref on the scrolling region plus an effect keyed on the section
 pathname. Verify it by scrolling a long section and switching tabs, not
 by assuming the component did it.
 
-The issue list and Issue Entry both stay on `DefaultLayout` until one of
-them grows a real scroll region. Per
+**Two screens use `FixedHeightLayout`: the Issue Workspace and Issue
+Entry.** The issue list stays on `DefaultLayout` — its table is document
+scroll with no pinned chrome, in the prototype and in the port.
+
+The trigger this passage used to carry — "until one of them grows a real
+scroll region" — is **answered for Issue Entry**: the design already
+specifies one, so there was never anything to wait for. The rule it
+invoked still holds for anything else that might be added here: per
 `decisions/0005-no-page-host-layer-in-this-application.md`'s reasoning
-applied to layouts: a structure signalling a property the code does not
-have is worse than its absence.
+applied to layouts, a structure signalling a property the code does not
+have is worse than its absence. Note the order that makes it safe — build
+the behaviour the design specifies, then attach the layout that supports
+it. Attaching the layout to a screen with no scroll region of its own
+produces exactly the empty signal 0005 warns about.
 
 **Do not do that — keep it a separate layout.** Provenance for why the
 warning is this emphatic: in `kus-pqms`, this behaviour was first
@@ -4513,6 +4544,14 @@ screen that needs it.
 > screens. The paragraphs below about scroll-container relocation remain correct
 > and are why this is a separate layout rather than a prop — only the choice of
 > screen was wrong.
+>
+> **Amended 2026-08-29 — the issue-list half of this stands, the rest was
+> under-stated.** The 2026-08-27 check that produced this note read the
+> implementation, not the design, and that is the wrong instrument for a
+> question this file governs. Re-checked against the UX prototype, **Issue
+> Entry does have a sticky action row and an internal scroll port**, so it
+> takes `FixedHeightLayout` alongside the Workspace. The issue list remains
+> excluded. Full record in "Which screen gets it" above.
 
 **RESOLVED — a fourth layout, not a variant.**
 
@@ -4531,13 +4570,15 @@ child that positions, scrolls or restores focus behaves differently under it,
 and the difference is invisible at the call site — which is the failure mode a
 separate, named layout prevents.
 
-Use it for the issue list and any other screen with its own scroll region
-(a table with a sticky header, a split pane, a chat-style timeline). Everything
-else stays on `DefaultLayout`.
+Use it for any screen that owns its own scroll region — the Issue Workspace and
+Issue Entry today; a table with a sticky header, a split pane or a chat-style
+timeline would qualify equally. Everything else stays on `DefaultLayout`.
 
-**Build it when the issue list is built, not before** — but decide it now,
-because retrofitting it means moving the scroll container under components that
-already assumed the document.
+**Attach it to a screen only once that screen actually has its own scroll
+region**, and build the two together. Retrofitting means moving the scroll
+container under components that already assumed the document, and attaching it
+to a screen that has no such region signals a property the code does not have —
+which is the failure `decisions/0005` names.
 
 #### The registry, and why it is not a `switch`
 Where layouts are selected by metadata rather than by nesting, the mapping is a

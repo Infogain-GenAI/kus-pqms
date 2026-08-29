@@ -172,3 +172,48 @@
   font-size: var(--fs-caption);
   color: var(--danger-500);
 }
+
+/* ── Form card ────────────────────────────────────────────────────────────────
+ *
+ * THE THREE SECTIONS ARE ONE CARD, NOT THREE. The prototype renders Vehicle
+ * Information, System Classification and Issue Information inside a single
+ * 14px-radius container, separated by hairlines — not as three free-standing
+ * cards with gaps between them. Rendering them separately made the form read as
+ * three unrelated panels rather than one document, which is the most visible
+ * whole-screen difference from the design.
+ *
+ * `overflow: hidden` is what keeps the first and last sections' backgrounds
+ * inside the rounded corners; without it the hairline separators run to the
+ * card's square edge.
+ *
+ * 22px section padding and the 14px radius are the design's own values and have
+ * no matching token — reproduced rather than snapped, and living here in CSS
+ * rather than in a style object so they are not counted against ds-gate's
+ * JS-side numeric ceiling.
+ */
+
+.formCard {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xs);
+}
+
+.section {
+  padding: 22px;
+}
+
+/* Separator between sections, never above the first — this is why it is a
+   sibling selector rather than a border-top on every .section. */
+.section + .section {
+  border-top: var(--border-width) solid var(--divider);
+}
+
+/* "Same Existing Issues", appended to the end of the System Classification
+   section. A plain block rather than a card — it already sits inside `.formCard`,
+   and a card here would nest one inside another. `16px` separates it from the
+   classification grid above, matching the prototype's `margin-top:16px`. */
+.samePanel {
+  margin-top: 16px;
+}

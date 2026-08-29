@@ -224,3 +224,32 @@ as a vendored copy with no recorded provenance for how it is updated.
 
 **Nothing further is converted until this is answered.** The work is safely
 paused: everything done so far is verified, committed, and rendering identically.
+
+### Footnote, 2026-08-29 — six Category B values resolved locally
+
+**This does not answer the blocking question and does not change the analysis
+above.** Recorded so the counts here are not read as untouched.
+
+While porting Issue Entry's Model Code panel to the UX prototype, six colours in
+`apps/portal/src/features/issues/ModelCodeYearPicker.module.css` were found to
+have been **snapped to the nearest token** — during this pause, and without being
+written down. The snapping was visible: the selected year chip read bluer than
+the design. Per Yogesh's ruling they are now reproduced as literals in that one
+component: `#F4F7FB`, `#DDE3E9`, `#E1E7EC`, `#EDF0F3`, `#F7F9FB`, `#FBFCFD`.
+
+`#DDE3E9` is one of the four greys already listed in Category B above (~36 uses),
+so this resolves a handful of that row's instances in a single file. **The rest of
+Category B, the whole of Category A, and the blocking question are exactly as open
+as before.**
+
+Two things worth carrying into whatever answers this request:
+
+- **Snapping is not a neutral default.** It happened silently here and produced
+  visible drift. Whichever way the blocking question is answered, "snap to the
+  nearest token" needs to be a recorded decision rather than something that
+  happens when nobody chooses.
+- **One token stood in for several distinct source values.** In that file
+  `--border-subtle` had replaced three different prototype greys — and was
+  genuinely correct for two of them. Any future bulk conversion has to map per
+  element; a find-and-replace would be individually plausible and collectively
+  wrong, and no gate in this repo would catch it.

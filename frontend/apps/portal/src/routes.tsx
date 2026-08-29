@@ -105,25 +105,13 @@ export const routes: RouteObject[] = [
         children: [
           { path: '/dashboard', lazy: () => import('@/features/dashboard/DashboardScreen').then((m) => ({ Component: m.DashboardScreen })), ErrorBoundary: EB },
 
-          /**
-           * ORDER IS NOT WHAT MAKES `/issues/new` REACHABLE, and this is worth
-           * stating because getting it wrong makes Issue Entry unreachable —
-           * `:id` would swallow the literal "new" and render the Workspace with
-           * `id === "new"`. React Router ranks branches GLOBALLY by specificity,
-           * not per-branch and not by declaration order: static segments score
-           * 10 against a dynamic segment's 3, so `/issues/new` outranks
-           * `/issues/:id` regardless of where either sits. 07 verified this
-           * against the matching implementation; the cheap empirical check it
-           * asks for is a reachability test, which is why one exists in
-           * tests/routes.test.tsx.
-           */
+          // The issue LIST is the only `/issues*` route on this layout. It is a
+          // document-scrolling table with no pinned chrome, in the prototype and
+          // in the port. Its two siblings — `/issues/new` and `/issues/:id` —
+          // both own internal scroll regions and live under FixedHeightLayout
+          // below. Route ranking is global, so splitting them across branches
+          // changes no match; see the note there.
           { path: '/issues', lazy: () => import('@/features/issues/IssueListScreen').then((m) => ({ Component: m.IssueListScreen })), ErrorBoundary: EB },
-          { path: '/issues/new', lazy: () => import('@/features/issues/CreateIssueScreen').then((m) => ({ Component: m.CreateIssueScreen })), ErrorBoundary: EB },
-
-          // The Issue Workspace (`/issues/:id`) is NOT here — it is a child of
-          // FixedHeightLayout below, so it sits in a different branch from
-          // `/issues` and `/issues/new`. Route ranking is global, so splitting the
-          // three across branches changes no match.
 
           { path: '/notifications', lazy: () => import('@/features/notifications/NotificationsScreen').then((m) => ({ Component: m.NotificationsScreen })), ErrorBoundary: EB },
         ],
@@ -139,24 +127,52 @@ export const routes: RouteObject[] = [
          */
         Component: FixedHeightLayout,
         children: [
+          /**
+           * ─── WHAT QUALIFIES A SCREEN FOR THIS BRANCH ──────────────────────────
+           * One property, and only one: THE SCREEN PINS ITS OWN CHROME AND OWNS AN
+           * INTERNAL SCROLL REGION. A screen here must supply that region itself —
+           * `FixedHeightLayout`'s `<main>` is the fixed frame and does not scroll,
+           * so a child without its own `overflow-y` region is clipped at one
+           * viewport.
+           *
+           * Stated as a property rather than as a list of which screens are in and
+           * which are out, deliberately. The list form was here before and went
+           * stale the moment a screen changed — and worse, it recorded a fact about
+           * the IMPLEMENTATION ("CreateIssueScreen has no sticky/overflow
+           * behaviour") as though it settled a question about the DESIGN. It did
+           * not: the UX prototype specifies a sticky action row and a scroll port
+           * for Issue Entry, so the screen qualified all along and only the code
+           * lagged. Ask the property, and check it against the prototype.
+           *
+           * ORDER AND BRANCH ARE IRRELEVANT TO MATCHING, which is what makes this
+           * split safe: React Router ranks branches GLOBALLY by specificity, not
+           * per-branch and not by declaration order. Static segments score 10
+           * against a dynamic segment's 3, so `/issues/new` outranks `/issues/:id`
+           * wherever each sits. Getting that wrong makes Issue Entry unreachable —
+           * `:id` swallows the literal "new" and renders the Workspace with
+           * `id === "new"` — so `tests/routes.test.tsx` pins it with a reachability
+           * test rather than leaving it to this comment.
+           */
           {
             /**
-             * ─── WHY THE WORKSPACE IS THE SCREEN THAT GETS THIS LAYOUT ─────────
+             * ISSUE ENTRY. Per the UX prototype: a sticky action row carrying Clear
+             * and Register Issue (`position:sticky;top:42px;z-index:38`) above an
+             * internal scroll port (`data-createport`, `overflow-y:auto`). The form
+             * body scrolls; the actions stay reachable without scrolling back up,
+             * which is the whole point of pinning them.
+             */
+            path: '/issues/new',
+            lazy: () => import('@/features/issues/CreateIssueScreen').then((m) => ({ Component: m.CreateIssueScreen })),
+            ErrorBoundary: EB,
+          },
+          {
+            /**
+             * ─── THE ISSUE WORKSPACE ──────────────────────────────────────────
              * Yogesh's resolved requirement (2026-08-27): "Navigating to a
              * Workspace section resets scroll to the top of the scrolling region.
              * Only the workspace body scrolls; the page itself never does." The
              * shell's crumb, header card, tab strip and approval banner are the
              * pinned region; the section `<Outlet />` is the only scrolling one.
-             *
-             * NOT THE ISSUE LIST, AND NOT ISSUE ENTRY — 07 contradicts itself on
-             * this and both of its answers were wrong for this application. Its
-             * normative route tree puts only Issue Entry here, while its
-             * layout-count section argues the Issue List needs it. Checked against
-             * both screens: `CreateIssueScreen` has no sticky/100vh/overflow
-             * behaviour at all, and `IssueListScreen`'s only internal scroll is
-             * its filter drawer. Neither has the property 07's own rationale
-             * describes, so both stay on `DefaultLayout`. 07 now records the
-             * contradiction at both passages.
              *
              * THIS MOVE WAS DEFERRED FROM THE ROUTER MIGRATION ON PURPOSE, and the
              * sequencing bought two clean measurements. Attaching the layout

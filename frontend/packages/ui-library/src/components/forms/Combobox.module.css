@@ -79,6 +79,18 @@
   box-shadow: 0 12px 30px rgba(5, 20, 31, 0.16);
 }
 
+/* Optional bulk-action row above the options, with the hairline that separates
+   it from the list. Padding matches the prototype's 2px 2px 6px so the actions
+   sit tight to the panel edge rather than reading as a first option. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 2px 6px;
+  margin-bottom: 5px;
+  border-bottom: var(--border-width) solid var(--divider);
+}
+
 .status {
   padding: 11px 12px;
   color: var(--text-disabled);

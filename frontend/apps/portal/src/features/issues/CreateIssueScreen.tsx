@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Info, Link2, RotateCcw, Send } from 'lucide-react'
 import { Badge, Button, Input, Select, SOURCE, SOURCE_KEYS, SourceBadge, StatusBadge, Textarea, type SourceKey } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
-import { CardHead, Modal, PageContainer, PageCrumb, SectionCard, ULabel } from '@/app/chrome'
+// No `SectionCard` here any more: the three form sections live inside one
+// `.formCard` and must not each carry their own border, radius and shadow.
+import { CardHead, Modal, PageContainer, PageCrumb, ULabel } from '@/app/chrome'
 import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { LinkIssuesSection } from './LinkIssuesSection'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
+import { relatedRank } from './issue-entry/relatedRank'
 import entryStyles from './issue-entry/issue-entry.module.css'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
@@ -48,7 +51,45 @@ export function CreateIssueScreen() {
   )
   const label = (list: { id: string; label: string }[], id: string) => list.find((c) => c.id === id)?.label
   const symptomLabel = pendingSymptom || (symId ? label(symptoms, symId) : undefined)
-  const correlated = useMemo(() => (symptomLabel ? store.issues.filter((i) => i.symptom === symptomLabel).slice(0, 5) : []), [symptomLabel, store.issues])
+  const systemLabel = sysId ? label(systems, sysId) : undefined
+  const subSystemLabel = subId ? label(subs, subId) : undefined
+  const componentLabel = compId ? label(comps, compId) : undefined
+
+  /**
+   * Candidates for "Same Existing Issues", ranked — see `issue-entry/relatedRank.ts`.
+   *
+   * READINESS IS STILL GATED ON SYMPTOM, and that matches the prototype
+   * (`sameReady = !!(f0.symptom && …)`); it was never the defect. What changed is
+   * what runs afterwards: this was an exact string comparison against
+   * `i.symptom`, which almost never matched, so the panel rendered its empty
+   * branch on virtually every entry. It now ranks across the whole draft —
+   * classification, model code, DTC codes, title and description — and keeps the
+   * top 8, as the prototype does.
+   *
+   * `reasons` is carried even though nothing renders it yet: the "Suggested
+   * because: …" line is a separate, deliberately deferred piece of work, and
+   * throwing the reasons away here only to recompute them later is worse than
+   * carrying them now.
+   */
+  const correlated = useMemo(
+    () =>
+      symptomLabel
+        ? relatedRank(
+            {
+              system: systemLabel,
+              subSystem: subSystemLabel,
+              component: componentLabel,
+              symptom: symptomLabel,
+              title,
+              description,
+              dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : undefined,
+              modelCode: anchorCode,
+            },
+            store.issues,
+          ).slice(0, 8)
+        : [],
+    [symptomLabel, systemLabel, subSystemLabel, componentLabel, title, description, dtc, anchorCode, store.issues],
+  )
 
   /**
    * Every outstanding requirement, always computed — see `issue-entry/validation.ts`
@@ -60,9 +101,9 @@ export function CreateIssueScreen() {
    */
   const errors = validateIssueEntry({
     vehicle,
-    system: sysId ? label(systems, sysId) : undefined,
-    subSystem: subId ? label(subs, subId) : undefined,
-    component: compId ? label(comps, compId) : undefined,
+    system: systemLabel,
+    subSystem: subSystemLabel,
+    component: componentLabel,
     symptom: symptomLabel,
     title,
     description,
@@ -92,9 +133,9 @@ export function CreateIssueScreen() {
         // The record carries one year; use the earliest selected on the anchor code.
         modelYear: Number(anchorYears[0]) || 2026,
         linkedIssueIds: linkedIds,
-        system: sysId ? label(systems, sysId) : undefined,
-        subSystem: subId ? label(subs, subId) : undefined,
-        component: compId ? label(comps, compId) : undefined,
+        system: systemLabel,
+        subSystem: subSystemLabel,
+        component: componentLabel,
         symptom: symptomLabel,
         dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : undefined,
         submit: true,
@@ -107,47 +148,137 @@ export function CreateIssueScreen() {
     setCreated({ id: created.id, title: created.title })
   }
 
-  const pathSteps: { label: string; done: boolean }[] = [
-    { label: 'Model Code', done: vehicle.codes.length > 0 },
-    { label: 'System', done: !!sysId },
-    { label: 'Sub-System', done: !!subId },
-    { label: 'Component', done: !!compId },
-    { label: 'Symptom', done: !!symptomLabel },
+  /**
+   * The PATH bar's segments.
+   *
+   * ⚠️ EACH SEGMENT SHOWS THE SELECTED VALUE, falling back to the field's name
+   * only while it is empty — the prototype's `_seg(val, ph)` → `text: set ? val : ph`.
+   *
+   * THIS WAS THE DEFECT, and it was structural rather than a render bug: the old
+   * shape was `{ label, done }`, which carried no value at all, so the bar
+   * rendered the literal words "Model Code · System · Sub-System · Component ·
+   * Symptom" forever and no change to the JSX could have fixed it. A reader
+   * comparing against the design saw five static labels where the design shows
+   * the classification they had just chosen.
+   *
+   * Model Code joins ALL selected codes, not just the anchor — a two-code
+   * selection reads "KA4, DL3". The anchor is only the code that supplies the
+   * model NAME on the issue record; it was never meant to stand in for the
+   * selection here.
+   */
+  const pathSteps: { text: string; set: boolean }[] = [
+    { text: vehicle.codes.length > 0 ? vehicle.codes.join(', ') : 'Model Code', set: vehicle.codes.length > 0 },
+    { text: systemLabel ?? 'System', set: !!systemLabel },
+    { text: subSystemLabel ?? 'Sub-System', set: !!subSystemLabel },
+    { text: componentLabel ?? 'Component', set: !!componentLabel },
+    { text: symptomLabel ?? 'Symptom', set: !!symptomLabel },
   ]
 
   return (
-    <PageContainer>
-      <PageCrumb backTo="/issues" trail={[{ label: 'Issue Management', to: '/issues' }, { label: 'Issue Entry' }]} />
+    /*
+     * ─── THE FIXED FRAME ────────────────────────────────────────────────────────
+     * This screen renders under `FixedHeightLayout`, whose `<main>` is exactly one
+     * viewport tall and does NOT scroll. Per that layout's contract the child
+     * screen must supply its own scrolling region, or its content is clipped at one
+     * viewport — see the scroll port below.
+     *
+     * WHY THIS SCREEN AND NOT THE ISSUE LIST: the UX prototype's Issue Entry pins
+     * its action row (`position:sticky;top:42px;z-index:38`) above an internal
+     * scroll port (`data-createport`, `overflow-y:auto`). This is a long
+     * three-section form whose primary actions must stay reachable without
+     * scrolling back to the top. The issue list has no such pinned chrome and stays
+     * on `DefaultLayout`.
+     *
+     * `flex: 1` + `minHeight: 0`: in a flex column a child refuses to shrink below
+     * its content size without `minHeight: 0`, which would push the frame past the
+     * viewport and hand the scroll back to the document — the exact failure the
+     * layout exists to prevent.
+     *
+     * ⚠️ FULL-BLEED ON PURPOSE — `PageContainer` is NOT the outer wrapper here,
+     * unlike most screens. The content rail is applied twice below, once in the
+     * pinned region and once inside the scroller, so that the scrollbar sits at the
+     * window edge rather than inside the padded rail. Read the scroll port's
+     * comment before collapsing these back into one container.
+     */
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      {/*
+        ─── PINNED REGION ────────────────────────────────────────────────────────
+        Crumb, title and the Clear / Register actions stay put while the form body
+        scrolls. `flex: 'none'` so it is sized by its content and never shrinks to
+        give the scroller room.
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
-        <h1 style={{ margin: 0, font: 'var(--fw-bold) 30px/1.15 var(--font-display)', letterSpacing: 'var(--ls-h1)', color: 'var(--text-primary)' }}>New issue</h1>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          {/* Clear now asks first — it resets three sections and every linked
-              issue, with no undo, and sits beside Register. */}
-          <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={15} />} onClick={() => setClearOpen(true)}>Clear</Button>
-          <Button iconLeft={<Icon icon={Send} size={15} />} onClick={register}>Register Issue</Button>
+        `width: '100%'` IS REQUIRED AND IS NOT COSMETIC. `PageContainer` carries
+        `margin: '0 auto'` (chrome.tsx:17), and per the flexbox spec a flex item
+        stretches on the cross axis only if its cross size computes to `auto` AND
+        NEITHER cross-axis margin is auto. In this column the cross axis is
+        horizontal, so `0 auto` disables the stretch and the region shrink-to-fits
+        its content, centred — measurably narrower than the rail it should share.
+        `alignSelf: 'stretch'` does NOT fix it: stretch is already the inherited
+        default, and auto margins defeat it. Giving the cross size a definite value
+        is what breaks the `auto` precondition. Safe against overflow because
+        `box-sizing: border-box` is global (styles/global.css:5-9), and `maxWidth`
+        still clamps and centres above 1800px.
+      */}
+      <PageContainer style={{ flex: 'none', paddingBottom: 0, width: '100%' }}>
+        <PageCrumb backTo="/issues" trail={[{ label: 'Issue Management', to: '/issues' }, { label: 'Issue Entry' }]} />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
+          <h1 style={{ margin: 0, font: 'var(--fw-bold) 30px/1.15 var(--font-display)', letterSpacing: 'var(--ls-h1)', color: 'var(--text-primary)' }}>New issue</h1>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            {/* Clear now asks first — it resets three sections and every linked
+                issue, with no undo, and sits beside Register. */}
+            <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={15} />} onClick={() => setClearOpen(true)}>Clear</Button>
+            <Button iconLeft={<Icon icon={Send} size={15} />} onClick={register}>Register Issue</Button>
+          </div>
         </div>
-      </div>
 
-      <ValidationBanner errors={shown} />
+        {/* The validation summary belongs to the PINNED region, not the scroller.
+            It names fields the user must go and fix, so it has to stay visible
+            while they scroll to them — inside the scroll port it would scroll
+            away exactly when it is being acted on. */}
+        <ValidationBanner errors={shown} />
+      </PageContainer>
 
+      {/*
+        ─── THE ONLY SCROLLING REGION ON THIS SCREEN ─────────────────────────────
+        The prototype's `data-createport`. Full-bleed so its scrollbar sits at the
+        window edge, with the content rail applied by the inner `PageContainer` —
+        the same arrangement as the Issue Workspace, and for the same reason: a
+        scroller inside the padded rail insets the gutter and makes the region's
+        width depend on whether it happens to be scrolling.
+
+        `minHeight: 0` is as load-bearing here as on the frame above: without it
+        this flex item grows to its content height instead of scrolling.
+
+        Expect a few pixels of antialiasing difference on the first card's rounded
+        corners against any baseline captured before this region existed — the
+        scroll origin can land on a fractional offset. Known and accepted; the same
+        note is recorded at length on the Workspace's equivalent boundary.
+      */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <PageContainer>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {/* ── The form card: three sections, one container ──────────────────────
+            See `issue-entry.module.css`'s `.formCard`. The sections are plain
+            divs rather than `SectionCard`s because each must NOT carry its own
+            border, radius and shadow — the card around them owns all three. */}
+        <div className={entryStyles.formCard}>
         {/* Vehicle Information */}
-        <SectionCard>
+        <div className={entryStyles.section}>
           <CardHead title="Vehicle Information" />
           <ModelCodeYearPicker value={vehicle} onChange={setVehicle} />
           {err('modelCode') && <p className={entryStyles.fieldError}>{err('modelCode')}</p>}
-        </SectionCard>
+        </div>
 
         {/* System Classification */}
-        <SectionCard>
+        <div className={entryStyles.section}>
           <CardHead title="System Classification" />
           {/* PATH bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--accent-50)', border: 'var(--border-width) solid var(--accent-100)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-3)', flexWrap: 'wrap' }}>
             <span style={{ font: 'var(--fw-bold) 10px/1 var(--font-body)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Path</span>
             {pathSteps.map((s, i) => (
-              <span key={s.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ font: `${s.done ? 'var(--fw-semibold)' : 'var(--fw-regular)'} var(--fs-body-sm)/1 var(--font-body)`, color: s.done ? 'var(--text-primary)' : 'var(--text-muted)' }}>{s.label}</span>
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ font: `${s.set ? 'var(--fw-semibold)' : 'var(--fw-regular)'} var(--fs-body-sm)/1 var(--font-body)`, color: s.set ? 'var(--text-primary)' : 'var(--text-muted)' }}>{s.text}</span>
                 {i < pathSteps.length - 1 && <Icon icon={ChevronRight} size={13} style={{ color: 'var(--neutral-300)' }} />}
               </span>
             ))}
@@ -189,10 +320,66 @@ export function CreateIssueScreen() {
               {err('symptom') && <p className={entryStyles.fieldError}>{err('symptom')}</p>}
             </div>
           </div>
-        </SectionCard>
+
+          {/*
+            ─── SAME EXISTING ISSUES — INSIDE System Classification ──────────────
+            Placement is checkable against the prototype rather than a matter of
+            taste: in the unpacked template the markers fall in this order —
+            `data-createsec="2"` → `sameCardsShow` → `sameEmptyShow` →
+            `data-createsec="0"`. So the panel and its empty state belong AFTER
+            the classification fields and BEFORE Issue Information, within
+            section 2. It reads that way for a reason: the suggestions are a
+            consequence of the classification you just chose, and they are most
+            useful before you spend effort describing an issue that may already
+            exist.
+
+            It is a plain block, NOT a card — a card here would nest inside the
+            form card. The prototype renders it as a bare
+            `flex-column; gap:10px; margin-top:16px` list.
+
+            NO HEADING, matching the prototype: `sameCardsShow` opens straight
+            into the entry list with no title and no subtitle. We previously
+            rendered a `CardHead` with "Same Existing Issues" and an explanatory
+            subtitle, carried over from the Vue app.
+
+            That was raised as a usability concern — an unlabelled list appearing
+            mid-form has to explain itself — and the concern was heard and
+            overruled in favour of matching the design. Recorded so the next
+            reader knows the heading was REMOVED deliberately and does not
+            helpfully restore it.
+          */}
+          {symptomLabel && (
+            <div className={entryStyles.samePanel}>
+              {correlated.length === 0 ? (
+                <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)' }}>No similar issues were found based on the current issue information.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  {correlated.map(({ issue: i }) => (
+                    <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '9px 12px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{i.id}</span>
+                      <SourceBadge source={i.source} size="sm" />
+                      <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{i.title}</span>
+                      <StatusBadge status={i.status} size="sm" />
+                      <Button variant="link" size="sm" onClick={() => nav(`/issues/${i.id}`)}>Preview</Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={linkedIds.includes(i.id)}
+                        iconLeft={<Icon icon={Link2} size={13} />}
+                        onClick={() => setLinkedIds((l) => (l.includes(i.id) ? l : [...l, i.id]))}
+                      >
+                        {linkedIds.includes(i.id) ? 'Linked' : 'Link'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Issue Information */}
-        <SectionCard>
+        <div className={entryStyles.section}>
           <CardHead title="Issue Information" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             <div>
@@ -228,45 +415,27 @@ export function CreateIssueScreen() {
               {err('source') && <p className={entryStyles.fieldError}>{err('source')}</p>}
             </div>
           </div>
-        </SectionCard>
+        </div>
+        </div>
 
-        {/* Correlation advisory (non-blocking) */}
-        {symptomLabel && (
-          <SectionCard>
-            <CardHead icon={Link2} title="Same Existing Issues" subtitle="We found existing issues with similar system classification. Review the issue or issue group before linking." />
-            {correlated.length === 0 ? (
-              <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)' }}>No similar issues were found based on the current issue information.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {correlated.map((i) => (
-                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '9px 12px', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                    <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{i.id}</span>
-                    <SourceBadge source={i.source} size="sm" />
-                    <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{i.title}</span>
-                    <StatusBadge status={i.status} size="sm" />
-                    <Button variant="link" size="sm" onClick={() => nav(`/issues/${i.id}`)}>Preview</Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={linkedIds.includes(i.id)}
-                      iconLeft={<Icon icon={Link2} size={13} />}
-                      onClick={() => setLinkedIds((l) => (l.includes(i.id) ? l : [...l, i.id]))}
-                    >
-                      {linkedIds.includes(i.id) ? 'Linked' : 'Link'}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-        )}
-
+        {/* ⚠️ STILL OUTSIDE THE FORM CARD, AND DELIBERATELY SO FOR NOW.
+            The prototype's `data-createport` holds the form card and the manual
+            "Search & link existing issue" affordance as separate children, so a
+            link surface outside the card is not itself wrong — but this component
+            is ours, not a direct port of that affordance, and reconciling the two
+            is its own piece of work. Named rather than left to look accidental. */}
         <LinkIssuesSection
           linkedIds={linkedIds}
           onLink={(id) => setLinkedIds((l) => (l.includes(id) ? l : [...l, id]))}
           onUnlink={(id) => setLinkedIds((l) => l.filter((x) => x !== id))}
         />
       </div>
+        </PageContainer>
+      </div>
+
+      {/* Modals sit OUTSIDE the scroll port. They are fixed-position overlays, so
+          nesting them in a scrolling region buys nothing and would tie their
+          lifetime to it. */}
 
       {/* Request-new classification (submits to approval queue; non-blocking) */}
       <Modal open={requestOpen} onClose={() => setRequestOpen(false)} title="Request New Classification" footer={
@@ -293,6 +462,6 @@ export function CreateIssueScreen() {
           onOpenWorkspace={() => nav(`/issues/${created.id}`)}
         />
       )}
-    </PageContainer>
+    </div>
   )
 }
