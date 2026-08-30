@@ -1,4 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
+import {
+  EMPTY_ISSUE_FILTERS,
+  useIssueListView,
+  type IssueFilterState,
+  type IssueListView,
+} from '@/data/issueListView'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Car, Check, ChevronDown, ChevronUp, CircleCheck, ClipboardList, Columns3, Download, FileOutput, Flame, FolderOpen, Layers, Link2, Plus, RefreshCw, RotateCcw, Search, SlidersHorizontal, TriangleAlert, UserCog, X } from 'lucide-react'
@@ -59,27 +65,36 @@ const OPTIONAL_COLS = [
 const DEFAULT_VISIBLE = DEFAULT_COLS.map((c) => c.key as string)
 
 // Filters-drawer draft (the prototype applies the whole draft on Apply, discards on Reset).
-interface FilterDraft {
-  modelCode: string
-  modelYear: string
-  system: string
-  subSystem: string
-  component: string
-  symptom: string
-  status: string
-  source: string
-  owner: string
-  grouping: string
-  dateFrom: string
-  dateTo: string
-  days: string
-  linked: string
-  ews: string
-}
-const EMPTY_FILTERS: FilterDraft = { modelCode: '', modelYear: '', system: '', subSystem: '', component: '', symptom: '', status: '', source: '', owner: '', grouping: '', dateFrom: '', dateTo: '', days: '', linked: '', ews: '' }
+//
+// THE SHAPE MOVED TO `@/data/issueListView` when the view became persisted: it
+// is now part of what gets serialised to sessionStorage, so the module that
+// validates the stored blob has to own the field list. Aliased here so the ~30
+// `FilterDraft` references below read unchanged.
+type FilterDraft = IssueFilterState
+const EMPTY_FILTERS: FilterDraft = EMPTY_ISSUE_FILTERS
 
 /** Default list sort: Issue Date descending (the prototype's 'registered desc'). */
 const DEFAULT_SORT: DataTableSort = { key: 'issueDate', dir: 'desc' }
+
+/**
+ * Every column key the table can render — the allow-list the stored view is
+ * validated against, so a blob written by an older build cannot name a column
+ * that no longer exists. Also bounds the stored SORT key: sorting is by column.
+ */
+const ALL_COLUMN_KEYS: readonly string[] = [
+  ...DEFAULT_COLS.map((c) => c.key as string),
+  ...OPTIONAL_COLS.map((c) => c.key as string),
+]
+
+/** The view a first-time visitor sees, and the fallback for anything invalid. */
+const DEFAULT_VIEW: IssueListView = {
+  q: '',
+  flt: EMPTY_FILTERS,
+  cols: DEFAULT_VISIBLE,
+  sort: DEFAULT_SORT,
+  page: 1,
+  pageSize: 20,
+}
 
 const drawerLabel = { font: 'var(--fw-bold) 11px/1.35 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)' } as const
 const fieldRow = { display: 'grid', gridTemplateColumns: '116px 1fr', gap: 'var(--space-4)', alignItems: 'center', padding: 'var(--space-2) 0' } as const
@@ -291,19 +306,36 @@ export function IssueListScreen() {
   const { issues, bulkStatus, bulkAssignRole, priorityResult } = useStore()
 
   const [tab, setTab] = useState<'my' | 'all'>(scope === 'own' ? 'my' : 'all')
-  const [q, setQ] = useState('')
+  /*
+   * ─── THE PERSISTED VIEW ─────────────────────────────────────────────────────
+   *
+   * Search, applied filters, visible columns, sort, page and page size are kept
+   * in sessionStorage for the tab's lifetime — see `@/data/issueListView`. Before
+   * this, they were six `useState` calls, so opening an issue and pressing Back
+   * returned an unfiltered list at page 1 and discarded whatever the user had
+   * narrowed down to.
+   *
+   * The destructured names and the setters' signatures are IDENTICAL to the
+   * `useState` pairs they replaced, so every call site below is unchanged and
+   * persistence is invisible at the point of use.
+   *
+   * ⚠️ `tab` (My Issues / All Issues) IS NOT PART OF THIS, and must not be added
+   * to it. It is seeded from the viewer's capability on every mount, so a scope
+   * restored from an earlier visit could seat someone in a scope their current
+   * role would not have picked. Vue's store excludes it for the same reason and
+   * says so at length. The two DRAFTS below are also excluded, but only because
+   * they are seeded from the applied state when a drawer opens.
+   */
+  const { view, setQ, setFlt, setCols, setSort, setPage, setPageSize } = useIssueListView(DEFAULT_VIEW, ALL_COLUMN_KEYS)
+  const { q, flt, cols, sort, page, pageSize } = view
+
   const [drawer, setDrawer] = useState<'' | 'filter' | 'cols'>('')
   const [linkedModalFor, setLinkedModalFor] = useState<string | null>(null)
   const [secOpen, setSecOpen] = useState({ vehicle: true, classification: true, issue: true })
-  // Applied filters + the drawer's working draft.
-  const [flt, setFlt] = useState<FilterDraft>(EMPTY_FILTERS)
-  const [draft, setDraft] = useState<FilterDraft>(EMPTY_FILTERS)
-  // Visible columns (defaults per the prototype) + the Columns drawer's working draft.
-  const [cols, setCols] = useState<string[]>(DEFAULT_VISIBLE)
-  const [colsDraft, setColsDraft] = useState<string[]>(DEFAULT_VISIBLE)
-  const [sort, setSort] = useState<DataTableSort>(DEFAULT_SORT)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  // The drawers' working drafts. Seeded from the applied state on open, so they
+  // start from what is on screen rather than from empty.
+  const [draft, setDraft] = useState<FilterDraft>(flt)
+  const [colsDraft, setColsDraft] = useState<string[]>(cols)
   const [selected, setSelected] = useState<Array<string | number>>([])
   const [bulkTarget, setBulkTarget] = useState('')
   const [bulkReason, setBulkReason] = useState('')
