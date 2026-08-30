@@ -2,6 +2,7 @@ import { render } from '@testing-library/react'
 import { RouterProvider, createMemoryRouter, type RouteObject } from 'react-router-dom'
 import type { RoleKey } from '@/data/types'
 import { RoleProvider } from '@/data/roles'
+import { _syncCurrentRole } from '@/data/capabilities'
 import { StoreProvider } from '@/data/store'
 
 /**
@@ -91,6 +92,23 @@ export function renderAt(
   url: string,
   { role = 'PQM' as RoleKey } = {},
 ) {
+  /*
+   * ⚠️ THE ROLE MUST BE ESTABLISHED BEFORE THE ROUTER IS CONSTRUCTED.
+   *
+   * `createMemoryRouter` initialises immediately and runs the initial match's
+   * LOADERS — before `render()` below has mounted `RoleProvider`. A capability
+   * loader (`@/app/capabilityGuard`) reads the module-level snapshot in
+   * `@/data/capabilities`, so without this line it would see whatever the
+   * previous test left behind and `role` here would silently not apply to any
+   * loader, only to components.
+   *
+   * This mirrors the real app rather than working around it: there,
+   * `createBrowserRouter` runs at module scope in `App.tsx`, so the snapshot's
+   * module default is what the first navigation sees — and the app never passes
+   * a non-default `initialRole`, so the two agree. See `capabilities.ts`.
+   */
+  _syncCurrentRole(role)
+
   const router = createMemoryRouter(routes, { initialEntries: [url] })
   const result = render(
     <RoleProvider initialRole={role}>

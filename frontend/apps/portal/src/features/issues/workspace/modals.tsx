@@ -7,6 +7,8 @@ import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
 import type { DispositionOutcome, Issue } from '@/data/types'
 import { inputStyle } from './shared'
+import { Trans, useTranslation } from 'react-i18next'
+import { NS } from './IssueDetail.i18n'
 
 // The four Workspace modals, moved verbatim from IssueWorkspaceScreen.tsx
 // (2026-08-27) when the sections became child routes.
@@ -23,6 +25,7 @@ import { inputStyle } from './shared'
 // the shell to open them.
 
 export function ChangeStatusModal({ open, issue, canApprove, onClose }: { open: boolean; issue: Issue; canApprove: boolean; onClose: () => void }) {
+  const { t } = useTranslation(NS)
   const store = useStore()
   const { user } = useRole()
   const [target, setTarget] = useState<StatusKey | ''>('')
@@ -54,31 +57,31 @@ export function ChangeStatusModal({ open, issue, canApprove, onClose }: { open: 
   return (
     <Modal open={open} onClose={onClose} title={
       <>
-        Change issue status
-        <div style={{ marginTop: 3, font: 'var(--fw-regular) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-disabled)' }}>A valid reason is required for every status change.</div>
+        {t('statusModalTitle')}
+        <div style={{ marginTop: 3, font: 'var(--fw-regular) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-disabled)' }}>{t('statusModalSubtitle')}</div>
       </>
     } footer={
       <>
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button disabled={!valid} iconLeft={<Icon icon={Check} size={16} />} onClick={submit}>Save status change</Button>
+        <Button variant="ghost" onClick={onClose}>{t('statusModalCancel')}</Button>
+        <Button disabled={!valid} iconLeft={<Icon icon={Check} size={16} />} onClick={submit}>{t('statusModalSave')}</Button>
       </>
     }>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 'var(--space-4)' }}>
-        <ULabel style={{ marginBottom: 0 }}>Current status</ULabel>
+        <ULabel style={{ marginBottom: 0 }}>{t('statusModalCurrentStatus')}</ULabel>
         <StatusBadge status={issue.status} />
       </div>
       {terminal && (
         <p style={{ margin: '0 0 var(--space-4)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'var(--neutral-50)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }} role="status">
-          This issue is <b style={{ color: 'var(--text-primary)' }}>{STATUS[issue.status].label}</b> and its status cannot be changed any further.
+          <Trans t={t} i18nKey="statusModalTerminal" values={{ status: STATUS[issue.status].label }} components={{ b: <b style={{ color: 'var(--text-primary)' }} /> }} />
         </p>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
         <div>
-          <ULabel>New status *</ULabel>
+          <ULabel>{t('statusModalNewStatus')}</ULabel>
           <Select aria-label="New status" value={target} disabled={terminal} placeholder="Select status…" options={STATUS_KEYS.filter((k) => k !== issue.status).map((k) => ({ value: k, label: STATUS[k].label }))} onChange={(e) => setTarget(e.target.value as StatusKey)} />
         </div>
       </div>
-      <ULabel>Reason / comment *</ULabel>
+      <ULabel>{t('statusModalReason')}</ULabel>
       <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={target === 'outofscope' ? 'NASO (no action) requires at least 30 characters…' : 'e.g. Reviewed investigation details and moved for technical validation'} />
       <p style={{ margin: '10px 0 0', font: 'var(--fw-regular) var(--fs-caption)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
         {canApprove ? 'Override roles apply directly; the justification is audit-logged.' : 'Submits as Pending Approval — an ASM/PQM decides with a remark.'}
@@ -88,6 +91,7 @@ export function ChangeStatusModal({ open, issue, canApprove, onClose }: { open: 
 }
 
 export function CreateQirModal({ open, issue, onClose }: { open: boolean; issue: Issue; onClose: () => void }) {
+  const { t } = useTranslation(NS)
   const store = useStore()
   const { user } = useRole()
   const [reason, setReason] = useState('')
@@ -95,20 +99,21 @@ export function CreateQirModal({ open, issue, onClose }: { open: boolean; issue:
   return (
     <Modal open={open} onClose={onClose} title="Create QIR" footer={
       <>
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button disabled={!valid} iconLeft={<Icon icon={ClipboardPlus} size={15} />} onClick={() => { store.setStatus(issue.id, 'escalated', reason.trim(), { name: user.name, role: user.role }, 'Escalated to QIR (hand-off)'); setReason(''); onClose() }}>Create QIR</Button>
+        <Button variant="ghost" onClick={onClose}>{t('qirModalCancel')}</Button>
+        <Button disabled={!valid} iconLeft={<Icon icon={ClipboardPlus} size={15} />} onClick={() => { store.setStatus(issue.id, 'escalated', reason.trim(), { name: user.name, role: user.role }, 'Escalated to QIR (hand-off)'); setReason(''); onClose() }}>{t('qirModalCreate')}</Button>
       </>
     }>
       <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>
-        Escalates {issue.id} to the QIR module. The issue becomes <b>Escalated</b>; the QIR reference will appear read-only in Resolution. The QIR module owns what happens next.
+        <Trans t={t} i18nKey="qirModalBody" values={{ issueId: issue.id }} components={{ b: <b /> }} />
       </p>
-      <ULabel>Escalation reason * (min 20 characters)</ULabel>
+      <ULabel>{t('qirModalReason')}</ULabel>
       <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why does this issue warrant a QIR?" />
     </Modal>
   )
 }
 
 export function EditIssueModal({ open, issue, onClose }: { open: boolean; issue: Issue; onClose: () => void }) {
+  const { t } = useTranslation(NS)
   const store = useStore()
   const { user } = useRole()
   const [title, setTitle] = useState(issue.title)
@@ -118,20 +123,21 @@ export function EditIssueModal({ open, issue, onClose }: { open: boolean; issue:
   return (
     <Modal open={open} onClose={onClose} title="Edit issue" footer={
       <>
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button disabled={!valid} onClick={() => { store.updateIssue(issue.id, { title: title.trim(), description: description.trim(), dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : undefined }, { name: user.name, role: user.role }); onClose() }}>Save changes</Button>
+        <Button variant="ghost" onClick={onClose}>{t('editModalCancel')}</Button>
+        <Button disabled={!valid} onClick={() => { store.updateIssue(issue.id, { title: title.trim(), description: description.trim(), dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : undefined }, { name: user.name, role: user.role }); onClose() }}>{t('editModalSave')}</Button>
       </>
     }>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        <div><ULabel>Issue title *</ULabel><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. EV6 — HV battery rapid SOC drop under cold soak" style={{ ...inputStyle, height: 'var(--control-md)' }} /></div>
-        <div><ULabel>Description *</ULabel><Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Symptoms, reproduction steps, environmental conditions, frequency, and any safety implications…" /></div>
-        <div><ULabel>DTC / trouble code <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>· optional · comma-separated</span></ULabel><input value={dtc} onChange={(e) => setDtc(e.target.value)} placeholder="e.g. P0A0F, C1234, B1020" style={{ ...inputStyle, height: 'var(--control-md)' }} /></div>
+        <div><ULabel>{t('editModalTitle')}</ULabel><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. EV6 — HV battery rapid SOC drop under cold soak" style={{ ...inputStyle, height: 'var(--control-md)' }} /></div>
+        <div><ULabel>{t('editModalDescription')}</ULabel><Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Symptoms, reproduction steps, environmental conditions, frequency, and any safety implications…" /></div>
+        <div><ULabel>{t('editModalDtc')} <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{t('editModalDtcHint')}</span></ULabel><input value={dtc} onChange={(e) => setDtc(e.target.value)} placeholder="e.g. P0A0F, C1234, B1020" style={{ ...inputStyle, height: 'var(--control-md)' }} /></div>
       </div>
     </Modal>
   )
 }
 
 export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issue: Issue; onClose: () => void }) {
+  const { t } = useTranslation(NS)
   const store = useStore()
   const { user } = useRole()
   const actor = { name: user.name, role: user.role }
@@ -149,18 +155,18 @@ export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issu
   return (
     <Modal open={open} onClose={onClose} title={
       <>
-        Manage Related Issues
-        <div style={{ marginTop: 3, font: 'var(--fw-regular) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-disabled)' }}>Review, unlink, and link Parent/Child issues. All changes apply together on Save.</div>
+        {t('linksModalTitle')}
+        <div style={{ marginTop: 3, font: 'var(--fw-regular) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-disabled)' }}>{t('linksModalSubtitle')}</div>
       </>
     } width={620} footer={
       <>
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button disabled={!dirty} iconLeft={<Icon icon={Check} size={15} />} onClick={save}>Save changes</Button>
+        <Button variant="ghost" onClick={onClose}>{t('linksModalCancel')}</Button>
+        <Button disabled={!dirty} iconLeft={<Icon icon={Check} size={15} />} onClick={save}>{t('linksModalSave')}</Button>
       </>
     }>
-      <ULabel>Current Related Issues</ULabel>
+      <ULabel>{t('linksModalCurrentHeading')}</ULabel>
       {draft.length === 0 ? (
-        <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>This issue has no related Parent/Child issues.</p>
+        <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>{t('linksModalEmpty')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
           {draft.map((lid) => {
@@ -169,15 +175,15 @@ export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issu
               <div key={lid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) var(--space-3)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
                 <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{lid}</span>
                 <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{li?.title}</span>
-                <Button variant="ghost" size="sm" style={{ color: 'var(--danger-500)', borderColor: '#E3B8B0' }} onClick={() => setDraft((d) => d.filter((x) => x !== lid))}>Unlink</Button>
+                <Button variant="ghost" size="sm" style={{ color: 'var(--danger-500)', borderColor: '#E3B8B0' }} onClick={() => setDraft((d) => d.filter((x) => x !== lid))}>{t('linksModalUnlink')}</Button>
               </div>
             )
           })}
         </div>
       )}
-      <ULabel>Link Another Issue</ULabel>
+      <ULabel>{t('linksModalCandidatesHeading')}</ULabel>
       {candidates.length === 0 ? (
-        <p style={{ margin: 0, font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>No classification-matched candidates.</p>
+        <p style={{ margin: 0, font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>{t('linksModalNoCandidates')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {candidates.map((c) => (
@@ -185,13 +191,13 @@ export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issu
               <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{c.id}</span>
               <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{c.title}</span>
               <StatusBadge status={c.status} size="sm" />
-              <Button variant="secondary" size="sm" iconLeft={<Icon icon={Link2} size={14} />} onClick={() => setDraft((d) => [...d, c.id])}>Link</Button>
+              <Button variant="secondary" size="sm" iconLeft={<Icon icon={Link2} size={14} />} onClick={() => setDraft((d) => [...d, c.id])}>{t('linksModalLink')}</Button>
             </div>
           ))}
         </div>
       )}
       <p style={{ margin: 'var(--space-3) 0 0', font: 'var(--fw-regular) var(--fs-caption)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
-        Links notify both owners; unlink is a soft delete recorded in the audit trail.
+        {t('linksModalFootnote')}
       </p>
     </Modal>
   )

@@ -3,16 +3,17 @@ import { Button, Select, Textarea, type ComboboxOption } from '@pqms/ui-library'
 import {
   ACTIVITY_TYPES,
   DEALERS,
-  ELIGIBLE_PARTS,
   EVALUATION_TYPES,
-  TEAM_DIRECTORY,
   activityTypeForm,
   typeHasField,
   vinOptionsFor,
   type ActivityType,
 } from '@/data/investigation'
+import { useStore } from '@/data/store'
 import { AttachmentsDropzone } from './AttachmentsDropzone'
 import { FieldLabel, PanelHeading, ValidationBanner } from './primitives'
+import { AddPartsManuallyModal } from './AddPartsManuallyModal'
+import { AddTeamMemberModal } from './AddTeamMemberModal'
 import { ValuePicker } from './ValuePicker'
 import styles from './investigation.module.css'
 
@@ -72,6 +73,7 @@ export function AddActivityForm({
   onSave: (draft: ActivityDraft) => void
   onRequestNewType?: () => void
 }) {
+  const store = useStore()
   const [type, setType] = useState<ActivityType>(ACTIVITY_TYPES[0])
   const [details, setDetails] = useState('')
   const [evaluationType, setEvaluationType] = useState('')
@@ -81,21 +83,55 @@ export function AddActivityForm({
   const [members, setMembers] = useState<string[]>([])
   const [attachments, setAttachments] = useState<string[]>([])
   const [attempted, setAttempted] = useState(false)
+  /*
+   * The two directory modals are mounted HERE rather than by the parent, unlike
+   * Vue — which puts them in InvestigationActivities and reaches back into the
+   * form through a template ref to auto-select what was added.
+   *
+   * This form owns `parts` and `members`, so owning the modals too makes the
+   * auto-select a plain setState instead of an imperative handle. Vue needs the
+   * ref because it also fetches the directories in the parent; here the store is
+   * reachable from anywhere, so that reason does not apply.
+   */
+  const [partsModalOpen, setPartsModalOpen] = useState(false)
+  const [memberModalOpen, setMemberModalOpen] = useState(false)
 
   const form = activityTypeForm(type)
   const shows = (f: Parameters<typeof typeHasField>[1]) => typeHasField(type, f)
 
+  /*
+   * ⚠️ FROM THE STORE, NOT FROM THE SEED CONSTANTS. Both directories now grow
+   * during a session — "Add parts manually" and "Add team member" append to
+   * them — so reading `ELIGIBLE_PARTS` / `TEAM_DIRECTORY` directly would show a
+   * user a picker that does not contain what they just added.
+   *
+   * The `manual` flag rides along and badges those rows, so a value someone
+   * typed in is distinguishable from one the catalogue knows.
+   */
+  const partCatalogue = store.partOptions()
+  const memberCatalogue = store.teamDirectory()
+
   const partOptions = useMemo<ComboboxOption[]>(
-    () => ELIGIBLE_PARTS.map((p) => ({ value: p.partNo, label: p.partNo, meta: `qty ${p.qty}` })),
-    [],
+    () =>
+      partCatalogue.map((p) => ({
+        value: p.partNo,
+        label: p.partNo,
+        meta: p.manual ? `qty ${p.qty} · manual` : `qty ${p.qty}`,
+      })),
+    [partCatalogue],
   )
   const dealerOptions = useMemo<ComboboxOption[]>(
     () => DEALERS.map((d) => ({ value: d.code, label: d.code, detail: d.name })),
     [],
   )
   const memberOptions = useMemo<ComboboxOption[]>(
-    () => TEAM_DIRECTORY.map((m) => ({ value: m.name, label: m.name, detail: `${m.role} · ${m.company}` })),
-    [],
+    () =>
+      memberCatalogue.map((m) => ({
+        value: m.name,
+        label: m.name,
+        detail: m.manual ? `${m.role} · ${m.company} · manual` : `${m.role} · ${m.company}`,
+      })),
+    [memberCatalogue],
   )
   const vinOptions = useMemo<ComboboxOption[]>(
     () => vinOptionsFor(issueId).map((v) => ({ value: v, label: v })),
@@ -196,6 +232,7 @@ export function AddActivityForm({
           onChange={setParts}
           disabled={disabled}
           placeholder="Search eligible parts…"
+          onAdd={() => setPartsModalOpen(true)}
           addLabel="Add parts manually"
           invalid={err('parts', 'Select or add at least one part.')}
         />
@@ -240,6 +277,7 @@ export function AddActivityForm({
           onChange={setMembers}
           disabled={disabled}
           placeholder="Search team members…"
+          onAdd={() => setMemberModalOpen(true)}
           addLabel="Add a team member"
           invalid={err('members', 'Add at least one team member.')}
         />
@@ -263,6 +301,35 @@ export function AddActivityForm({
       <Button fullWidth disabled={disabled} onClick={save}>Save activity</Button>
 
       {lockNote && <p className={styles.closedNote}>{lockNote}</p>}
+
+      {/*
+        ─── APPEND, AUTO-SELECT, CLEAR THE ERROR — ALL THREE TOGETHER ───────────
+        Vue's AC17 is explicit that these happen as one action, and the reason is
+        the user's intent: "use these parts", not "add them to a list I must then
+        go and find". Adding without selecting would leave someone staring at a
+        picker they have just fed, wondering whether it worked.
+
+        Only what was NEW is selected — the store returns just the rows it
+        actually added, so re-submitting a part that already exists selects it
+        without creating a duplicate.
+      */}
+      <AddPartsManuallyModal
+        open={partsModalOpen}
+        onClose={() => setPartsModalOpen(false)}
+        onSubmit={(rows) => {
+          const added = store.addManualParts(rows)
+          setParts((prev) => [...prev, ...added.map((p) => p.partNo).filter((n) => !prev.includes(n))])
+        }}
+      />
+
+      <AddTeamMemberModal
+        open={memberModalOpen}
+        onClose={() => setMemberModalOpen(false)}
+        onSubmit={(rows) => {
+          const added = store.addManualTeamMembers(rows)
+          setMembers((prev) => [...prev, ...added.map((m) => m.name).filter((n) => !prev.includes(n))])
+        }}
+      />
     </>
   )
 }

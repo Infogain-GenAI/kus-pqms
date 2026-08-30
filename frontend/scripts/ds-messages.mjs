@@ -13,3 +13,12 @@
 
 /** App-side rule closing the numeric hard-coded dimension loophole. */
 export const NUMERIC_DIM_MESSAGE = 'Numeric hard-coded dimension — use a design-system spacing token via var().'
+
+/**
+ * App-side rule for user-facing copy written inline in JSX.
+ *
+ * Tier 0's non-negotiables ban hardcoded copy, and this is the family that
+ * measures it. Vue co-locates every component's strings in a sibling
+ * `*.i18n.ts`; this port's equivalent is `*.copy.ts`.
+ */
+export const JSX_COPY_MESSAGE = 'Hardcoded user-facing copy — move it to the feature\u2019s *.copy.ts module.'

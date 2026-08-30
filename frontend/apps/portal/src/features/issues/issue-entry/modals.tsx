@@ -1,6 +1,8 @@
 import { ArrowLeft, ArrowRight, Check, TriangleAlert } from 'lucide-react'
 import { Button, Icon } from '@pqms/ui-library'
 import { Modal } from '@/app/chrome'
+import { useTranslation } from 'react-i18next'
+import { NS } from './IssueEntry.i18n'
 import type { FieldError } from './validation'
 import styles from './issue-entry.module.css'
 
@@ -27,6 +29,7 @@ export function ClearFormConfirmModal({
   onClose: () => void
   onConfirm: () => void
 }) {
+  const { t } = useTranslation(NS)
   return (
     <Modal
       open={open}
@@ -34,14 +37,13 @@ export function ClearFormConfirmModal({
       title="Clear all entered information?"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => { onConfirm(); onClose() }}>Clear form</Button>
+          <Button variant="ghost" onClick={onClose}>{t('clearFormCancel')}</Button>
+          <Button onClick={() => { onConfirm(); onClose() }}>{t('clearFormConfirm')}</Button>
         </>
       }
     >
       <p className={styles.successBody}>
-        This will reset the entire form back to blank — Issue Information, Vehicle Information,
-        System Classification, and any linked issues. This can&apos;t be undone.
+        {t('clearFormBody')}
       </p>
     </Modal>
   )
@@ -80,6 +82,7 @@ export function SubmitConfirmationModal({
   onBackToList: () => void
   onOpenWorkspace: () => void
 }) {
+  const { t } = useTranslation(NS)
   return (
     <Modal
       open={open}
@@ -88,42 +91,42 @@ export function SubmitConfirmationModal({
       onClose={() => {}}
       align="center"
       width={440}
-      title={<span className={styles.successTitle}>Issue created successfully</span>}
+      title={<span className={styles.successTitle}>{t('submittedTitle')}</span>}
     >
       <div className={styles.success}>
         <span className={styles.successDisc} aria-hidden>
           <Icon icon={Check} size={30} />
         </span>
         <p className={styles.successBody}>
-          Your issue has been successfully created and is now open for processing.
+          {t('submittedBody')}
         </p>
 
         <div className={styles.summary}>
           <div className={styles.summaryRow}>
-            <span className={styles.summaryLabel}>Issue ID</span>
+            <span className={styles.summaryLabel}>{t('submittedIssueId')}</span>
             <span className={styles.summaryId} data-testid="created-issue-id">{issueId}</span>
           </div>
           <div className={styles.summaryRow}>
-            <span className={styles.summaryLabel}>Issue title</span>
+            <span className={styles.summaryLabel}>{t('submittedIssueTitle')}</span>
             <span className={styles.summaryTitle} title={issueTitle}>{issueTitle}</span>
           </div>
           <div className={styles.summaryRow}>
-            <span className={styles.summaryLabel}>Status</span>
+            <span className={styles.summaryLabel}>{t('submittedStatus')}</span>
             {/* Fixed copy, not derived from the record: immediately after a
                 successful create there is no other state this could be. */}
             <span className={styles.statusPill}>
               <span className={styles.statusDot} aria-hidden />
-              Submitted · Open
+              {t('submittedStatusValue')}
             </span>
           </div>
         </div>
 
         <div className={styles.successActions}>
           <Button variant="secondary" iconLeft={<Icon icon={ArrowLeft} size={16} />} onClick={onBackToList}>
-            Back to Issue List
+            {t('submittedBackToList')}
           </Button>
           <Button iconRight={<Icon icon={ArrowRight} size={16} />} onClick={onOpenWorkspace}>
-            Open Issue Workspace
+            {t('submittedOpenWorkspace')}
           </Button>
         </div>
       </div>
@@ -140,14 +143,14 @@ export function SubmitConfirmationModal({
  * makes the total visible from wherever the user happens to be scrolled.
  */
 export function ValidationBanner({ errors }: { errors: FieldError[] }) {
+  const { t } = useTranslation(NS)
   if (errors.length === 0) return null
   return (
     <div className={styles.banner} role="alert" data-testid="issue-entry-validation">
       <Icon icon={TriangleAlert} size={16} className={styles.bannerIcon} />
       <div>
         <p className={styles.bannerTitle}>
-          Cannot register this issue — {errors.length} field{errors.length > 1 ? 's' : ''} need
-          {errors.length > 1 ? '' : 's'} attention.
+          {t('validationBanner', { count: errors.length })}
         </p>
         <ul className={styles.bannerList}>
           {errors.map((e) => (

@@ -7,6 +7,8 @@ import { MetaChip, PageContainer, PageCrumb, SectionCard, TagChip } from '@/app/
 import { PriorityTab } from './PriorityTab'
 import { ApprovalBanner } from './workspace/ApprovalBanner'
 import { ClosedBanner } from './workspace/ClosedBanner'
+import { useTranslation } from 'react-i18next'
+import { NS } from './workspace/IssueDetail.i18n'
 import { WorkspaceTabStrip } from './workspace/WorkspaceTabStrip'
 import { ChangeStatusModal, CreateQirModal, ManageLinksModal } from './workspace/modals'
 import type { WorkspaceContext, WorkspaceModal } from './workspace/context'
@@ -67,6 +69,7 @@ import { fmtMDY, modelCodeLabel } from '@/data/util'
  * five times.
  */
 export function IssueWorkspaceScreen() {
+  const { t } = useTranslation(NS)
   const { id = '' } = useParams()
   const loc = useLocation()
   const nav = useNavigate()
@@ -152,7 +155,7 @@ export function IssueWorkspaceScreen() {
       <PageContainer>
         <PageCrumb backTo="/issues" trail={[{ label: 'Issue Management', to: '/issues' }, { label: id, mono: true }]} />
         <SectionCard>
-          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Issue {id} was not found.</p>
+          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{t('shellNotFound', { issueId: id })}</p>
         </SectionCard>
       </PageContainer>
     )
@@ -262,10 +265,10 @@ export function IssueWorkspaceScreen() {
                   shows nothing rather than a misleading default letter. */}
               {priority.scored && (
                 <TagChip tint={PRIORITY_BANDS[priority.final].tint} color={PRIORITY_BANDS[priority.final].color}>
-                  Priority {priority.final}
+                  {t('shellPriority', { letter: priority.final })}
                 </TagChip>
               )}
-              {issue.isEws && <TagChip tint="var(--danger-50)" color="var(--danger-600)">EWS flagged</TagChip>}
+              {issue.isEws && <TagChip tint="var(--danger-50)" color="var(--danger-600)">{t('shellEwsFlagged')}</TagChip>}
             </div>
             <h1 style={{ margin: '0 0 var(--space-3)', font: 'var(--fw-bold) 24px/1.2 var(--font-display)', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{issue.title}</h1>
             <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
@@ -285,22 +288,22 @@ export function IssueWorkspaceScreen() {
               <Avatar name={issue.owner} size="md" />
               <span>
                 <span style={{ display: 'block', font: 'var(--fw-semibold) var(--fs-body-sm)/1.2 var(--font-body)', color: 'var(--text-primary)' }}>{issue.owner}</span>
-                <span style={{ display: 'block', font: 'var(--fw-regular) var(--fs-caption)/1.2 var(--font-body)', color: 'var(--text-muted)' }}>Owner · {issue.ownerRole}</span>
+                <span style={{ display: 'block', font: 'var(--fw-regular) var(--fs-caption)/1.2 var(--font-body)', color: 'var(--text-muted)' }}>{t('shellOwner', { role: issue.ownerRole })}</span>
               </span>
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
               {/* Edit is a MODE of the Detail section, not a modal and not a route.
                   So the button navigates to Detail first — editing from any other
                   section would otherwise set a flag nothing on screen reads. */}
-              <Button variant="secondary" size="sm" disabled={!canEditIssue || editing} iconLeft={<Icon icon={PenSquare} size={14} />} onClick={() => { nav(`/issues/${id}/detail`); setEditing(true) }}>Edit issue</Button>
+              <Button variant="secondary" size="sm" disabled={!canEditIssue || editing} iconLeft={<Icon icon={PenSquare} size={14} />} onClick={() => { nav(`/issues/${id}/detail`); setEditing(true) }}>{t('shellEditIssue')}</Button>
               {/* Closed is terminal, so there is no status to change TO — the
                   lock disables the trigger and the banner below says why. Vue
                   removes this button outright on a Closed issue; see the
                   divergence note in `@/data/issueLock`. `outofscope` is NOT
                   covered here: it stays reachable and the modal keeps its own
                   terminal message for it, exactly as before. */}
-              <Button variant="secondary" size="sm" disabled={!!issue.proposedStatus || lock.isClosed} iconLeft={<Icon icon={ArrowLeftRight} size={14} />} onClick={() => setModal('status')}>Change status</Button>
-              <Button variant="secondary" size="sm" disabled={!canQir} iconLeft={<Icon icon={ClipboardPlus} size={14} />} onClick={() => setModal('qir')}>Create QIR</Button>
+              <Button variant="secondary" size="sm" disabled={!!issue.proposedStatus || lock.isClosed} iconLeft={<Icon icon={ArrowLeftRight} size={14} />} onClick={() => setModal('status')}>{t('shellChangeStatus')}</Button>
+              <Button variant="secondary" size="sm" disabled={!canQir} iconLeft={<Icon icon={ClipboardPlus} size={14} />} onClick={() => setModal('qir')}>{t('shellCreateQir')}</Button>
             </div>
           </div>
         </div>

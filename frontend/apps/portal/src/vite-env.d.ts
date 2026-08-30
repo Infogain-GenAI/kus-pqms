@@ -21,6 +21,7 @@ interface ImportMetaEnv {
    */
   readonly VITE_API_BASE_URL?: string
 
+
   /**
    * Where runtime errors are reported. UNSET BY DEFAULT, AND THAT IS THE SAFE
    * STATE: with no DSN, `shared/monitoring.ts` installs nothing, makes no

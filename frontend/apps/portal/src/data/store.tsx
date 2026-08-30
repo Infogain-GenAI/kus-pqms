@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import type { StatusKey } from '@pqms/ui-library'
+import { relatedRank } from './relatedRank'
 import type {
   ActivityType,
   AppNotification,
@@ -23,6 +24,7 @@ import { reportDataSource } from '@/config/data-source'
 import { ACTIVITIES, AUDIT, CLASSIFICATION, COMMENTS, ISSUES, NOTIFICATIONS, PARTS, PRIORITIES } from './seed'
 import { assertSeedAnchors } from './assertSeed'
 import { newId } from './util'
+import { ELIGIBLE_PARTS, TEAM_DIRECTORY, type PartOption, type TeamMember } from './investigation'
 import { findPriorityItem, priorityLetter, priorityTotal, type PriorityLetter } from './priorityMatrix'
 
 // Fail fast (dev server, preview build and every fidelity capture) if the dataset's
@@ -81,6 +83,13 @@ interface StoreValue {
   classChildren: (parentId?: string) => ClassificationNode[]
   classByLevel: (level: ClassLevel, parentId?: string) => ClassificationNode[]
   correlations: (issueId: string) => Issue[]
+  /**
+   * The parts pickable in the Add-activity form — the seeded eligible list plus
+   * anything added this session through 'Add parts manually'.
+   */
+  partOptions: () => PartOption[]
+  /** The same for team members. */
+  teamDirectory: () => TeamMember[]
   /** Saved priority for an issue; an unscored issue returns an empty, unscored record. */
   priorityFor: (issueId: string) => IssuePriority
   /** Calculated total, calculated letter, effective letter and whether it was overridden. */
@@ -182,6 +191,16 @@ interface StoreValue {
    * decision time: an approval that lands after another change would otherwise
    * record a "before" that was never true.
    */
+  /**
+   * Adds manually-entered parts to the session directory and returns what was
+   * added, so the caller can select them immediately.
+   *
+   * Rows already present by part number are IGNORED rather than duplicated — the
+   * user's intent is 'this part should be available', which is already true.
+   */
+  addManualParts: (rows: { partNo: string; qty: string }[]) => PartOption[]
+  /** The same for team members, keyed on name. */
+  addManualTeamMembers: (rows: { name: string; role: string; company: string }[]) => TeamMember[]
   requestActivityChange: (
     input: { activityId: string; issueId: string; field: ChangeRequestField; currentValue: string; proposedValue: string; reason: string },
     actor: Actor,
@@ -194,6 +213,12 @@ interface StoreValue {
   markAllRead: () => void
   markRead: (id: string) => void
 }
+
+/**
+ * How many link candidates `correlations` returns. Matches Issue Entry's own
+ * cap, so the same issue suggests the same shortlist in both places.
+ */
+const MAX_LINK_CANDIDATES = 8
 
 const StoreContext = createContext<StoreValue | null>(null)
 
@@ -230,11 +255,115 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (level: ClassLevel, parentId?: string) => classification.filter((c) => c.level === level && (parentId ? c.parentId === parentId : true)),
     [classification],
   )
+  /**
+   * Link candidates for the Manage-Related-Issues modal, ranked.
+   *
+   * ─── IT WAS EXACT-SYMPTOM EQUALITY, AND THAT ALMOST NEVER MATCHED ───────────
+   *
+   * The previous body was `i.symptom === me.symptom` — a single string
+   * comparison on one field. Measured against the seed: **20 of 35 issues
+   * returned ZERO candidates**, so the modal rendered "No classification-matched
+   * candidates" for well over half the register, and the feature read as broken
+   * rather than empty.
+   *
+   * ⚠️ NOTE THE FAILURE MODE, because it is why this survived so long: an empty
+   * candidate list compiles cleanly, renders a legitimate-looking empty state,
+   * and captures pixel-identically. Neither a typecheck nor a fidelity snapshot
+   * can see it. Only reading the predicate, or exercising the screen against real
+   * data, finds this class of defect.
+   *
+   * `issue-entry/relatedRank.ts` recorded this exact instance as a KNOWN SECOND
+   * SITE of the bug it was written to fix on Issue Entry, and deliberately left
+   * it alone as out of scope for that pass. This is that follow-up.
+   *
+   * ─── WHY THE SAME RANKER RATHER THAN A LOOSER PREDICATE ─────────────────────
+   *
+   * Because "what counts as related?" must have one answer. Issue Entry and this
+   * modal are the same question asked at two moments — before an issue exists and
+   * after — and two different similarity rules would mean a candidate suggested
+   * at entry that cannot be found again at link time.
+   *
+   * `relatedRank` moved from `features/issues/issue-entry/` to `data/` for this:
+   * `data/` is a leaf layer that has never imported from `features/`, and the
+   * store reaching upward would have been the first inversion.
+   */
+  /*
+   * ─── SESSION DIRECTORIES ────────────────────────────────────────────────────
+   *
+   * Parts and team members added through the two 'add manually' modals. Held
+   * SEPARATELY from the seeded constants rather than by mutating them: the seed
+   * is a module-level readonly array shared by every test in a file, and pushing
+   * into it would leak one test's additions into the next and one user's session
+   * into a reload's idea of what shipped.
+   *
+   * They are session-scoped and deliberately NOT persisted. A manually added
+   * part is a note that this activity cites something the catalogue does not
+   * carry; treating it as a permanent master-data edit is a different feature
+   * with an approval flow behind it, which is what 'Request new' is for.
+   */
+  const [manualParts, setManualParts] = useState<PartOption[]>([])
+  const [manualMembers, setManualMembers] = useState<TeamMember[]>([])
+
+  const partOptions = useCallback(() => [...ELIGIBLE_PARTS, ...manualParts], [manualParts])
+  const teamDirectory = useCallback(() => [...TEAM_DIRECTORY, ...manualMembers], [manualMembers])
+
+  const addManualParts = useCallback(
+    (rows: { partNo: string; qty: string }[]) => {
+      const existing = new Set([...ELIGIBLE_PARTS, ...manualParts].map((p) => p.partNo))
+      const added = rows
+        .map((r) => ({ partNo: r.partNo.trim(), qty: r.qty.trim(), manual: true as const }))
+        .filter((r) => r.partNo && !existing.has(r.partNo))
+      if (added.length > 0) setManualParts((prev) => [...prev, ...added])
+      // Returns only what was NEW, so the caller selects exactly what it added.
+      return added
+    },
+    [manualParts],
+  )
+
+  const addManualTeamMembers = useCallback(
+    (rows: { name: string; role: string; company: string }[]) => {
+      const existing = new Set([...TEAM_DIRECTORY, ...manualMembers].map((m) => m.name))
+      const added = rows
+        .map((r) => ({ id: newId('tm'), name: r.name.trim(), role: r.role.trim(), company: r.company.trim(), manual: true as const }))
+        .filter((r) => r.name && !existing.has(r.name))
+      if (added.length > 0) setManualMembers((prev) => [...prev, ...added])
+      return added
+    },
+    [manualMembers],
+  )
+
   const correlations = useCallback(
     (issueId: string) => {
       const me = issues.find((i) => i.id === issueId)
-      if (!me?.symptom) return []
-      return issues.filter((i) => i.id !== issueId && i.symptom === me.symptom && i.status !== 'closed')
+      if (!me) return []
+
+      /*
+       * Closed issues are excluded from the POOL, exactly as before — linking to
+       * a settled record is not a useful suggestion. Kept as a pre-filter rather
+       * than folded into the ranker, which is deliberately about similarity only
+       * and knows nothing about lifecycle.
+       */
+      const pool = issues.filter((i) => i.status !== 'closed')
+
+      return relatedRank(
+        {
+          system: me.system,
+          subSystem: me.subSystem,
+          component: me.component,
+          symptom: me.symptom,
+          title: me.title,
+          description: me.description,
+          dtcCodes: me.dtcCodes,
+          modelCode: me.modelCode,
+        },
+        pool,
+        issueId,
+      )
+        // Same bound as Issue Entry. Without it a broad system match can return
+        // eleven rows into a modal that has room for a handful, and a list that
+        // long stops being a suggestion.
+        .slice(0, MAX_LINK_CANDIDATES)
+        .map((r) => r.issue)
     },
     [issues],
   )
@@ -514,10 +643,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: StoreValue = {
     issues, classification, notifications, unreadCount,
-    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, correlations,
+    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, correlations, partOptions, teamDirectory,
     priorityFor, priorityResult, savePriority,
     createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
     bulkAssignRole, requestClassification, addComment, addActivity, addPart, setPartStatus,
+    addManualParts, addManualTeamMembers,
     requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
