@@ -616,38 +616,47 @@ describe('Requesting a classification that does not exist yet', () => {
 })
 
 /**
- * Issue groups.
+ * Issue groups, reached through the RANKING — which is the path that matters.
  *
- * ⚠️ THE TAGGED COHORTS ARE ONLY REACHABLE THROUGH SEARCH, NOT THROUGH RANKING,
- * and that is a property of the SEED rather than of the card.
- *
- * `EE-260023`'s cohort carries `system: 'Engine' / subSystem: 'Fuel System'`,
- * and the classification tree has no such nodes — its systems are Electrical,
- * Powertrain, Suspension and Body. So no classification a user can pick will
- * ever produce an exact match against them; the ranking can only reach them via
- * `Same model code` (+8), which loses the `.slice(0, 8)` cut to any exact
- * classification match (+100). Tests here therefore drive the SEARCH path.
- *
- * If group cards are wanted among ranked suggestions, the fix is seed data — a
- * cohort whose classification exists in the taxonomy, or those nodes added to it.
+ * This was previously unreachable and the tests drove search instead: the
+ * cohorts were filed against `component: 'Fuel System'`, a label the four-system
+ * taxonomy did not contain, so no classification a user could pick ever matched
+ * them. Porting the design's full 10-system tree and correcting the two invalid
+ * components fixed the data, not the card.
  */
 describe('an issue group renders as one card with its children folded in', () => {
-  const openSearch = (q: string) => {
+  /** Drives the cascade by option LABEL, unlike `fillCompleteForm`'s first-option walk. */
+  function classifyAs(labels: [string, string, string, string]) {
+    const codeBox = screen.getByRole('combobox', { name: /model code/i })
+    fireEvent.focus(codeBox)
+    const first = screen.getAllByRole('option')[0]
+    if (first) fireEvent.mouseDown(first)
+    const names = [/^System$/i, /^Sub-system$/i, /^Component$/i, /^Symptom$/i]
+    names.forEach((name, idx) => {
+      const box = screen.getByRole('combobox', { name })
+      fireEvent.focus(box)
+      const panelId = box.getAttribute('aria-controls')
+      const panel = panelId ? document.getElementById(panelId) : null
+      const opts = [...(panel?.querySelectorAll('[role="option"]') ?? [])]
+      const want = opts.find((o) => (o.textContent ?? '').trim().toLowerCase() === labels[idx].toLowerCase())
+      if (want) fireEvent.mouseDown(want)
+    })
+  }
+
+  const openEngineCohort = () => {
     renderCreate()
-    fillCompleteForm()
-    fireEvent.click(btn(/search & link another issue/i))
-    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: q } })
+    classifyAs(['Engine', 'Fuel System', 'Fuel Injector', 'Engine vibration'])
   }
 
   it('collapses a four-issue cohort into a single group card', () => {
-    openSearch('vibration')
-    // Four members share a groupId; de-duplication makes them one card.
+    openEngineCohort()
+    // EE-260023 / 031 / 044 / 071 share a groupId. Four ranked hits, one card.
     expect(body()).toMatch(/issue group ·/i)
     expect(body()).toContain('Parent')
   })
 
   it('hides the children behind an expander that names the count', () => {
-    openSearch('vibration')
+    openEngineCohort()
     expect(body()).toMatch(/show child issues \(\d\)/i)
     fireEvent.click(screen.getAllByRole('button', { name: /show child issues/i })[0])
     expect(body()).toMatch(/hide child issues/i)
@@ -655,7 +664,7 @@ describe('an issue group renders as one card with its children folded in', () =>
   })
 
   it('links and unlinks every member at once', () => {
-    openSearch('vibration')
+    openEngineCohort()
     fireEvent.click(screen.getAllByRole('button', { name: /link to issue group/i })[0])
     // The header count is the group's size, not 1.
     expect(body()).toMatch(/[2-9] linked/)
@@ -663,19 +672,39 @@ describe('an issue group renders as one card with its children folded in', () =>
     expect(body()).not.toMatch(/\d+ linked/)
   })
 
-  it('opens group history against the PARENT, not an arbitrary member', () => {
-    openSearch('vibration')
+  it('derives the parent as the earliest member', () => {
+    openEngineCohort()
     fireEvent.click(screen.getAllByRole('button', { name: /view group history/i })[0])
-    // The modal is titled with the id it was opened for; the parent is the
-    // group's identity, so that is the one it must use.
+    // EE-260023 (2026-07-10) is earliest in its cohort; nothing stores that role.
     expect(body()).toMatch(/history — EE-260023/i)
   })
 
-  it('derives the parent as the earliest member, and marks the rest Child', () => {
-    openSearch('vibration')
+  it('renders the same cohort through SEARCH with the search-only badge', () => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: 'vibration' } })
+    // The other half of the asymmetry — the group card rendered by the SEARCH
+    // variant, which carries icons the suggestion variant omits. ("Standalone
+    // Issue" is not asserted here: every hit for this query is a cohort member,
+    // so they collapse into one group card and no standalone card exists. That
+    // badge is covered by the `-26` test above.)
+    expect(body()).toMatch(/issue group ·/i)
+  })
+
+  it('expands children in the search variant too', () => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: 'vibration' } })
     fireEvent.click(screen.getAllByRole('button', { name: /show child issues/i })[0])
-    // EE-260023 (2026-07-10) is earliest in its cohort; nothing stores that role.
-    expect(body()).toContain('EE-260023')
     expect(body()).toContain('Child')
+  })
+
+  it('shows the group WITHOUT the search-only icons and badge', () => {
+    openEngineCohort()
+    // `Standalone Issue` and the git-branch/crown/corner-down-right icons belong
+    // to the search variant only. Same component, deliberately different.
+    expect(body()).not.toContain('Standalone Issue')
   })
 })
