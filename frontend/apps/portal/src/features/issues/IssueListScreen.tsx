@@ -5,6 +5,7 @@ import {
   type IssueFilterState,
   type IssueListView,
 } from '@/data/issueListView'
+import { useDebouncedValue } from '@/shared/useDebouncedCallback'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Car, Check, ChevronDown, ChevronUp, CircleCheck, ClipboardList, Columns3, Download, FileOutput, Flame, FolderOpen, Layers, Link2, Plus, RefreshCw, RotateCcw, Search, SlidersHorizontal, TriangleAlert, UserCog, X } from 'lucide-react'
@@ -329,6 +330,25 @@ export function IssueListScreen() {
   const { view, setQ, setFlt, setCols, setSort, setPage, setPageSize } = useIssueListView(DEFAULT_VIEW, ALL_COLUMN_KEYS)
   const { q, flt, cols, sort, page, pageSize } = view
 
+  /*
+   * ─── THE SEARCH BOX TYPES AT FULL SPEED; THE TABLE CATCHES UP ───────────────
+   *
+   * `q` is the input's own value and updates on every keystroke — a controlled
+   * input MUST, or typing feels broken. `searchTerm` is the same value 250ms
+   * after the user stops, and it is what the filter memo reads.
+   *
+   * Before this, one keystroke re-ran the whole predicate over every issue, then
+   * the sort, then re-rendered the table, then wrote the persisted view to
+   * sessionStorage. Typing "charge port" did that eleven times to show a result
+   * that only mattered once. It is survivable at 35 seeded rows and is not at a
+   * real register — and this is the screen that will hold one.
+   *
+   * ⚠️ DEBOUNCE THE DERIVATION, NEVER THE INPUT. Debouncing `setQ` would make
+   * the field itself lag behind the keyboard, which is the one thing worse than
+   * a slow table. See `@/shared/useDebouncedCallback` for the split.
+   */
+  const searchTerm = useDebouncedValue(q, 250)
+
   const [drawer, setDrawer] = useState<'' | 'filter' | 'cols'>('')
   const [linkedModalFor, setLinkedModalFor] = useState<string | null>(null)
   const [secOpen, setSecOpen] = useState({ vehicle: true, classification: true, issue: true })
@@ -384,9 +404,10 @@ export function IssueListScreen() {
       if (flt.linked === 'no' && linkCount > 0) return false
       if (flt.ews === 'yes' && !i.isEws) return false
       if (flt.ews === 'no' && i.isEws) return false
-      if (q) {
+      // `searchTerm`, NOT `q` — see the memo's dependency list below.
+      if (searchTerm) {
         const hay = `${i.id} ${i.title} ${i.model} ${i.modelCode} ${i.system ?? ''} ${i.owner} ${i.assignee ?? ''}`.toLowerCase()
-        if (!hay.includes(q.toLowerCase())) return false
+        if (!hay.includes(searchTerm.toLowerCase())) return false
       }
       return true
     })
@@ -406,7 +427,7 @@ export function IssueListScreen() {
       const cmp = av < bv ? -1 : av > bv ? 1 : 0
       return sort.dir === 'asc' ? cmp : -cmp
     })
-  }, [scoped, flt, q, sort])
+  }, [scoped, flt, searchTerm, sort])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
   const pageClamped = Math.min(page, pageCount)

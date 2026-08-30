@@ -11,7 +11,7 @@
 // come back, and the filters are still applied. That is unmount-and-remount, not
 // a function call, and only a render can show it.
 import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'
@@ -153,18 +153,30 @@ const total = () => Number(/of\s+([\d,]+)\s+issues/i.exec(pagingLine())?.[1]?.re
 const search = () => screen.getByPlaceholderText(/search/i)
 
 describe('REGRESSION — the list forgot everything on navigation', () => {
-  it('a search survives unmount and remount', () => {
+  it('a search survives unmount and remount', async () => {
     // Unmounting IS the scenario: the screen unmounts the moment a row is
     // opened, and it was that unmount — not a reload — that discarded the user's
     // filters. `unmount()` reproduces it exactly.
     const first = renderList()
+    const before = total()
     fireEvent.change(search(), { target: { value: 'charge' } })
-    const narrowed = total()
+
+    // ⚠️ AWAITED, BECAUSE THE FILTER IS DEBOUNCED. The input updates on the
+    // keystroke; the table catches up ~250ms later. Reading the count
+    // synchronously here measures the UNFILTERED list and the assertion below
+    // would then compare two identical numbers and pass for the wrong reason.
+    const narrowed = await waitFor(() => {
+      const n = total()
+      expect(n).toBeLessThan(before)
+      return n
+    })
     expect(narrowed).toBeGreaterThan(0)
     first.unmount()
 
     renderList()
     expect((search() as HTMLInputElement).value).toBe('charge')
+    // No wait needed on remount: the restored term is the initial state, so the
+    // first render already filters — the debounce only defers CHANGES.
     expect(total()).toBe(narrowed)
   })
 

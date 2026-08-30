@@ -1,32 +1,26 @@
 import { NOW } from './types'
 
+/**
+ * ─── THE DATE FORMATTERS MOVED TO `@/shared/format/date` ─────────────────────
+ *
+ * They are RE-EXPORTED here, not reimplemented, so the 51 existing
+ * `from '@/data/util'` imports keep working and cannot drift onto a second
+ * implementation. New code should import from `@/shared/format/date` directly.
+ *
+ * They moved because every one of them was wrong. Each called `new Date(iso)`
+ * and then read it back with LOCAL getters — and a date-only string like
+ * `"2026-06-16"` parses as UTC midnight, so west of UTC it rendered the previous
+ * day. `Issue.reportedDate` is date-only throughout the seed and the user base
+ * is Kia US, so this was firing on essentially every date in the application.
+ * The full explanation and the fix are in that module's header.
+ */
+export { fmtDate, fmtDateTime, fmtHM, fmtMD, fmtMDY, parseCalendarDate, toLocalIsoDate } from '@/shared/format/date'
+
 /** Whole days between reportedDate and closedAt (or the fixed NOW). Deterministic on mock data. */
 export function daysOpen(reportedDate: string, closedAt?: string): number {
   const start = new Date(reportedDate).getTime()
   const end = closedAt ? new Date(closedAt).getTime() : new Date(NOW).getTime()
   return Math.max(0, Math.round((end - start) / 86_400_000))
-}
-
-export function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-export function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
-/** MM/DD/YYYY (prototype date format). */
-export function fmtMDY(iso: string): string {
-  const d = new Date(iso)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${p(d.getMonth() + 1)}/${p(d.getDate())}/${d.getFullYear()}`
-}
-
-/** HH:mm 24h. */
-export function fmtHM(iso: string): string {
-  const d = new Date(iso)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
 /** "SV" for single-model issues, "2 Models"/"3 Models" for multi (matches the UX list). */
@@ -38,18 +32,4 @@ export function modelCodeLabel(i: { modelCode: string; modelCodes?: string[] }):
 export function newId(prefix: string): string {
   const rand = (globalThis.crypto?.randomUUID?.() ?? String(Math.round(performance.now() * 1000))).slice(0, 8)
   return `${prefix}-${rand}`
-}
-
-/**
- * "Jun 17" — a short month/day, for the fixed-width date column in the
- * existing-issue preview's Related-history list.
- *
- * ⚠️ LOCAL TIME, MATCHING `fmtMDY` AND `fmtHM` ABOVE, NOT UTC. The Vue original
- * formats the same column in UTC, which would put this app's dates one day out
- * from every other date on screen for any viewer west of Greenwich — the audit
- * row would read "Jun 16" beside a timestamp the History tab renders as Jun 17.
- * Consistency inside this app beats matching the other app's helper.
- */
-export function fmtMD(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })
 }
