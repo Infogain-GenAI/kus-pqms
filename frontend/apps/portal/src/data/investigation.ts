@@ -239,6 +239,15 @@ export interface TeamMember {
   name: string
   role: string
   company: string
+  /**
+   * true = added this session through "Add team member", not drawn from the
+   * seeded directory.
+   *
+   * Mirrors `PartOption.manual`, which already existed. Vue keeps the same flag
+   * on its own directory entry type and badges such rows in the picker, so a
+   * user can tell a colleague they just typed in from one the system knows.
+   */
+  manual?: boolean
 }
 
 export const TEAM_DIRECTORY: readonly TeamMember[] = [

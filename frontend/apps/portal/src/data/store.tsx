@@ -24,6 +24,7 @@ import { reportDataSource } from '@/config/data-source'
 import { ACTIVITIES, AUDIT, CLASSIFICATION, COMMENTS, ISSUES, NOTIFICATIONS, PARTS, PRIORITIES } from './seed'
 import { assertSeedAnchors } from './assertSeed'
 import { newId } from './util'
+import { ELIGIBLE_PARTS, TEAM_DIRECTORY, type PartOption, type TeamMember } from './investigation'
 import { findPriorityItem, priorityLetter, priorityTotal, type PriorityLetter } from './priorityMatrix'
 
 // Fail fast (dev server, preview build and every fidelity capture) if the dataset's
@@ -82,6 +83,13 @@ interface StoreValue {
   classChildren: (parentId?: string) => ClassificationNode[]
   classByLevel: (level: ClassLevel, parentId?: string) => ClassificationNode[]
   correlations: (issueId: string) => Issue[]
+  /**
+   * The parts pickable in the Add-activity form — the seeded eligible list plus
+   * anything added this session through 'Add parts manually'.
+   */
+  partOptions: () => PartOption[]
+  /** The same for team members. */
+  teamDirectory: () => TeamMember[]
   /** Saved priority for an issue; an unscored issue returns an empty, unscored record. */
   priorityFor: (issueId: string) => IssuePriority
   /** Calculated total, calculated letter, effective letter and whether it was overridden. */
@@ -183,6 +191,16 @@ interface StoreValue {
    * decision time: an approval that lands after another change would otherwise
    * record a "before" that was never true.
    */
+  /**
+   * Adds manually-entered parts to the session directory and returns what was
+   * added, so the caller can select them immediately.
+   *
+   * Rows already present by part number are IGNORED rather than duplicated — the
+   * user's intent is 'this part should be available', which is already true.
+   */
+  addManualParts: (rows: { partNo: string; qty: string }[]) => PartOption[]
+  /** The same for team members, keyed on name. */
+  addManualTeamMembers: (rows: { name: string; role: string; company: string }[]) => TeamMember[]
   requestActivityChange: (
     input: { activityId: string; issueId: string; field: ChangeRequestField; currentValue: string; proposedValue: string; reason: string },
     actor: Actor,
@@ -269,6 +287,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
    * `data/` is a leaf layer that has never imported from `features/`, and the
    * store reaching upward would have been the first inversion.
    */
+  /*
+   * ─── SESSION DIRECTORIES ────────────────────────────────────────────────────
+   *
+   * Parts and team members added through the two 'add manually' modals. Held
+   * SEPARATELY from the seeded constants rather than by mutating them: the seed
+   * is a module-level readonly array shared by every test in a file, and pushing
+   * into it would leak one test's additions into the next and one user's session
+   * into a reload's idea of what shipped.
+   *
+   * They are session-scoped and deliberately NOT persisted. A manually added
+   * part is a note that this activity cites something the catalogue does not
+   * carry; treating it as a permanent master-data edit is a different feature
+   * with an approval flow behind it, which is what 'Request new' is for.
+   */
+  const [manualParts, setManualParts] = useState<PartOption[]>([])
+  const [manualMembers, setManualMembers] = useState<TeamMember[]>([])
+
+  const partOptions = useCallback(() => [...ELIGIBLE_PARTS, ...manualParts], [manualParts])
+  const teamDirectory = useCallback(() => [...TEAM_DIRECTORY, ...manualMembers], [manualMembers])
+
+  const addManualParts = useCallback(
+    (rows: { partNo: string; qty: string }[]) => {
+      const existing = new Set([...ELIGIBLE_PARTS, ...manualParts].map((p) => p.partNo))
+      const added = rows
+        .map((r) => ({ partNo: r.partNo.trim(), qty: r.qty.trim(), manual: true as const }))
+        .filter((r) => r.partNo && !existing.has(r.partNo))
+      if (added.length > 0) setManualParts((prev) => [...prev, ...added])
+      // Returns only what was NEW, so the caller selects exactly what it added.
+      return added
+    },
+    [manualParts],
+  )
+
+  const addManualTeamMembers = useCallback(
+    (rows: { name: string; role: string; company: string }[]) => {
+      const existing = new Set([...TEAM_DIRECTORY, ...manualMembers].map((m) => m.name))
+      const added = rows
+        .map((r) => ({ id: newId('tm'), name: r.name.trim(), role: r.role.trim(), company: r.company.trim(), manual: true as const }))
+        .filter((r) => r.name && !existing.has(r.name))
+      if (added.length > 0) setManualMembers((prev) => [...prev, ...added])
+      return added
+    },
+    [manualMembers],
+  )
+
   const correlations = useCallback(
     (issueId: string) => {
       const me = issues.find((i) => i.id === issueId)
@@ -580,10 +643,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: StoreValue = {
     issues, classification, notifications, unreadCount,
-    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, correlations,
+    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, correlations, partOptions, teamDirectory,
     priorityFor, priorityResult, savePriority,
     createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
     bulkAssignRole, requestClassification, addComment, addActivity, addPart, setPartStatus,
+    addManualParts, addManualTeamMembers,
     requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
