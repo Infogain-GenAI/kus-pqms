@@ -29,33 +29,37 @@ import { USERS } from './seed'
  * and then asserts on a loader is asserting on whichever rendered last.
  */
 
-/** Ordered least → most privileged. The ONLY place this ordering is expressed. */
+/** The three tiers. NOT ordered — see `hasCapability`. */
 export type Capability = 'read' | 'override' | 'admin'
-
-/**
- * The rank each capability satisfies.
- *
- * ⚠️ A HIERARCHY, WHICH VUE'S IS NOT. Vue has two capabilities and its
- * `hasCapability` returns true for `override` only on an exact match, because
- * there is nothing above it. This app has a third — `admin` — and an admin who
- * could not reach an override-gated screen would be a privilege INVERSION, not
- * a stricter rule. So the comparison is `>=` on rank rather than equality, and
- * the divergence is deliberate.
- */
-const CAPABILITY_RANK: Record<Capability, number> = {
-  read: 0,
-  override: 1,
-  admin: 2,
-}
 
 /**
  * Does `current` satisfy `required`?
  *
- * `read` is satisfied by everyone, matching Vue: a route that requires only
- * `read` is declaring "any signed-in session", not "read-only sessions only".
+ * ⚠️ `admin` IS NOT A SUPERSET OF `override` IN THIS APPLICATION, and an earlier
+ * version of this file assumed it was. It is a SEPARATE TRACK. `computeCan` in
+ * `roles.tsx` is unambiguous about it:
+ *
+ *     approve / override-edit → cap === 'override'      (admin: NO)
+ *     propose  / edit-own     → cap read or override    (admin: NO)
+ *     create                  → cap !== 'admin'         (admin: NO)
+ *     administer              → cap === 'admin'
+ *
+ * So an ADMIN in this app can administer and do nothing else — it is an
+ * operator role, not a super-user. A rank comparison (`admin >= override`) would
+ * have contradicted that everywhere, and the disagreement was caught by a test
+ * asserting `canApprove` equals `can('approve')`: the rank model said an admin
+ * could approve, and the application says they cannot.
+ *
+ * `read` is the one shared floor, matching Vue: a route requiring only `read` is
+ * declaring "any signed-in session", not "read-only sessions only".
+ *
+ * IF THE PRODUCT EVER DECIDES ADMIN SHOULD INHERIT OVERRIDE, this function and
+ * `computeCan` must change TOGETHER. Changing one alone reintroduces exactly the
+ * split that was found here.
  */
 export function hasCapability(current: Capability, required: Capability): boolean {
-  return CAPABILITY_RANK[current] >= CAPABILITY_RANK[required]
+  if (required === 'read') return true
+  return current === required
 }
 
 /**

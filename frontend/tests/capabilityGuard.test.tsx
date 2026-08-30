@@ -65,11 +65,21 @@ describe('the capability hierarchy', () => {
     }
   })
 
-  it('admin satisfies override — a privilege INVERSION would be the bug', () => {
-    // Vue compares for equality because it has only two capabilities. This app
-    // has three, and an admin locked out of an override screen would be worse
-    // than the rule it was meant to enforce.
-    expect(hasCapability('admin', 'override')).toBe(true)
+  it('admin does NOT satisfy override — the tiers are separate tracks', () => {
+    /*
+     * ⚠️ REVERSED FROM WHAT THIS TEST FIRST ASSERTED. I modelled the three
+     * capabilities as a rank (`read < override < admin`) on the assumption that
+     * an admin locked out of an override screen would be a privilege inversion.
+     * `computeCan` in roles.tsx already answered that question the other way:
+     * `approve` and `override-edit` require `cap === 'override'` exactly, so an
+     * ADMIN cannot approve in this application.
+     *
+     * The rank model therefore contradicted the app everywhere it was used. It
+     * was caught by a `usePermissions` test asserting `canApprove` equals
+     * `can('approve')` — the two disagreed for ADMIN.
+     */
+    expect(hasCapability('admin', 'override')).toBe(false)
+    expect(hasCapability('override', 'admin')).toBe(false)
   })
 
   it('read satisfies neither override nor admin', () => {

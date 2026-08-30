@@ -54,6 +54,10 @@ const CHECKS = [
   { name: 'lint:ds:imports', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'imports'] },
   { name: 'lint:ds:selftest', cmd: process.execPath, args: ['scripts/check-import-rule.mjs'] },
   { name: 'css-vars', cmd: process.execPath, args: ['scripts/check-css-vars.mjs'] },
+  // Hard zero, not a ratchet — see the script's header for why it is not a
+  // ds-gate family. It self-tests, so a pattern that stops matching fails loudly
+  // rather than reporting a clean codebase.
+  { name: 'role-gate', cmd: process.execPath, args: ['scripts/check-role-gate.mjs'] },
   { name: 'tokens:drift', cmd: process.execPath, args: ['scripts/check-tokens-drift.mjs'] },
   // The suite writes the coverage summary the ratchet reads, so these two are the
   // ONE ordered pair here. They run as a single sequential unit alongside the rest.

@@ -20,6 +20,7 @@
     "lint:ds": "pnpm run lint:ds:values && pnpm run lint:ds:numeric && pnpm run lint:ds:imports",
     "lint:ds:selftest": "node scripts/check-import-rule.mjs",
     "lint:css-vars": "node scripts/check-css-vars.mjs",
+    "lint:roles": "node scripts/check-role-gate.mjs",
     "tokens:gen": "pnpm --filter @pqms/design-tokens tokens:gen",
     "tokens:check": "pnpm --filter @pqms/design-tokens tokens:check",
     "tokens:drift": "node scripts/check-tokens-drift.mjs",
