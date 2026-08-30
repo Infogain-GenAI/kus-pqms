@@ -50,10 +50,10 @@ interface JobStatusMeta {
 }
 
 const JOB_STATUS: Record<string, JobStatusMeta> = {
-  completed: { label: 'Completed', color: 'var(--success-500)', tint: '#1F8A5B14', icon: CheckCircle2 },
-  running: { label: 'Running', color: 'var(--status-review)', tint: '#7C5CDB14', icon: LoaderCircle },
-  scheduled: { label: 'Scheduled', color: 'var(--info-500)', tint: '#2A6FDB14', icon: Clock },
-  failed: { label: 'Failed', color: 'var(--danger-500)', tint: '#D92D2014', icon: CircleX },
+  completed: { label: 'Completed', color: 'var(--success-500)', tint: 'var(--success-500-tint)', icon: CheckCircle2 },
+  running: { label: 'Running', color: 'var(--status-review)', tint: 'var(--status-review-tint)', icon: LoaderCircle },
+  scheduled: { label: 'Scheduled', color: 'var(--info-500)', tint: 'var(--accent-500-tint)', icon: Clock },
+  failed: { label: 'Failed', color: 'var(--danger-500)', tint: 'var(--danger-500-tint)', icon: CircleX },
 }
 
 const JOBS = [
@@ -64,10 +64,10 @@ const JOBS = [
 ]
 
 const KPIS = [
-  { label: 'Scheduled jobs', value: '4', icon: Layers, color: 'var(--info-500)', tint: '#2A6FDB14' },
-  { label: 'Running now', value: '1', icon: LoaderCircle, color: 'var(--status-review)', tint: '#7C5CDB14' },
-  { label: 'Failed (24h)', value: '1', icon: CircleX, color: 'var(--danger-500)', tint: '#D92D2014' },
-  { label: 'Avg duration', value: '1m 14s', icon: Timer, color: 'var(--status-disposed)', tint: '#0E938414' },
+  { label: 'Scheduled jobs', value: '4', icon: Layers, color: 'var(--info-500)', tint: 'var(--accent-500-tint)' },
+  { label: 'Running now', value: '1', icon: LoaderCircle, color: 'var(--status-review)', tint: 'var(--status-review-tint)' },
+  { label: 'Failed (24h)', value: '1', icon: CircleX, color: 'var(--danger-500)', tint: 'var(--danger-500-tint)' },
+  { label: 'Avg duration', value: '1m 14s', icon: Timer, color: 'var(--status-disposed)', tint: 'var(--status-disposed-tint)' },
 ]
 
 const SOURCES = [
@@ -81,10 +81,10 @@ const SOURCES = [
 ]
 
 const MODULE_TINT: Record<string, { color: string; tint: string }> = {
-  Scoring: { color: 'var(--info-500)', tint: '#2A6FDB14' },
-  Sources: { color: 'var(--status-review)', tint: '#7C5CDB14' },
-  Reminders: { color: 'var(--status-disposed)', tint: '#0E938414' },
-  Batch: { color: 'var(--kia-midnight)', tint: '#05141F14' },
+  Scoring: { color: 'var(--info-500)', tint: 'var(--accent-500-tint)' },
+  Sources: { color: 'var(--status-review)', tint: 'var(--status-review-tint)' },
+  Reminders: { color: 'var(--status-disposed)', tint: 'var(--status-disposed-tint)' },
+  Batch: { color: 'var(--kia-midnight)', tint: 'var(--kia-midnight-tint)' },
 }
 
 const AUDIT = [
@@ -96,10 +96,10 @@ const AUDIT = [
 ]
 
 const CLASS_COUNTS = [
-  { label: 'Systems', value: '10', icon: Layers, color: 'var(--info-500)', tint: '#2A6FDB14' },
-  { label: 'Sub-systems', value: '25', icon: Box, color: 'var(--status-review)', tint: '#7C5CDB14' },
-  { label: 'Components', value: '35', icon: Cpu, color: 'var(--status-disposed)', tint: '#0E938414' },
-  { label: 'Symptoms', value: '43', icon: Activity, color: 'var(--warning-500)', tint: '#E2820B14' },
+  { label: 'Systems', value: '10', icon: Layers, color: 'var(--info-500)', tint: 'var(--accent-500-tint)' },
+  { label: 'Sub-systems', value: '25', icon: Box, color: 'var(--status-review)', tint: 'var(--status-review-tint)' },
+  { label: 'Components', value: '35', icon: Cpu, color: 'var(--status-disposed)', tint: 'var(--status-disposed-tint)' },
+  { label: 'Symptoms', value: '43', icon: Activity, color: 'var(--warning-500)', tint: 'var(--warning-500-tint)' },
 ]
 
 /** System → sub-system slice of the prototype's classTree() (deeper levels out of scope here). */
@@ -467,7 +467,7 @@ export function AdminScreen() {
                       <span style={{ width: 'var(--icon-md)', height: 'var(--icon-md)', flex: 'none', color: 'var(--text-disabled)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Icon icon={expanded[sys.name] ? ChevronDown : ChevronRight} size={15} />
                       </span>
-                      <IconChip icon={Layers} tint="#2A6FDB14" color="var(--info-500)" size={24} iconSize={14} />
+                      <IconChip icon={Layers} tint="var(--accent-500-tint)" color="var(--info-500)" size={24} iconSize={14} />
                       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', font: 'var(--fw-bold) 13px/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{sys.name}</span>
                       <span style={{ flex: 'none', font: 'var(--fw-regular) 11px/1 var(--font-body)', color: 'var(--text-disabled)' }}>{sys.subs.length}</span>
                     </div>
@@ -475,7 +475,7 @@ export function AdminScreen() {
                       sys.subs.map((sub) => (
                         <div key={sub.name} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px 8px 32px', borderRadius: 'var(--radius-lg)' }}>
                           <span style={{ width: 'var(--icon-md)', flex: 'none' }} />
-                          <IconChip icon={Box} tint="#7C5CDB14" color="#7C5CDB" size={24} iconSize={14} />
+                          <IconChip icon={Box} tint="var(--status-review-tint)" color="#7C5CDB" size={24} iconSize={14} />
                           <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', font: 'var(--fw-semibold) 13px/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{sub.name}</span>
                           <span style={{ flex: 'none', font: 'var(--fw-regular) 11px/1 var(--font-body)', color: 'var(--text-disabled)' }}>{sub.count}</span>
                         </div>

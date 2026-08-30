@@ -15,11 +15,58 @@ requires opening another file.
 The N-PQMS ISM frontend is being converted from hard-coded values
 (`padding: '16px'`) to design-system tokens (`padding: 'var(--space-4)'`). Of 467
 such values, **103 have been converted** — every one verified to render
-identically. **353 remain, and they cannot be converted, because the design
-system has no token holding their value.** The design system is vendored into
-this project as a **byte-for-byte copy with an automated drift check**, so adding
-a token is not an edit this project is able to make. **Whether these values ever
-become tokens is your decision, not ours.**
+identically. **353 remain, because the design system has no token holding their
+value.** **Whether these values ever become tokens is your decision, not ours.**
+
+> ### ⚠️ CORRECTION, 2026-08-30 — THIS DOCUMENT'S ORIGINAL PREMISE WAS FALSE
+>
+> This paragraph previously read: *"The design system is vendored into this
+> project as a byte-for-byte copy with an automated drift check, **so adding a
+> token is not an edit this project is able to make.**"*
+>
+> **That is not true of this repository, and it never was.** The claim was
+> inherited rather than tested. It is the foundation of this document's blocking
+> question, of its "nothing further is converted until this is answered", and of
+> the pause that followed — so it is corrected here rather than quietly amended.
+>
+> `packages/design-tokens/design-system-manifest.json` is **a committed file in
+> this repository**, and both gates check consistency *against that file*, not
+> against anything remote. `"source":"spa"` in the manifest records where it was
+> extracted from, not where it is fetched from. Confirmed by Yogesh: **this repo
+> owns the manifest; nothing upstream re-exports it.**
+>
+> Proven end-to-end by adding a disposable token, running every gate, and
+> reverting. **The procedure — three files, one command, in this order:**
+>
+> 1. Append to the `tokens` array in `design-system-manifest.json`, e.g.
+>    `{"name":"--x","value":"3px","kind":"spacing","definedIn":"tokens/elevation.css"}`
+> 2. Add `--x: 3px;` to the `tokens/*.css` file named in that entry's `definedIn`.
+>    **The generator does not write CSS** — this step is manual, and it is the
+>    non-obvious one.
+> 3. `pnpm --filter @pqms/design-tokens tokens:gen`, which rewrites
+>    `src/tokens/tokens.generated.ts`.
+>
+> The typed `TokenName` union and `cssVar()` pick the new token up automatically;
+> `ds-gate` is indifferent, as it lints `.ts`/`.tsx` for raw values.
+>
+> **THREE FAILURE MODES, TWO OF WHICH MISLEAD:**
+>
+> · *Manifest without CSS* — `tokens:check` fails clearly, naming the token.
+>
+> · *Manifest + CSS, not regenerated* — `tokens:check` PASSES, then `tokens:drift`
+>   prints a line-by-line diff of everything after the insertion point. **It looks
+>   like dozens of tokens changed. They did not — the file is offset by one line.**
+>   The fix is `tokens:gen`, not a repair.
+>
+> · **⚠️ *CSS without the manifest* — EVERY GATE PASSES SILENTLY.** `tokens:check`
+>   iterates the manifest, so a CSS-only token is invisible to it, and `css-vars`
+>   only checks that `var()` references resolve. The token works at runtime and is
+>   absent from the typed map. **This is the one trap with no guard.**
+>
+> **"We can" is not "we should."** A token added here diverges from whatever
+> produced the manifest. That would matter if something upstream re-exported it —
+> Yogesh has confirmed nothing does, so the question is settled for this repo, but
+> the reasoning should be re-tested if that ever changes.
 
 ---
 
@@ -50,16 +97,38 @@ These repeat, follow a pattern, and sit next to values the design system already
 owns. **This is the category that suggests the system is missing something,
 rather than the code being sloppy.**
 
-#### A1 · Colour tints — the clearest case, ~15 uses
+#### A1 · Colour tints — RESOLVED 2026-08-30, seven tokens added
 
-Every one of these is **an existing design-system colour at 8% opacity**:
+**COUNT CORRECTED: seven tints, 18 uses — not four and ~15.** Re-measured before
+acting. The three the original table missed are identical in construction, so the
+derivation is more systematic than this document argued, not less.
 
-| In the code | Base colour | Design-system token for the base |
-|---|---|---|
-| `#7C5CDB14` | `#7C5CDB` | `--status-review` ✅ exists |
-| `#2A6FDB14` | `#2A6FDB` | `--accent-500` ✅ exists |
-| `#0E938414` | `#0E9384` | `--status-disposed` ✅ exists |
-| `#D92D2014` | `#D92D20` | `--danger-500` ✅ exists |
+**⚠️ SCOPE OF THE PRECEDENT — ALL 18 USES ARE IN `AdminScreen.tsx`.** That does
+not weaken the justification: an owned hue at 8% is either a real generatable
+layer or it is not, and that does not depend on how many screens reach for it.
+But it does weaken A1 as a citable precedent. **Cite it as "the system owns this
+derivation, demonstrated in Admin" — not as a pattern repeating across the app**,
+which the codebase does not currently show.
+
+Every one is **an existing design-system colour at 8% opacity**:
+
+| In the code | Base colour | Base token | Now |
+|---|---|---|---|
+| `#7C5CDB14` ×5 | `#7C5CDB` | `--status-review` | `--status-review-tint` |
+| `#2A6FDB14` ×5 | `#2A6FDB` | `--accent-500` | `--accent-500-tint` |
+| `#0E938414` ×3 | `#0E9384` | `--status-disposed` | `--status-disposed-tint` |
+| `#D92D2014` ×2 | `#D92D20` | `--danger-500` | `--danger-500-tint` |
+| `#E2820B14` ×1 | `#E2820B` | `--warning-500` | `--warning-500-tint` |
+| `#1F8A5B14` ×1 | `#1F8A5B` | `--success-500` | `--success-500-tint` |
+| `#05141F14` ×1 | `#05141F` | `--kia-midnight` | `--kia-midnight-tint` |
+
+**⚠️ THE `-tint` SUFFIX WAS A JUDGMENT CALL, NOT A DERIVATION.** No alpha-tint
+convention existed to follow. The nearest precedent, `--kia-midnight-90/-80/-70`,
+is a *lightness* ramp — reusing that shape for an *alpha* tint would actively
+mislead. A numeric opacity suffix (`--accent-500-08`) was rejected because it
+collides visually with the 50/100/500/600 scale numbers already inside the names.
+"Tint" is this document's own word for them. **The next person adding a token
+should know which parts of the naming are convention and which were chosen.**
 
 *(`14` in hex is 20/255 ≈ 8% opacity.)*
 
@@ -71,16 +140,57 @@ reach for, so they wrote the hue and appended an opacity. Every instance is
 internally consistent with the design system; the vocabulary simply stops one
 level short.
 
-#### A2 · A second border width — 14 uses of `2px`
+#### A2 · A second border width — RESOLVED 2026-08-30, one token added
 
-The system defines `--border-width: 1px`. The interface uses **2px borders in 14
-places** — emphasis states, selected rows, active tabs.
+**⚠️ COUNT CORRECTED: FIVE uses, not 14.** The original figure counted *every*
+`2px` in the codebase — `padding: 2px` (4), `margin-top: 2px` (2), `gap: 2px` (2),
+`margin`, `margin-left`, `padding-top`, a `borderRadius: '2px'`, and one hit
+inside `dist/` build output. Those are spacing and radius, not border width.
 
-For context on why this matters: **`1px` accounted for 41 of the 103 conversions
-already completed.** Border width is the single most repeated value in this
-codebase, and the system currently expresses exactly one of the two widths in use.
+The five genuine border widths: `AppHeader.tsx`, `DashboardScreen.tsx`,
+`ChangeRequestPanel.module.css`, `PartRequestHistory.module.css`,
+`button.module.css` — three of them left-accent stripes rather than borders proper.
 
-#### A3 · Off-grid spacing — ~14 uses
+**This materially weakened A2's original argument**, which rested on 14 against
+the 41 `1px` conversions to claim border width was "the single most repeated value
+in this codebase". At five it is not. The decision was re-taken on the corrected
+number and stands anyway: five uses with no token covering them is a real gap.
+
+Added as **`--border-width-emphasis`**, named rather than numbered — `-2` invites
+a `-3`, and `--border-width` carries no number to pair with.
+
+> ### ⚠️ THIS DOCUMENT'S INVENTORY AND `ds-gate` COUNT DIFFERENT SETS
+>
+> Converting A1 and A2 moved `ds-gate`'s `values` ceiling **293 → 274**: a drop of
+> 19, from **20** conversions in `.ts`/`.tsx`. (The other three are in
+> `.module.css`, which `ds-gate` does not lint at all.) The missing one reconciles
+> exactly, and the reason generalises:
+>
+> **`AppHeader.tsx`'s `2px` sat inside a template literal, and the gate never
+> counted it.** Its rule matches `Literal` AST nodes; a value inside a
+> `` `backtick` `` string is a `TemplateLiteral` and is invisible to it. Proven by
+> controls rather than inferred — restoring that literal left the count at 274,
+> while restoring `DashboardScreen.tsx`'s plain-string `2px` moved it to 275.
+>
+> So a conversion can be real and correct and still not move the ceiling. **The
+> ceiling is a floor on what is countable, not a census of what exists.** A rough
+> scan finds backtick spans containing `px`/hex values across the app — most are
+> prose inside comments, but at least one (`IssueListScreen.tsx:238`) is a genuine
+> uncounted template literal. **Sizing that blind spot properly needs an AST pass
+> and has not been done.**
+>
+> ### ⚠️ THE REMAINING COUNTS IN THIS DOCUMENT ARE UNVERIFIED
+>
+> **Two of two figures that were checked before being acted on proved wrong** —
+> A1 understated by three tints, A2 overstated by roughly three times. Neither
+> error was visible without re-measuring, and A2's would have justified a token on
+> an argument that does not hold.
+>
+> So: **A3's "~14", Category B's "~141" and its per-row counts, and Category C's
+> remainder have NOT been re-measured.** Treat them as estimates. Re-count before
+> acting on any of them — the base rate in this document is two for two.
+
+#### A3 · Off-grid spacing — ~14 uses (unverified)
 
 `3px`, `5px`, `7px` — sitting between `--space-1` (4px) and `--space-2` (8px).
 Fewer, and a weaker case than A1 or A2; possibly just imprecision.

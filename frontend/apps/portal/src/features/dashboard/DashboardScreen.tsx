@@ -229,7 +229,7 @@ export function DashboardScreen() {
                     <span style={{ flex: 1, font: 'var(--fw-semibold) 13px/1 var(--font-body)', color: 'var(--text-primary)' }}>{l.label}</span>
                     <span style={{ font: 'var(--fw-bold) 20px/1 var(--font-display)', color: l.color }}>{l.value}</span>
                   </div>
-                  {idx < arr.length - 1 && <div style={{ height: 'var(--icon-xs)', marginLeft: 4, borderLeft: '2px dotted #DCE1E6' }} />}
+                  {idx < arr.length - 1 && <div style={{ height: 'var(--icon-xs)', marginLeft: 4, borderLeft: 'var(--border-width-emphasis) dotted #DCE1E6' }} />}
                 </div>
               ))}
             </div>

@@ -150,7 +150,7 @@ export function AppHeader() {
                       <button
                         key={n.id}
                         onClick={() => { markRead(n.id); setNotifOpen(false); if (n.recordId) nav(`/issues/${n.recordId}`) }}
-                        style={{ display: 'flex', alignItems: 'flex-start', gap: 11, width: '100%', textAlign: 'left', border: 'none', borderLeft: `2px solid ${n.read ? 'transparent' : m.color}`, background: n.read ? 'var(--surface-card)' : 'var(--neutral-25)', padding: '12px 14px', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'flex-start', gap: 11, width: '100%', textAlign: 'left', border: 'none', borderLeft: `var(--border-width-emphasis) solid ${n.read ? 'transparent' : m.color}`, background: n.read ? 'var(--surface-card)' : 'var(--neutral-25)', padding: '12px 14px', cursor: 'pointer' }}
                       >
                         <span style={{ width: 34, height: 34, borderRadius: 9, background: m.tint, color: m.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                           <Icon icon={m.icon} size={17} />
