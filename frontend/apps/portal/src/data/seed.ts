@@ -196,13 +196,24 @@ export const AUDIT: AuditEntry[] = [
 // The prototype's NOTIFS() entries verbatim — 6 unread, matching the bell badge. The source
 // stores relative times ('8 min ago' … 'Yesterday') that fmtStamp() renders as MDY dates
 // against _todayBase(); here they are the equivalent absolute instants before NOW.
+//
+// `recordType` ADDED 2026-08-30. Every row is explicit about what it points at,
+// because the router now asks. Vue's fixtures do the same and for the same
+// reason — before this, every notification was assumed to be an issue.
+//
+// n7 is NEW and is the only row that is not from the prototype's NOTIFS(). It
+// exists because `notificationTarget`'s `qir` branch was otherwise unreachable
+// from the running app: a branch no seed can exercise is a branch nobody sees
+// break. It is READ, so the bell badge still shows 6 unread and every count
+// pinned elsewhere is unchanged.
 export const NOTIFICATIONS: AppNotification[] = [
-  { id: 'n1', category: 'Critical', title: 'Issue requires review', recordId: 'EE-260001', read: false, createdAt: '2026-07-09T08:52:00Z' },
-  { id: 'n2', category: 'Critical', title: 'EWS alert needs disposition', recordId: 'CL-260003', read: false, createdAt: '2026-07-09T08:00:00Z' },
-  { id: 'n3', category: 'Action Required', title: 'Investigation update pending', recordId: 'EE-260001', read: false, createdAt: '2026-07-09T07:00:00Z' },
-  { id: 'n4', category: 'Warning', title: 'QIR action is overdue', recordId: 'BD-260006', read: false, createdAt: '2026-07-09T06:00:00Z' },
-  { id: 'n5', category: 'Warning', title: 'Disposition approval pending', recordId: 'ST-260002', read: false, createdAt: '2026-07-09T04:00:00Z' },
-  { id: 'n6', category: 'Information', title: 'TSB publication completed', recordId: 'AC-260004', read: false, createdAt: '2026-07-08T09:00:00Z' },
+  { id: 'n1', category: 'Critical', title: 'Issue requires review', recordId: 'EE-260001', recordType: 'issue', read: false, createdAt: '2026-07-09T08:52:00Z' },
+  { id: 'n2', category: 'Critical', title: 'EWS alert needs disposition', recordId: 'CL-260003', recordType: 'issue', read: false, createdAt: '2026-07-09T08:00:00Z' },
+  { id: 'n3', category: 'Action Required', title: 'Investigation update pending', recordId: 'EE-260001', recordType: 'issue', read: false, createdAt: '2026-07-09T07:00:00Z' },
+  { id: 'n4', category: 'Warning', title: 'QIR action is overdue', recordId: 'BD-260006', recordType: 'issue', read: false, createdAt: '2026-07-09T06:00:00Z' },
+  { id: 'n5', category: 'Warning', title: 'Disposition approval pending', recordId: 'ST-260002', recordType: 'issue', read: false, createdAt: '2026-07-09T04:00:00Z' },
+  { id: 'n6', category: 'Information', title: 'TSB publication completed', recordId: 'AC-260004', recordType: 'issue', read: false, createdAt: '2026-07-08T09:00:00Z' },
+  { id: 'n7', category: 'Action Required', title: 'A QIR you raised was escalated', recordId: 'QIR-26014', recordType: 'qir', read: true, createdAt: '2026-07-08T07:30:00Z' },
 ]
 
 /** Issue Priority seed — the four issues the V4-V5 prototype ships pre-scored

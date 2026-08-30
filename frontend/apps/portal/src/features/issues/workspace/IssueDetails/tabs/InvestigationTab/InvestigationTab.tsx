@@ -40,7 +40,30 @@ export type InvestigationWorkstream = 'activities' | 'parts'
  * workspace sections because a section is a place; this filters what one section
  * shows, which is the converse of that rule rather than an exception to it.
  */
-export function InvestigationTab({ issueId, canEdit }: { issueId: string; canEdit: boolean }) {
+export function InvestigationTab({ issueId, canEdit, activityNote, partRequestNote }: {
+  issueId: string
+  canEdit: boolean
+  /**
+   * Why editing is off, for the Add-activity rail. Rendered under the disabled
+   * form when present.
+   *
+   * ─── OPTIONAL, AND ABSENT IS MEANINGFUL ──────────────────────────────────
+   *
+   * `canEdit` can be false for two unrelated reasons — the Closed lock, or the
+   * viewer's capability — and this component cannot tell them apart from a
+   * single boolean. So it does not try: it renders whatever sentence its caller
+   * supplies and shows nothing when none is. The section is the only place that
+   * can see both halves of the gate, so it is the only place that can name the
+   * cause correctly.
+   *
+   * Passing a note is NOT the same as `!canEdit`. Do not derive one from the
+   * other here — that is precisely the shortcut that had a read-only role on an
+   * OPEN issue reading "this issue is closed".
+   */
+  activityNote?: string
+  /** The same, for the Part Requests rail. */
+  partRequestNote?: string
+}) {
   const store = useStore()
   const [workstream, setWorkstream] = useState<InvestigationWorkstream>('activities')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -102,9 +125,9 @@ export function InvestigationTab({ issueId, canEdit }: { issueId: string; canEdi
       </header>
 
       {workstream === 'activities' ? (
-        <InvestigationActivities issueId={issueId} canEdit={canEdit} expanded={expanded} onToggle={toggle} />
+        <InvestigationActivities issueId={issueId} canEdit={canEdit} lockNote={activityNote} expanded={expanded} onToggle={toggle} />
       ) : (
-        <PartRequestsSection issueId={issueId} canEdit={canEdit} />
+        <PartRequestsSection issueId={issueId} canEdit={canEdit} lockNote={partRequestNote} />
       )}
     </div>
   )

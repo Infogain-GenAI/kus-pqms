@@ -14,6 +14,7 @@ import { PageContainer, PageCrumb, ULabel } from '@/app/chrome'
 import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { LinkIssuesSection } from './LinkIssuesSection'
+import { IssueExistingPreviewModal } from './IssueExistingPreviewModal'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { RequestNewSystemModal } from './classification/RequestNewSystemModal'
@@ -30,6 +31,8 @@ export function CreateIssueScreen() {
 
   const [vehicle, setVehicle] = useState<ModelCodeSelection>({ codes: [], yearsByCode: {} })
   const [linkedIds, setLinkedIds] = useState<string[]>([])
+  /** The issue open in the preview modal, by id. Null when it is closed. */
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const [sysId, setSysId] = useState(''); const [subId, setSubId] = useState(''); const [compId, setCompId] = useState(''); const [symId, setSymId] = useState('')
   const [pendingSymptom, setPendingSymptom] = useState('')
   const [requestOpen, setRequestOpen] = useState(false)
@@ -420,7 +423,14 @@ export function CreateIssueScreen() {
                       <SourceBadge source={i.source} size="sm" />
                       <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{i.title}</span>
                       <StatusBadge status={i.status} size="sm" />
-                      <Button variant="link" size="sm" onClick={() => nav(`/issues/${i.id}`)}>Preview</Button>
+                      {/*
+                        ⚠️ THIS OPENS A MODAL. IT USED TO CALL `nav('/issues/' + i.id)`.
+                        Navigating away unmounts this screen, and the draft lives in
+                        its component state — so a user checking whether a suggested
+                        match was really the same defect lost everything they had
+                        typed. On the entry form, of all screens.
+                      */}
+                      <Button variant="link" size="sm" data-testid={`preview-${i.id}`} onClick={() => setPreviewId(i.id)}>Preview</Button>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -508,6 +518,19 @@ export function CreateIssueScreen() {
       />
 
       <ClearFormConfirmModal open={clearOpen} onClose={() => setClearOpen(false)} onConfirm={clearAll} />
+
+      {/*
+        Preview an existing issue WITHOUT leaving the form. Link and Unlink from
+        inside it write to the same `linkedIds` the panel's own buttons do, so
+        the two routes to linking cannot disagree about what is linked.
+      */}
+      <IssueExistingPreviewModal
+        issue={previewId ? (store.getIssue(previewId) ?? null) : null}
+        linked={!!previewId && linkedIds.includes(previewId)}
+        onClose={() => setPreviewId(null)}
+        onLink={(id) => setLinkedIds((l) => (l.includes(id) ? l : [...l, id]))}
+        onUnlink={(id) => setLinkedIds((l) => l.filter((x) => x !== id))}
+      />
 
       {created && (
         <SubmitConfirmationModal

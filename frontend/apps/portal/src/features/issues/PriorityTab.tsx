@@ -27,7 +27,23 @@ import {
 
 type Draft = { scores: Record<string, number>; selIdx: Record<string, number>; manualFinal: PriorityLetter | null }
 
-export function PriorityTab({ issueId }: { issueId: string }) {
+export function PriorityTab({ issueId, canEdit = true }: {
+  issueId: string
+  /**
+   * The Closed-issue lock, ANDed by the shell. Scoring writes to the issue, so a
+   * Closed record must not accept it.
+   *
+   * ⚠️ THERE IS NO VUE COUNTERPART TO THIS TAB — the priority matrix is this
+   * app's own surface. It is locked anyway, because the rule is about the RECORD
+   * being settled, not about which screens happened to exist when it was
+   * written. A write surface exempt from the lock only because nobody ported it
+   * is the exact inconsistency `@/data/issueLock` was extracted to end.
+   *
+   * Defaults to `true` so the tab keeps working for any caller that has not been
+   * taught about the lock, rather than silently going read-only.
+   */
+  canEdit?: boolean
+}) {
   const store = useStore()
   const { user, role } = useRole()
   const saved = store.priorityFor(issueId)
@@ -108,7 +124,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
               icon={Gauge}
               title={sec.title}
               right={
-                <Button variant="ghost" size="sm" onClick={() => resetCategory(sec.key)}>
+                <Button variant="ghost" size="sm" disabled={!canEdit} onClick={() => resetCategory(sec.key)}>
                   Reset category
                 </Button>
               }
@@ -124,6 +140,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                         <button
                           type="button"
                           onClick={() => clearItem(it.key)}
+                          disabled={!canEdit}
                           aria-label={`Clear ${it.label}`}
                           style={{
                             display: 'inline-flex',
@@ -150,6 +167,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                             type="button"
                             aria-pressed={sel}
                             onClick={() => toggle(it.key, opIdx, op.pts)}
+                            disabled={!canEdit}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -265,6 +283,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
                   type="button"
                   aria-pressed={on}
                   onClick={() => setDraft({ ...draft, manualFinal: l })}
+                  disabled={!canEdit}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -288,7 +307,7 @@ export function PriorityTab({ issueId }: { issueId: string }) {
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            <Button variant="primary" iconLeft={<Icon icon={Save} size={14} />} onClick={save} disabled={!dirty}>
+            <Button variant="primary" iconLeft={<Icon icon={Save} size={14} />} onClick={save} disabled={!dirty || !canEdit}>
               Save priority
             </Button>
             <Button variant="secondary" onClick={cancel} disabled={!dirty}>

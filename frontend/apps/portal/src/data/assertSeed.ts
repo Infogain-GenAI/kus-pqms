@@ -33,8 +33,26 @@ export function assertSeedAnchors(): void {
   for (const n of NOTIFICATIONS) {
     const t = new Date(n.createdAt).getTime()
     if (t > nowMs) fail(`notification ${n.id} createdAt ${n.createdAt} is after NOW`)
-    const ref = n.recordId ? ISSUES.find((i) => i.id === n.recordId) : undefined
-    if (n.recordId && !ref) fail(`notification ${n.id} references missing issue ${n.recordId}`)
+    /*
+     * ⚠️ ONLY ISSUE-TYPED ROWS ARE CHECKED AGAINST `ISSUES`.
+     *
+     * This used to resolve EVERY `recordId` against the issue list, which was
+     * correct only for as long as issues were the sole record type. A `qir` row
+     * has no entry there and would fail this check while being perfectly valid —
+     * so the assertion now asks what the row points AT before deciding where to
+     * look for it.
+     *
+     * A row carrying an id but no type is still caught: `notificationTarget`
+     * refuses to route it, so it is a dead notification, and saying so here is
+     * cheaper than a user reporting a click that does nothing.
+     */
+    if (n.recordId && !n.recordType) {
+      fail(`notification ${n.id} has recordId ${n.recordId} but no recordType, so it cannot be routed`)
+    }
+    const ref = n.recordType === 'issue' && n.recordId ? ISSUES.find((i) => i.id === n.recordId) : undefined
+    if (n.recordType === 'issue' && n.recordId && !ref) {
+      fail(`notification ${n.id} references missing issue ${n.recordId}`)
+    }
     if (ref && t < new Date(`${ref.reportedDate}T00:00:00Z`).getTime()) {
       fail(`notification ${n.id} (${n.createdAt}) precedes issue ${ref.id} (${ref.reportedDate})`)
     }

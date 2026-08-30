@@ -67,6 +67,11 @@ export default defineConfig({
       provider: 'v8',
       include: [
         'apps/portal/src/data/**',
+        // Widened 2026-08-30 for the shared format/logging/debounce utilities.
+        // The vitest note above warns this drops the percentage and fails the
+        // gate — it did not here, because these modules land with tests and
+        // measure higher than the existing average. Floors re-seeded regardless.
+        'apps/portal/src/shared/**',
         'apps/portal/src/features/issues/IssueListScreen.tsx',
         'apps/portal/src/features/issues/IssueWorkspaceScreen.tsx',
         'apps/portal/src/features/issues/CreateIssueScreen.tsx',

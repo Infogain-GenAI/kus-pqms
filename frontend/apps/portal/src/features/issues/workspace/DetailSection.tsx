@@ -36,7 +36,7 @@ const IssueEditForm = lazy(() =>
 )
 
 export function DetailSection() {
-  const { issue, canEditIssue: canEdit, openModal, editing, onEditingChange } = useWorkspace()
+  const { issue, canEditIssue: canEdit, lock, openModal, editing, onEditingChange } = useWorkspace()
   const nav = useNavigate()
   const store = useStore()
   const { user } = useRole()
@@ -112,7 +112,11 @@ export function DetailSection() {
           <ULabel style={{ marginBottom: 0 }}>Related linked issue</ULabel>
           <span className={styles.count}>{linked.length}</span>
         </div>
-        <button className={styles.manage} onClick={() => openModal('links')}>
+        {/* Linking is a mutating control, so it takes the lock — Vue gates the
+            equivalent panel action the same way. It is NOT covered by `canEdit`
+            above: that gate is about the edit FORM, and this button sits outside
+            it in the rail, reachable without entering edit mode. */}
+        <button className={styles.manage} disabled={!lock.isEditable} onClick={() => openModal('links')}>
           Manage Related Issues
         </button>
         {linked.length === 0 ? (

@@ -1,3 +1,20 @@
+/*
+ * ─── THE SUITE RUNS IN America/New_York, DELIBERATELY ────────────────────────
+ *
+ * Not the machine's zone. The product's user base is Kia US, and this project is
+ * developed in Asia/Calcutta — which is EAST of UTC, where the date-only parsing
+ * bug in `shared/format/date.ts` rounds the harmless way and is invisible.
+ *
+ * `new Date("2026-06-16")` parses as UTC midnight per spec, so read back with
+ * local getters it is the 15th in New York and the 16th in Calcutta. Every date
+ * in the app was rendering a day early for every real user, and no test on this
+ * machine could have caught it while the suite inherited the local zone.
+ *
+ * Pinning it here means the date tests assert the behaviour USERS get, and any
+ * future date handling is checked against a west-of-UTC zone by default.
+ */
+process.env.TZ = 'America/New_York'
+
 import { configure } from '@testing-library/dom'
 
 /**
@@ -72,3 +89,29 @@ if (typeof Range !== 'undefined' && !Range.prototype.getClientRects) {
   }
   Range.prototype.getBoundingClientRect = emptyRect
 }
+
+/**
+ * ─── PER-TEST STORAGE ISOLATION ──────────────────────────────────────────────
+ *
+ * The Issue List persists its view — search, filters, sort, page, page size,
+ * columns — to sessionStorage for the tab's lifetime (`@/data/issueListView`).
+ * A vitest environment is ONE jsdom per test FILE, not per test, so that storage
+ * survives from one test to the next and a test that filters or paginates hands
+ * its state to whatever runs after it.
+ *
+ * That is not theoretical: adding persistence turned four passing pagination
+ * tests red at once, because each was landing on page 2 left behind by its
+ * predecessor rather than on the page 1 it asserted about.
+ *
+ * Clearing here rather than in the one test file that noticed: any screen may
+ * persist state later, and a per-file copy is the one someone forgets. Tests
+ * that WANT to exercise restoration seed storage themselves inside the test,
+ * which runs after this.
+ */
+beforeEach(() => {
+  try {
+    sessionStorage.clear()
+  } catch {
+    /* storage unavailable in this environment; nothing to isolate */
+  }
+})

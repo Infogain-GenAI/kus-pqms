@@ -1,0 +1,35 @@
+/*
+ * The Closed-issue banner.
+ *
+ * NEUTRAL, NOT WARNING. `ApprovalBanner` beside it is warning-tinted because it
+ * asks for a decision; this one reports a settled fact and must not compete with
+ * it for urgency. It borrows the `closed` status hue that the header badge
+ * already shows, so the banner and the badge read as the same statement.
+ *
+ * A CSS MODULE RATHER THAN INLINE STYLE, unlike ApprovalBanner: `ds-gate.mjs`
+ * counts raw numeric and colour literals in `.ts`/`.tsx` only, so new chrome
+ * written inline would ratchet the adherence budget up. Modules are the right
+ * place regardless; this is just the reason not to copy the neighbour.
+ */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-width) solid var(--neutral-200);
+  border-radius: var(--radius-xl);
+  background: var(--neutral-50);
+}
+
+.icon {
+  flex: none;
+  color: var(--status-closed);
+}
+
+.text {
+  margin: 0;
+  font: var(--fw-regular) var(--fs-body-sm) / 1.4 var(--font-body);
+  color: var(--text-secondary);
+}
