@@ -60,7 +60,13 @@
   border: var(--border-width) solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--neutral-500);
+  /* #8A97A3, NOT `--neutral-500` (#6B7681, darker and warmer). The design's unset
+     path segment is its own grey and no token matches it — using the nearest one
+     made unfilled steps read as ordinary muted text rather than as placeholders,
+     which is the whole distinction this strip exists to draw. A literal is correct
+     here; `--fs-body-md` is the only 14px token and it is a FONT SIZE, so there is
+     no colour token to reach for either. */
+  color: #8a97a3;
   font-family: var(--font-body);
   font-size: 12.5px;
   font-weight: var(--fw-medium);
@@ -118,10 +124,15 @@
 
 /* ── Fields ───────────────────────────────────────────────────────────────── */
 
+/* 14px is the design's own gap (`grid-template-columns:1fr 1fr;gap:14px`). It sits
+   between `--space-3` (12px) and `--space-4` (16px) with no token on it, and the
+   only 14px token in the system is `--fs-body-md`, a font size — reaching for that
+   would put a type token in a layout slot. Raw value, in CSS, where `ds-gate` does
+   not lint and so no ceiling is spent. */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-6);
+  gap: 14px;
 }
 
 .label {

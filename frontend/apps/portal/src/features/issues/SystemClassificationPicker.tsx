@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react'
+import { useId, useMemo, type ReactNode } from 'react'
 import { ChevronRight, Info } from 'lucide-react'
 import { Combobox, Icon, type ComboboxOption } from '@pqms/ui-library'
 import { useStore } from '@/data/store'
@@ -43,6 +43,11 @@ export function SystemClassificationPicker({
   /** System is governance-locked in Edit mode: changing it is a request, not an edit. */
   systemReadOnly = false,
   onRequestSystem,
+  errors,
+  symptomDisabled = false,
+  symptomFooter,
+  requestPrompt = 'Can’t find the required System?',
+  requestLabel = 'Request New System',
 }: {
   value: ClassificationValue
   onChange: (next: ClassificationValue) => void
@@ -50,6 +55,22 @@ export function SystemClassificationPicker({
   disabled?: boolean
   systemReadOnly?: boolean
   onRequestSystem?: () => void
+  /** Per-field messages, shown only once the caller decides to show them. */
+  errors?: Partial<Record<'system' | 'subSystem' | 'component' | 'symptom', string | undefined>>
+  /** Issue Entry disables Symptom while a new one is pending approval. */
+  symptomDisabled?: boolean
+  /** Rendered under Symptom — Issue Entry puts the "Pending Approval" badge here. */
+  symptomFooter?: ReactNode
+  /**
+   * The request affordance's copy differs by screen and BOTH defaults below are
+   * currently wrong against the design — flagged rather than silently changed,
+   * because Edit is not this change's scope:
+   *   Issue Entry  `Can't find the required classification?` → `Request New`
+   *   Edit Issue   `Need to change the System?`              → `Raise a Request`
+   * The defaults preserve what `IssueEditForm` renders today.
+   */
+  requestPrompt?: string
+  requestLabel?: string
 }) {
   const store = useStore()
   const ids = useId()
@@ -100,9 +121,9 @@ export function SystemClassificationPicker({
       )}
 
       <div className={styles.requestRow}>
-        <span>Can&apos;t find the required System?</span>
+        <span>{requestPrompt}</span>
         <button type="button" className={styles.requestLink} onClick={onRequestSystem} disabled={!onRequestSystem}>
-          Request New System
+          {requestLabel}
         </button>
       </div>
 
@@ -114,6 +135,8 @@ export function SystemClassificationPicker({
           selected={value.system}
           disabled={locked || systemReadOnly}
           placeholder={locked ? 'Select a model code first' : 'Search system… (e.g. “Bat”, “Electrical”)'}
+          emptyText="No matching system."
+          error={errors?.system}
           onSelect={(v) => onChange({ system: v })}
           note={systemReadOnly ? 'Governance-locked — changing the System is a request, not an edit.' : undefined}
         />
@@ -124,6 +147,8 @@ export function SystemClassificationPicker({
           selected={value.subSystem}
           disabled={locked || !value.system}
           placeholder={value.system ? 'Search sub-system…' : 'Select a system first'}
+          emptyText="No matching sub-system."
+          error={errors?.subSystem}
           onSelect={(v) => onChange({ ...value, subSystem: v, component: undefined, symptom: undefined })}
         />
         <Field
@@ -133,6 +158,8 @@ export function SystemClassificationPicker({
           selected={value.component}
           disabled={locked || !value.subSystem}
           placeholder={value.subSystem ? 'Search component…' : 'Select a sub-system first'}
+          emptyText="No matching component."
+          error={errors?.component}
           onSelect={(v) => onChange({ ...value, component: v, symptom: undefined })}
         />
         <Field
@@ -140,8 +167,11 @@ export function SystemClassificationPicker({
           label="Symptom *"
           options={toOptions(symptoms)}
           selected={value.symptom}
-          disabled={locked || !value.component}
+          disabled={locked || !value.component || symptomDisabled}
           placeholder={value.component ? 'Search symptom…' : 'Select a component first'}
+          emptyText="No matching symptom."
+          error={errors?.symptom}
+          footer={symptomFooter}
           onSelect={(v) => onChange({ ...value, symptom: v })}
         />
       </div>
@@ -156,8 +186,11 @@ function Field({
   selected,
   disabled,
   placeholder,
+  emptyText,
   onSelect,
   note,
+  error,
+  footer,
 }: {
   id: string
   label: string
@@ -165,8 +198,12 @@ function Field({
   selected?: string
   disabled: boolean
   placeholder: string
+  /** The design gives each level its own no-match line ("No matching system."). */
+  emptyText: string
   onSelect: (value: string) => void
   note?: string
+  error?: string
+  footer?: ReactNode
 }) {
   return (
     <div>
@@ -177,8 +214,15 @@ function Field({
         onSelect={onSelect}
         disabled={disabled}
         placeholder={placeholder}
+        emptyText={emptyText}
+        invalid={!!error}
         aria-labelledby={id}
       />
+      {footer}
+      {/* `note` is advisory (governance lock); `error` is a validation failure.
+          Both use the same style but they are not the same thing, so they are
+          separate props rather than one overloaded slot. */}
+      {error && <p className={styles.error}>{error}</p>}
       {note && <p className={styles.error}>{note}</p>}
     </div>
   )

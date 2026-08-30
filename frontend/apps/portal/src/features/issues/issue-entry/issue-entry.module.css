@@ -393,3 +393,266 @@
   font-size: 11px;
   font-weight: var(--fw-bold);
 }
+
+/* ─── Linking, inside the Same Existing Issues block ──────────────────────────
+ *
+ * All of it lives here because that is where the design puts it. Issue Entry
+ * previously carried a `LinkIssuesSection` of our own OUTSIDE the form card;
+ * the design has no such surface. Three entry points, one panel.
+ *
+ * Tokens are used where they are exact: #E7ECF1 is `--border-subtle`, #6B7681 is
+ * `--text-muted`, #9AA5AE is `--text-disabled`. The rest are the design's own
+ * one-off values with no token behind them. */
+
+/* The header's right-hand action, beside the "{n} linked" badge. */
+.sameAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  height: 34px;
+  padding: 0 13px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--accent-700);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sameAction:hover {
+  background: #f4f8fc;
+  border-color: #c7d6ec;
+}
+
+/* ── The in-place search panel ─────────────────────────────────────────────── */
+.searchPanel {
+  margin-top: 16px;
+  padding: 16px;
+  border: var(--border-width) solid #dde7f2;
+  border-radius: 12px;
+  background: #f8fafd;
+}
+
+.searchHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.searchTitle {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.searchClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: #eef2f6;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.searchField {
+  position: relative;
+}
+
+/* The magnifier sits inside the field, so the input's left padding clears it. */
+.searchFieldIcon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-disabled);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 42px;
+  padding: 0 13px 0 38px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--interactive);
+  box-shadow: var(--shadow-focus);
+}
+
+.searchDivider {
+  height: 1px;
+  margin: 14px 0;
+  background: var(--border-subtle);
+}
+
+.searchIdle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 16px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.searchIdleText {
+  max-width: 360px;
+}
+
+/* The row is the container ONLY. The label and the count are styled separately
+   because the design styles them separately — the label is 10px/700 uppercase
+   with letter-spacing, the count is plain 11px. Putting the type on the row
+   uppercased "8 issues" into "8 ISSUES", which the design does not do. */
+.searchResultsHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+  font-family: var(--font-body);
+}
+
+.searchResultsLabel {
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.searchCount {
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
+/* ── Empty state — the design's `sameEmptyShow` ────────────────────────────── */
+.emptyPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 16px;
+  padding: 26px 20px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 13px;
+  border-radius: 11px;
+  background: #eef2f6;
+  color: var(--text-muted);
+}
+
+.emptyTitle {
+  max-width: 460px;
+  margin-bottom: 5px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.emptySub {
+  max-width: 420px;
+  margin-bottom: 16px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 9px;
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+/* ── All-linked state — informational, and it carries NO button ────────────── */
+.allLinked {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: var(--border-width) solid #dde7f2;
+  border-radius: 11px;
+  background: #f4f8fc;
+}
+
+.allLinkedIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-600);
+  color: var(--text-inverse);
+}
+
+.allLinkedTitle {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.allLinkedSub {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* The panel head's title cluster, and the icon above the idle / no-match copy.
+   These carry their values here rather than inline so they cost no `numeric`
+   ceiling — the gate lints .ts/.tsx and never CSS. */
+.searchHeadLeft {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.searchIdleIcon {
+  margin-bottom: 8px;
+  color: var(--text-disabled);
+}
