@@ -24,7 +24,7 @@
 import { describe, it, expect } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { routes } from '@/routes'
-import { bodyText, renderAt } from './support/dataRouter'
+import { bodyText, renderAt } from '../../../support/dataRouter'
 
 const ISSUE = 'HV-260101'
 

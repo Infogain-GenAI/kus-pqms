@@ -22,7 +22,7 @@ import type { RouteObject } from 'react-router-dom'
 import { capabilityDecision, requireCapability, type RouteCapabilityHandle } from '@/app/capabilityGuard'
 import { __resetCurrentCapability, _syncCurrentRole, hasCapability } from '@/data/capabilities'
 import { routes } from '@/routes'
-import { bodyText, renderAt } from './support/dataRouter'
+import { bodyText, renderAt } from '../support/dataRouter'
 
 afterEach(() => {
   __resetCurrentCapability()

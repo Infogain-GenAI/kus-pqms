@@ -15,7 +15,7 @@ import { describe, it, expect } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import { routes } from '@/routes'
 import { CLOSED_NOTES, issueLock } from '@/data/issueLock'
-import { bodyText, renderAt } from './support/dataRouter'
+import { bodyText, renderAt } from '../support/dataRouter'
 
 /**
  * Seeded issues, chosen for what they are rather than at random:
