@@ -23,6 +23,9 @@ const Wrapped = ({ children }: { children: ReactNode }) => (
 )
 const renderCreate = () => render(<CreateIssueScreen />, { wrapper: Wrapped })
 const btn = (name: RegExp) => screen.getByRole('button', { name })
+/** Non-throwing sibling of `btn`, for asserting a control is ABSENT.
+    `getByRole` throws when it finds nothing, so it cannot express "not there". */
+const queryBtn = (name: RegExp) => screen.queryByRole('button', { name })
 const body = () => document.body.textContent ?? ''
 
 describe('the form is a draft until Register Issue', () => {
@@ -113,7 +116,6 @@ describe('Register Issue reports what is missing', () => {
     expect(body()).toContain('Cannot register this issue')
     expect(body()).toContain('Select a model code.')
     expect(body()).toContain('Enter an issue title.')
-    expect(body()).toContain('Select the issue source.')
   })
 
   it('symptom is required at submit', () => {
@@ -140,50 +142,55 @@ describe('the classification "Request New" affordance', () => {
   })
 })
 
-describe('the issue-source chip row', () => {
-  it('renders the prototype\'s source vocabulary', () => {
-    // These are the seven sources the prototype shows.
-    //
-    // ⚠️ WHAT THIS PINS, AND WHAT IT DOES NOT — CORRECTED 2026-08-26.
-    // It was written as though seven were a FIXED vocabulary. Reading the canonical
-    // prototype source shows it is not: the Admin screen carries
-    //     sources: { warranty:true, …, fpqr:FALSE, … }
-    // and that section's own subtitle is "Control which channels are available in
-    // the Issue Entry source dropdown." The app already models this — AdminScreen's
-    // `sourceOn` seeds `fpqr: false`, matching the prototype.
-    //
-    // So there are TWO things here and only one is pinned:
-    //   - the VOCABULARY — the seven keys that may exist. A domain fact. Adding or
-    //     renaming one is a domain change. THIS is what the test pins, correctly.
-    //   - the AVAILABLE SET — which of the seven the dropdown offers today. ADMIN
-    //     CONFIGURATION, not a domain fact, and it can legitimately be fewer.
-    //
-    // This test asserts all seven render because Create Issue does not yet read the
-    // admin configuration. WHEN IT DOES, THIS TEST WILL FAIL — with `fpqr` disabled
-    // in the seed, six will render. That failure is CORRECT and the fix is to pin
-    // the vocabulary against the source map and the rendered set against the config,
-    // NOT to re-enable fpqr to make the test pass.
-    //
-    // (`INVENTORY.md`'s `SourceEvidencePanel` row says EIGHT variants against BRD
-    // Appendix C. Seven versus eight is unresolved — see
-    // PQMS_docs/component-specs/RECONCILIATION-workspace-and-create.md.)
-    renderCreate()
-    for (const src of ['Warranty', 'Weibull', 'Comeback', 'Techline', 'FPQR', 'EWS', 'GQIS']) {
-      expect(btn(new RegExp(`^${src}$`, 'i'))).toBeTruthy()
-    }
-  })
+/*
+ * ─── THE ISSUE-SOURCE CHIP ROW HAS BEEN REMOVED FROM THIS SCREEN ─────────────
+ *
+ * Two tests lived here — that the seven-source vocabulary renders, and that a
+ * chip toggles rather than navigating. Both are gone because the control is
+ * gone: registration no longer collects a source.
+ *
+ * THE REASONING THEY CARRIED IS NOT GONE, and it was the valuable half. It moved
+ * to `tests/sourceVocabulary.test.ts`, because it was never really about this
+ * screen — it distinguishes the seven-key VOCABULARY (a domain fact) from the
+ * AVAILABLE SET (admin configuration, which already seeds `fpqr: false`). That
+ * distinction now applies to `EditSourcesForm` on the workspace edit path, which
+ * renders the channels from `SOURCE_KEYS`.
+ *
+ * One thing those comments asserted is now known to be false, and is corrected
+ * at the new site rather than carried forward: they cited the prototype's Admin
+ * subtitle, "Control which channels are available in the Issue Entry source
+ * dropdown", as evidence about this screen. The prototype's Issue Entry has no
+ * source dropdown at all — zero occurrences of "source" in that screen's markup.
+ * The Admin copy is stale in the prototype itself.
+ */
 
-  it('a source chip toggles rather than navigating', () => {
-    renderCreate()
-    const before = body().length
-    fireEvent.click(btn(/^Warranty$/i))
-    // Still on the form — the chip is a toggle, not a link.
-    expect(btn(/^Register Issue$/i)).toBeTruthy()
-    expect(body().length).toBeGreaterThan(before - 200)
-  })
-})
 
 describe('the happy path — a complete form registers and confirms', () => {
+  describe('registration does not collect a source', () => {
+    // The behaviour that replaced the chip row. Verified by hand in the browser
+    // when it landed; pinned here so it stays true.
+    it('a complete form has no source control at all', () => {
+      renderCreate()
+      // Not "the chips are hidden" — the vocabulary is absent from the screen.
+      for (const src of ['Warranty', 'Weibull', 'Comeback', 'Techline', 'FPQR', 'EWS', 'GQIS']) {
+        expect(queryBtn(new RegExp(`^${src}$`, 'i')), `"${src}" should not render on Issue Entry`).toBeNull()
+      }
+    })
+
+    it('registers successfully with no source, and does not ask for one', () => {
+      renderCreate()
+      fillCompleteForm()
+      fireEvent.click(btn(/Register Issue/i))
+
+      // The whole point: a form with no source is COMPLETE. If the validation rule
+      // were ever restored without restoring the control, this fails — which is the
+      // permanent-dead-Register failure mode the rule would cause.
+      expect(body()).not.toContain('Cannot register this issue')
+      expect(body()).not.toContain('Select the issue source.')
+      expect(body()).toContain('Issue created successfully')
+    })
+    })
+
   /**
    * Fills every gate the validator checks, in the order the form presents them.
    * The classification selects are a CASCADE, so each must be set before the next
@@ -211,7 +218,9 @@ describe('the happy path — a complete form registers and confirms', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /^description$/i }), {
       target: { value: 'Reproduces below 0°C after an overnight soak.' },
     })
-    fireEvent.click(btn(/^Warranty$/i))
+    // NO SOURCE CHIP. Registration deliberately does not collect one — the
+    // design registers first and attributes origin later, on the edit path. The
+    // form is complete without it, which is what the next test asserts.
   }
 
   it('commits and shows the created record instead of redirecting', () => {

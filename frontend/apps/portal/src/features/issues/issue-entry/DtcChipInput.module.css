@@ -1,0 +1,193 @@
+/*
+ * DTC chip input — Issue Entry.
+ *
+ * The chip itself is deliberately identical to the Issue Detail card's
+ * (`issue-detail/fields.module.css`), because they show the same object: a code
+ * and its category. Two renderings of one thing that drift apart is worse than a
+ * little duplication, and the category colour is resolved the same way — from
+ * `data-cat`, with the tint mixed from `currentColor`, so no hex reaches the TS
+ * side and the pair cannot come apart.
+ *
+ * The field wrapping the chips is the design's: 42px minimum so an empty control
+ * matches a plain input's height exactly, growing as chips wrap.
+ */
+
+.wrap {
+  position: relative;
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 9px;
+  background: var(--surface-card);
+  cursor: text;
+}
+
+/* Focus is expressed on the FIELD, not the inner input — the input has no
+   border of its own, so the whole control has to respond or focus is invisible.
+   Same ring as every other form control. */
+.field:focus-within {
+  border-color: var(--interactive);
+  box-shadow: var(--shadow-focus);
+}
+
+.fieldDisabled {
+  border-color: #eaeef1;
+  background: var(--neutral-50);
+  cursor: not-allowed;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  gap: 7px;
+  padding: 0 6px 0 11px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--neutral-500);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* Asymmetric padding — 11px leading, 6px trailing — makes room for the remove
+   button without the chip looking lopsided. The Issue Detail chip is `0 11px`
+   because it has no remove button. */
+.chip[data-cat='P'] { color: var(--accent-500); }
+.chip[data-cat='B'] { color: var(--success-500); }
+.chip[data-cat='C'] { color: var(--warning-500); }
+.chip[data-cat='U'] { color: var(--status-review); }
+
+.chipCat {
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  opacity: 0.75;
+}
+
+/* Inherits `currentColor`, so the button is always legible against its own
+   chip's tint whatever the category. */
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  opacity: 0.65;
+  cursor: pointer;
+}
+
+.chipRemove:hover {
+  opacity: 1;
+}
+
+/* `min-width` keeps a usable typing area once several chips have wrapped;
+   `flex: 1` lets it take the rest of the row. */
+.input {
+  flex: 1;
+  min-width: 150px;
+  height: 30px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--fs-body-sm);
+  color: var(--text-primary);
+}
+
+.input::placeholder {
+  font-family: var(--font-body);
+  color: var(--text-disabled);
+}
+
+/* `max-height` here and `PANEL_MAX_HEIGHT_PX` in the component must stay equal —
+   the component measures available room against that number to decide which way
+   to open. */
+.panel {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown);
+  max-height: 236px;
+  overflow: auto;
+  padding: 5px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 10px;
+  background: var(--surface-card);
+  box-shadow: 0 8px 24px rgba(5, 20, 31, 0.12);
+}
+
+/* Flipped: anchored to the row's TOP edge, growing upward. Applied when there is
+   not `max-height` worth of room beneath the row inside the nearest scrolling
+   ancestor — see the component for why this is conditional rather than always
+   upward, and why a fully-scrolled check will not reproduce the bug it fixes. */
+.panelUp {
+  top: auto;
+  bottom: calc(100% + 5px);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--neutral-50);
+}
+
+.optionCode {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.optionCat {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
+/* Takes the row's remaining width and truncates — the code and the category tag
+   are fixed-width anchors at either end, so a long description never pushes the
+   category off the row. */
+.optionDesc {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  color: var(--text-secondary);
+}
+
+/* Help text — a SIBLING of `.wrap`, never inside it (see the component for why
+   that matters to the panel's anchor). Values are the design's own. */
+.help {
+  margin-top: 6px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--text-disabled);
+}

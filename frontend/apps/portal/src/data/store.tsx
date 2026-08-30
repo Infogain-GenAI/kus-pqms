@@ -46,7 +46,7 @@ export interface Actor {
 export interface NewIssueInput {
   title: string
   description?: string
-  source: Issue['source']
+  source?: Issue['source']
   model: string
   modelCode?: string
   /** All affected codes (V4-V5 multi-select). `modelCode` stays the anchor for display. */

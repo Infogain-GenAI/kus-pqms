@@ -282,13 +282,19 @@ export function blankChannel(channel: SourceKey): SourceChannel {
  * silently losing the ones that differ is exactly the data loss this avoids.
  */
 export function resolveSourceChannels(issue: {
-  source: SourceKey
+  /** Optional: an issue registered through Issue Entry has no source yet. */
+  source?: SourceKey
   sources?: SourceKey[]
   sourceEvidence?: { label: string; value: string }[]
   sourceChannels?: SourceChannel[]
 }): SourceChannel[] {
   if (issue.sourceChannels) return issue.sourceChannels
 
+  // `[undefined]` when the issue has no source at all — `SOURCE_KEYS.filter`
+  // then matches nothing and this correctly yields zero channels. That is the
+  // right answer, but note it is NOT the end of the story: a zero-channel issue
+  // lands in `IssueSourceCard`'s empty branch, which must itself handle an
+  // absent source rather than assume the flat field is present.
   const keys = issue.sources?.length ? issue.sources : [issue.source]
   // Tile order, not selection order — so the panels never reshuffle.
   const ordered = SOURCE_KEYS.filter((k) => keys.includes(k))

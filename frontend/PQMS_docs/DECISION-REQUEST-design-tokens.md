@@ -224,3 +224,76 @@ as a vendored copy with no recorded provenance for how it is updated.
 
 **Nothing further is converted until this is answered.** The work is safely
 paused: everything done so far is verified, committed, and rendering identically.
+
+### Footnote, 2026-08-29 — six Category B values resolved locally
+
+**This does not answer the blocking question and does not change the analysis
+above.** Recorded so the counts here are not read as untouched.
+
+While porting Issue Entry's Model Code panel to the UX prototype, six colours in
+`apps/portal/src/features/issues/ModelCodeYearPicker.module.css` were found to
+have been **snapped to the nearest token** — during this pause, and without being
+written down. The snapping was visible: the selected year chip read bluer than
+the design. Per Yogesh's ruling they are now reproduced as literals in that one
+component: `#F4F7FB`, `#DDE3E9`, `#E1E7EC`, `#EDF0F3`, `#F7F9FB`, `#FBFCFD`.
+
+`#DDE3E9` is one of the four greys already listed in Category B above (~36 uses),
+so this resolves a handful of that row's instances in a single file. **The rest of
+Category B, the whole of Category A, and the blocking question are exactly as open
+as before.**
+
+**Updated later the same day: eight, not six.** A second pass on the same
+component's combobox header added `#6B7681` (the "Clear selection" label) and
+`#B4BDC5` (both bulk actions when disabled). `#F0F2F5` was also identified as the
+prototype's divider colour but is NOT resolved — see the note below.
+
+Both new values reinforce the first observation rather than adding a new one: the
+nearest tokens were `--text-secondary` and `--text-disabled` (#9AA5AE), and using
+them had made the panel's primary action — "Select all" — render identically to
+its secondary one. **Snapping did not merely shift a shade here; it erased a
+distinction the design was drawing.** That is a stronger argument than "the greys
+look slightly off", and worth weighing when this request is answered.
+
+Counting the other way is equally instructive: in the same component,
+`--accent-600`, `--neutral-50`, `--border-subtle` and `--border-default` were each
+found to match the prototype EXACTLY and were kept. The system is right more often
+than it is wrong here; the problem is that nothing recorded which was which.
+
+### Second update — a full control-by-control sweep, and a third failure mode
+
+An exhaustive style diff of the whole Issue Entry screen (every declaration, every
+state) found **27 differences across 11 controls**, of which **15 needed literals**:
+seven in the Model Code panel, four in the shared `Combobox`, four in the PATH bar.
+
+That sweep separated the failures into three kinds, and **the third was not visible
+before**:
+
+1. **No token exists** — reproduce as a literal. (e.g. `#F4F7FB`, `#8A97A3`.)
+2. **A token exists and matches exactly** — keep it. Eleven such cases were found
+   and kept across the screen.
+3. **THE WRONG TOKEN WAS USED WHERE A RIGHT ONE EXISTED.** Three cases:
+   `--text-secondary` (#4A555F) where the design wanted `--text-muted` (#6B7681);
+   `--interactive` (#2A6FDB) where it wanted `--kia-midnight`; `--neutral-100`
+   (#ECEFF2) where it wanted the design's general selected surface.
+
+**Category 3 is the one that matters for this request**, because it is invisible to
+the "353 hard-coded values" framing entirely: nothing is hard-coded, no count moves,
+the gate stays green, and the screen is still wrong. Two of the three were in the
+shared `Combobox` and so affected every consumer, not one screen.
+
+It also cuts against reading this request as "the system is too small". At least as
+often, the right value was already there and the wrong one was reached for. Whatever
+answers the blocking question should probably say something about **how a value is
+chosen**, not only about which values exist.
+
+Two things worth carrying into whatever answers this request:
+
+- **Snapping is not a neutral default.** It happened silently here and produced
+  visible drift. Whichever way the blocking question is answered, "snap to the
+  nearest token" needs to be a recorded decision rather than something that
+  happens when nobody chooses.
+- **One token stood in for several distinct source values.** In that file
+  `--border-subtle` had replaced three different prototype greys — and was
+  genuinely correct for two of them. Any future bulk conversion has to map per
+  element; a find-and-replace would be individually plausible and collectively
+  wrong, and no gate in this repo would catch it.

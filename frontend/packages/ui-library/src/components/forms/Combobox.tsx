@@ -53,6 +53,21 @@ export interface ComboboxProps {
   invalid?: boolean
   /** Replaces the "no options" text — e.g. a loading message. */
   emptyText?: ReactNode
+  /**
+   * Optional content pinned above the option list, with a hairline divider
+   * beneath it. Renders nothing when omitted, so no existing consumer changes.
+   *
+   * Intended for bulk actions over the selection — the Model Code picker's
+   * "Select all" / "Clear selection" pair. The BEHAVIOUR deliberately stays with
+   * the caller rather than being built in here: only the caller knows whether
+   * "all" means every option or only the ones currently matching the query, and
+   * baking one answer into a shared component would impose it on every future
+   * consumer.
+   *
+   * It sits INSIDE the panel, so it appears only while the panel is open and
+   * scrolls with it.
+   */
+  header?: ReactNode
   'aria-labelledby'?: string
   'aria-label'?: string
 }
@@ -67,6 +82,7 @@ export function Combobox({
   displayValue,
   invalid = false,
   emptyText = 'No options found',
+  header,
   'aria-labelledby': labelledBy,
   'aria-label': ariaLabel,
 }: ComboboxProps) {
@@ -162,6 +178,14 @@ export function Combobox({
 
       {open && (
         <div id={`${id}-panel`} role="listbox" aria-multiselectable={multiple || undefined} className={styles.panel}>
+          {/* The header is presentation only and must not join the listbox's
+              option set — `role="presentation"` keeps assistive tech from
+              counting bulk-action buttons as selectable options. */}
+          {header != null && (
+            <div className={styles.header} role="presentation">
+              {header}
+            </div>
+          )}
           {filtered.length === 0 ? (
             <div className={styles.status}>{emptyText}</div>
           ) : (

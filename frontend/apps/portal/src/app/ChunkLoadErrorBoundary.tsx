@@ -125,7 +125,8 @@ export class ChunkLoadErrorBoundary extends Component<Props, State> {
           Something went wrong on this screen
         </div>
         {/* No max-width here: a numeric dimension would add to ds-gate's
-            `numeric` ceiling, which is at zero headroom (207/207). The
+            `numeric` ceiling, which runs at zero headroom — see
+            `.ds-ceilings.json` rather than a figure quoted here, which rots. The
             surrounding layout already constrains the width. */}
         <div
           style={{

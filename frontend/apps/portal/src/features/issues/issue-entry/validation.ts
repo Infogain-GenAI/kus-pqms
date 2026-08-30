@@ -48,7 +48,6 @@ export interface IssueEntryDraft {
   symptom?: string
   title: string
   description: string
-  source: string
 }
 
 export function validateIssueEntry(draft: IssueEntryDraft): FieldError[] {
@@ -82,10 +81,6 @@ export function validateIssueEntry(draft: IssueEntryDraft): FieldError[] {
   if (!draft.description.trim()) {
     errors.push({ section: 'issue', fieldKey: 'description', message: 'Describe the issue.' })
   }
-  if (!draft.source) {
-    errors.push({ section: 'issue', fieldKey: 'source', message: 'Select the issue source.' })
-  }
-
   return errors
 }
 

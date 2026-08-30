@@ -9,7 +9,10 @@ import type { CSSProperties } from 'react'
  * A PURE MOVE — the values are unchanged from IssueWorkspaceScreen.tsx:491.
  * Duplicating it instead would have re-declared `padding: '0 10px'`, which
  * `scripts/ds-gate.mjs` counts in its `values` family, against a ceiling with
- * zero headroom (333/333). Sharing keeps the count flat.
+ * zero headroom. The current figure lives in `.ds-ceilings.json` and is
+ * deliberately not repeated here — the gate ratchets it downward on its own, so
+ * a number copied into a comment is stale the next time anyone improves the
+ * count. Sharing keeps the count flat.
  *
  * Callers that need a taller field spread and override, e.g.
  * `{ ...inputStyle, height: 'var(--control-md)' }` — which is what the Edit

@@ -27,7 +27,15 @@ export function IssueCard({
   title,
   part,
   status = 'open',
-  source = 'warranty',
+  // NO DEFAULT. `source` passes straight to `SourceBadge`, which now renders
+  // "No source" for an absent one — defaulting here would re-introduce the
+  // silent "Warranty" mislabel one layer up, and defeat that fix for every
+  // consumer of this card.
+  //
+  // Dormant today: nothing in `apps/portal/src` renders `IssueCard` yet. Fixed
+  // anyway, because the landmine is armed for whoever wires it up without
+  // knowing that sourceless issues are now normal.
+  source,
   assignee,
   age,
   selected = false,

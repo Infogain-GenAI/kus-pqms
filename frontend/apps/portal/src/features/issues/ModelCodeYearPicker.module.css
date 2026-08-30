@@ -2,15 +2,53 @@
  * Model Code combobox + the "Model year(s) per model code" panel.
  *
  * Structure and values traced from the prototype via the Vue app's
- * `VehicleInformationForm.vue`. None of the panel's measurements has a matching
- * token, and each is reproduced rather than snapped to the nearest one:
+ * `VehicleInformationForm.vue`.
+ *
+ * ─── BOTH AXES, STATED — DO NOT LEAVE THIS TO INFERENCE ─────────────────────
+ * An earlier version of this header described only the measurements. That was
+ * true of measurements and SILENT about colours, and the silence hid a real
+ * decision: the colours had been snapped to tokens and nobody had written that
+ * down. Both axes are now named explicitly.
+ *
+ * MEASUREMENTS — reproduced. None has a matching token:
  *
  *   panel        10px radius, 13px/9px header pad
- *   column grid  186px fixed first column, then 1fr
+ *   column grid  186px code | 1fr years | 44px delete
  *   col headers  10.5px bold, 0.04em tracking, 13px/7px pad
  *   row          13px/11px left cell, 13px/9px right cell
  *   year chip    28px tall, 7px radius, 12.5px type, 15px checkbox
  *   divider      1px x 18px rule between "All" and the year chips
+ *
+ * COLOURS — reproduced as literals, per Yogesh's ruling. They were previously
+ * snapped, which drifted the panel visibly; the selected chip in particular read
+ * bluer than the design. Mapped PER ELEMENT rather than by
+ * substitution — this matters, because one token was standing in for several
+ * different prototype values at once. SEVEN literals:
+ *
+ *   #F4F7FB  selected chip fill        (was --accent-50, visibly bluer)
+ *   #DDE3E9  chip border               (was --border-subtle)
+ *   #E1E7EC  panel border              (was --border-subtle)
+ *   #EDF0F3  col-head + row rules      (was --border-subtle, 4 declarations)
+ *   #F7F9FB  panel head background     (was --neutral-25)
+ *   #FBFCFD  col-head background       (was --neutral-25)
+ *   #B4BDC5  both bulk actions, disabled (was --text-disabled, #9AA5AE)
+ *
+ * "Clear selection"'s label is NOT in that list: it is #6B7681, which is exactly
+ * `--text-muted`. The original code had `--text-secondary` (#4A555F) — the wrong
+ * token, not a missing one. Worth distinguishing, because the fix is different.
+ *
+ * FIVE PLACES DELIBERATELY STILL USE TOKENS, because the token is CORRECT there:
+ * `.panelHead`'s bottom border and `.divider` are #E7ECF1 in the prototype,
+ * which is exactly `--border-subtle`. The bulk actions' hover is #F4F6F8, which
+ * is exactly `--neutral-50`; and "Select all" names `var(--accent-600)` in the
+ * prototype itself, which we hold at the same #1F58B5. A blanket
+ * find-and-replace would have broken all four. `--border-default` on the
+ * checkbox is likewise already exact (#C3CBD2) and is untouched; and
+ * "Clear selection" is `--text-muted` per the note above.
+ *
+ * These are part of the OPEN decision request in
+ * `PQMS_docs/DECISION-REQUEST-design-tokens.md` (Category B) — resolved here as
+ * literals for this component only. The rest of that request is unaffected.
  *
  * The 50%-width first column is deliberate and is why the row below it is a
  * grid, not a flex wrap: the trigger's width must not change when a value is
@@ -37,18 +75,20 @@
 
 .panel {
   margin-top: -6px;
-  border: var(--border-width) solid var(--border-subtle);
+  border: var(--border-width) solid #e1e7ec;
   border-radius: 10px;
   overflow: hidden;
   background: var(--surface-card);
 }
 
+/* `border-bottom` KEEPS the token: the prototype's value here is #E7ECF1, which
+   IS `--border-subtle`. Only the background was ever wrong. */
 .panelHead {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 13px;
-  background: var(--neutral-25);
+  background: #f7f9fb;
   border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
@@ -70,9 +110,9 @@
 
 .colHeads {
   display: grid;
-  grid-template-columns: 186px 1fr;
-  background: var(--neutral-25);
-  border-bottom: var(--border-width) solid var(--border-subtle);
+  grid-template-columns: 186px 1fr 44px;
+  background: #fbfcfd;
+  border-bottom: var(--border-width) solid #edf0f3;
   font-family: var(--font-body);
   font-size: 10.5px;
   font-weight: var(--fw-bold);
@@ -87,30 +127,34 @@
 
 .colHeadFirst {
   composes: colHead;
-  border-right: var(--border-width) solid var(--border-subtle);
+  border-right: var(--border-width) solid #edf0f3;
 }
 
+/* Three columns: code | years | delete. The 44px third column is fixed so the
+   delete control sits in the same place on every row regardless of how many year
+   chips wrap in the middle column. */
 .yearRow {
   display: grid;
-  grid-template-columns: 186px minmax(0, 1fr);
+  grid-template-columns: 186px minmax(0, 1fr) 44px;
   align-items: stretch;
 }
 
 .yearRow + .yearRow {
-  border-top: var(--border-width) solid var(--border-subtle);
+  border-top: var(--border-width) solid #edf0f3;
 }
 
 .rowCode {
   padding: 11px 13px;
-  border-right: var(--border-width) solid var(--border-subtle);
+  border-right: var(--border-width) solid #edf0f3;
   min-width: 0;
 }
 
-.rowCodeTop {
+/* The delete column: centred both ways, so the control tracks the row's height
+   rather than sitting against its top edge. */
+.rowDelete {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
+  justify-content: center;
 }
 
 .code {
@@ -131,12 +175,17 @@
 }
 
 .remove {
+  width: 28px;
+  height: 28px;
   border: none;
   background: none;
-  padding: 2px;
+  padding: 0;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .remove:hover {
@@ -151,15 +200,35 @@
   align-items: center;
 }
 
-/* Year / All chip. Selection changes fill and weight only — never the box — so
-   the row never reflows as chips are toggled. */
+/* Year / All chip.
+ *
+ * ⚠️ DELIBERATE DIVERGENCE FROM THE PROTOTYPE — READ BEFORE "RESTORING" THIS.
+ * The prototype DOES change font-weight on selection: `_myChip(on)` renders
+ * `font-weight:${on?600:500}`. We hold it at `--fw-medium` in both states and let
+ * the fill and the text colour carry the selected state instead.
+ *
+ * Why: 600 is wider than 500, so toggling a chip re-measures its text and every
+ * chip after it shifts. On a row of eight model years that reflow is distracting
+ * during exactly the interaction it accompanies.
+ *
+ * Expect a fidelity diff on this control against a prototype-derived baseline.
+ * That is the accepted cost, not a regression.
+ *
+ * ONE THING THAT IS NOT SETTLED, recorded as the hypothesis it is: the weight
+ * jump was reported as more pronounced here than in the prototype, and source
+ * comparison does not explain that — both embed Inter at 400/500/600/700, and
+ * the chip otherwise matches (28px, `0 10px 0 8px`, 7px radius, 12.5px, 6px gap).
+ * The likeliest cause is the selected fill below being bluer than the
+ * prototype's `#F4F7FB`, making the whole selected state read louder. Unproven.
+ *
+ * The box never changes size in either version, so it contributes no reflow. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 28px;
   padding: 0 10px 0 8px;
-  border: var(--border-width) solid var(--border-subtle);
+  border: var(--border-width) solid #dde3e9;
   border-radius: 7px;
   background: var(--surface-card);
   color: var(--text-secondary);
@@ -170,10 +239,20 @@
   cursor: pointer;
 }
 
+/* No `font-weight` here — see the note above. Selection is carried by fill and
+   text colour alone, so the chip's width is identical in both states.
+ *
+ * ⚠️ A PREDICTION WORTH CHECKING RATHER THAN RE-DERIVING. This fill was
+ * `--accent-50` (#EAF2FB), noticeably bluer than the prototype's #F4F7FB, and
+ * the standing theory for why the weight change read as more pronounced here
+ * than in the prototype was that the louder fill amplified it. Reproducing the
+ * exact fill TESTS that theory. If the jump no longer reads as distracting, the
+ * weight-hold above may be redundant and could be reverted to match the
+ * prototype exactly — which would remove a known fidelity divergence. Check it
+ * before assuming either way. */
 .chipOn {
-  background: var(--accent-50);
+  background: #f4f7fb;
   color: var(--text-primary);
-  font-weight: var(--fw-semibold);
 }
 
 .chip:disabled {
@@ -223,4 +302,62 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* ── Combobox panel bulk actions ──────────────────────────────────────────────
+ *
+ * "Select all" / "Clear selection", rendered into `Combobox`'s optional header
+ * slot. Styled here rather than in the shared component because the slot is
+ * deliberately generic — the component owns the row and its divider, the caller
+ * owns what goes in it.
+ *
+ * The disabled state is meaningful, not decorative: "Select all" is dead once
+ * everything is selected and "Clear selection" is dead when nothing is, so each
+ * button tells you the current state before you press it.
+ */
+
+/* `flex: 1` is what makes the pair split the panel 50/50, and `text-align: left`
+   only becomes visible once they are wider than their content — which is why the
+   two belong together. Ours were `inline-flex` and sized to their text. */
+.bulkAction {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  cursor: pointer;
+  /* Secondary by default — "Clear selection". Note this is `--text-muted`
+     (#6B7681), NOT `--text-secondary` (#4A555F): the nearest-looking token was
+     the wrong one, but an exact token does exist, so this stays a token. */
+  color: var(--text-muted);
+}
+
+/* ⚠️ "Select all" IS THE PRIMARY ACTION AND MUST READ AS ONE.
+   Both buttons previously rendered `--text-secondary`, i.e. identically grey, so
+   the primary action looked like the secondary one. The prototype names
+   `var(--accent-600)` here — the same token we hold at #1F58B5 — so this is an
+   exact token match and stays a token rather than becoming a literal. */
+.bulkActionPrimary {
+  composes: bulkAction;
+  color: var(--accent-600);
+}
+
+/* Hover keeps its token: the prototype's #F4F6F8 IS `--neutral-50`, exactly. */
+.bulkAction:hover:not(:disabled) {
+  background: var(--neutral-50);
+}
+
+/* Disabled is one shared grey for both buttons, lighter than either enabled
+   state. `--text-disabled` resolves to #9AA5AE, which is NOT this value. */
+.bulkAction:disabled {
+  color: #b4bdc5;
+  cursor: not-allowed;
 }

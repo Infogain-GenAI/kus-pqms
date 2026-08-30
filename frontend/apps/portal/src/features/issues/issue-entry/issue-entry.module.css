@@ -172,3 +172,224 @@
   font-size: var(--fs-caption);
   color: var(--danger-500);
 }
+
+/* ── Form card ────────────────────────────────────────────────────────────────
+ *
+ * THE THREE SECTIONS ARE ONE CARD, NOT THREE. The prototype renders Vehicle
+ * Information, System Classification and Issue Information inside a single
+ * 14px-radius container, separated by hairlines — not as three free-standing
+ * cards with gaps between them. Rendering them separately made the form read as
+ * three unrelated panels rather than one document, which is the most visible
+ * whole-screen difference from the design.
+ *
+ * `overflow: hidden` is what keeps the first and last sections' backgrounds
+ * inside the rounded corners; without it the hairline separators run to the
+ * card's square edge.
+ *
+ * 22px section padding and the 14px radius are the design's own values and have
+ * no matching token — reproduced rather than snapped, and living here in CSS
+ * rather than in a style object so they are not counted against ds-gate's
+ * JS-side numeric ceiling.
+ */
+
+.formCard {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xs);
+}
+
+.section {
+  padding: 22px;
+}
+
+/* Separator between sections, never above the first — this is why it is a
+   sibling selector rather than a border-top on every .section. */
+.section + .section {
+  border-top: var(--border-width) solid var(--divider);
+}
+
+/* ── PATH bar ─────────────────────────────────────────────────────────────────
+ *
+ * The classification breadcrumb above the System Classification fields. Every
+ * value below is the design's own; the previous version approximated all of them
+ * with accent tokens, which read as a noticeably bluer, rounder, roomier bar.
+ *
+ *   container  #F1F6FE fill, #D6E0F5 border, 10px radius, 10px/13px pad, 7px gap
+ *   "PATH"     9.5px / 700 / 0.06em / #9AA5AE
+ *   segment    12.5px, set = 600 on white with a #CBD9EE hairline and a 1px
+ *              shadow; unset = 500 in #8A97A3 on nothing
+ *
+ * #F1F6FE is this screen's path-bar fill, and it stays in this module. Unlike the
+ * combobox greys — which the design reuses across controls, which is why those
+ * belong in the shared library — this one is applied here.
+ *
+ * An earlier version of this note claimed it occurs "6 times and only ever as
+ * this container". BOTH HALVES WERE WRONG: the real count was 14, and it is also
+ * used as a dropdown hover fill elsewhere. Neither error changed the decision,
+ * but the exclusivity half asserted something nobody had checked — so the note
+ * now says where WE use it and stops there. No count, deliberately: a number in
+ * a comment rots and nobody re-greps before trusting it.
+ */
+
+.pathBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 13px;
+  border: var(--border-width) solid #d6e0f5;
+  border-radius: 10px;
+  background: #f1f6fe;
+}
+
+.pathLabel {
+  flex: none;
+  margin-right: 3px;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  /* #9AA5AE IS `--text-disabled` exactly — token, not a literal. */
+  color: var(--text-disabled);
+}
+
+/* A SET segment is a chip; an unset one is bare text. Both carry the same
+   padding, radius and size so the bar does not reflow as the cascade fills in —
+   only the fill, border, weight and colour change. */
+.pathSeg {
+  padding: 3px 9px;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-medium);
+  line-height: 1.3;
+  white-space: nowrap;
+  color: #8a97a3;
+}
+
+.pathSegSet {
+  composes: pathSeg;
+  border-color: #cbd9ee;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-weight: var(--fw-semibold);
+  box-shadow: 0 1px 2px rgba(5, 20, 31, 0.05);
+}
+
+/* ── Section heading ──────────────────────────────────────────────────────────
+ * 15px/600, against `CardHead`'s `--fs-h4` (17px). Rendered directly rather than
+ * through `CardHead` because that component sets its font INLINE, and an inline
+ * style cannot be overridden from a stylesheet — so a local class was the only
+ * way to reach it without changing a component the workspace also uses.
+ * 16px below the heading, matching the design.
+ *
+ * THERE IS A SECOND AND BETTER REASON, found only after the fact: `CardHead`
+ * renders its title in a plain `<div>` (app/chrome.tsx:104), never a semantic
+ * heading. These sections use real `<h2>`s, so this screen now exposes a heading
+ * structure to assistive tech and to the document outline that `CardHead` gives
+ * no consumer at all.
+ *
+ * That makes the override an accessibility IMPROVEMENT rather than only a
+ * fidelity compromise — and it is an argument for fixing `CardHead` itself, which
+ * would benefit every other screen that uses it. Recorded here because this file
+ * is where someone will next wonder why the heading is hand-rolled. */
+.sectionHead {
+  margin: 0 0 16px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+/* The design stacks each section's fields at 15px, not the 16px step. */
+.sectionStack {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* ── Suggestion cards ─────────────────────────────────────────────────────── */
+
+.sameList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sameCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 14px 16px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--surface-card);
+}
+
+/* ── "Same Existing Issues" header ────────────────────────────────────────────
+ *
+ * ⚠️ THIS HEADER IS UNCONDITIONAL. It renders whether or not there are matches,
+ * and whether or not a symptom has been chosen — in the design its container has
+ * no `sc-if` wrapper and sits structurally OUTSIDE the block that gates the
+ * cards/empty/all-linked states. Only the "N linked" badge inside it is
+ * conditional. Do not move it inside a `symptomLabel &&` guard.
+ *
+ * Values derived from the design by content search rather than line number —
+ * different extractions of that payload number differently, so line references
+ * do not transfer between readers.
+ */
+
+.sameHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* The header leads the block, so it carries the block's separation from the
+     classification grid above — the list below must not add a second gap. */
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+/* 26px accent chip, #EEF2FB fill — not `--accent-50` (#EAF2FB), which is close
+   but not equal. */
+.sameHeadIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #eef2fb;
+  color: var(--accent-600);
+}
+
+.sameHeadTitle {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.sameHeadSub {
+  padding-top: 2px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--text-disabled);
+}
+
+/* "{n} linked" — green, and shown only when something is linked. */
+.sameLinked {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: var(--radius-md);
+  background: #e7f6ef;
+  color: #15724a;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+}
