@@ -1,0 +1,38 @@
+/*
+ * Request-a-classification modal, plus the pending marker its result wears.
+ */
+
+.modalSubcopy {
+  margin-top: 3px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-regular);
+  line-height: 1.35;
+  color: var(--text-disabled);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/*
+ * A requested value is SELECTABLE IMMEDIATELY — that is the point of raising the
+ * request from inside the form — so it needs a marker that says the taxonomy has
+ * not accepted it yet. Warning tones, not danger: nothing is wrong, it is
+ * waiting.
+ */
+.pendingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 6px;
+}
+
+.pendingNote {
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  line-height: 1.4;
+  color: var(--text-muted);
+}

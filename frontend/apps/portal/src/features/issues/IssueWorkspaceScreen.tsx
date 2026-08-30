@@ -363,7 +363,24 @@ export function IssueWorkspaceScreen() {
         it is not a sixth route, so there is no URL for it to occupy, but it
         scrolls exactly like the five that are.
       */}
-      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      {/*
+        `position: relative` is a GUARD, not layout — nothing here is positioned
+        against it.
+
+        An `overflow: auto` box does not become a containing block for
+        absolutely-positioned descendants. So any `position: absolute` element
+        inside a section — a visually-hidden file input, a dropdown panel, a
+        focus sentinel — that lacks a positioned ancestor of its own resolves
+        against the INITIAL containing block, and adds its offset to the
+        DOCUMENT's scroll height rather than this region's. The page then grows a
+        second scrollbar that scrolls nothing visible, which is exactly what the
+        Investigation tab's attachment input did (measured: 849px against a 768px
+        viewport).
+
+        That component was fixed at its source. This line means the next one
+        cannot reintroduce the symptom app-wide while its own bug is found.
+      */}
+      <div ref={scrollRef} style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {/*
           The rail, applied a second time. `PageContainer` keeps its own
           `max-width: 1800` so wide viewports still centre, and its BOTTOM padding

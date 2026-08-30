@@ -10,6 +10,24 @@
  */
 
 .zone {
+  /*
+   * ⚠️ LOAD-BEARING, NOT COSMETIC — this is what stops a SECOND SCROLLBAR.
+   *
+   * `.input` below is `position: absolute` (visually hidden but focusable). With
+   * no positioned ancestor it resolves against the INITIAL CONTAINING BLOCK, so
+   * although it renders at its static position deep inside the workspace's
+   * scrolling region, it contributes its offset to the DOCUMENT's scroll height
+   * instead of the scroller's.
+   *
+   * Measured: the Investigation tab pushed `documentElement.scrollHeight` to
+   * 849px against a 768px viewport, so the page scrolled ~81px underneath the
+   * workspace's own scroll region — two scrollbars, one of which moved nothing
+   * anyone could see.
+   *
+   * `SourceFieldAttachments.module.css`'s `.zone` already carries this for the
+   * same reason; this file was the one that omitted it.
+   */
+  position: relative;
   border: 1.5px dashed var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--space-5);

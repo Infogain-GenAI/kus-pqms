@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import { Gauge, GitBranch, History as HistoryIcon, LayoutPanelLeft, MessagesSquare, Microscope } from 'lucide-react'
+import { Gauge, GitBranch, History as HistoryIcon, LayoutPanelLeft, MessagesSquare, Microscope, Share2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { TogglePillContent, toggleGroupStyle, togglePillStyle } from '@/app/chrome'
+import { useRole } from '@/data/roles'
 
 /**
  * The Workspace tab strip. FIVE NAVLINKS AND ONE BUTTON, and the user must not be
@@ -49,21 +50,27 @@ import { TogglePillContent, toggleGroupStyle, togglePillStyle } from '@/app/chro
  * captures via `getByRole('tab')` — that script now navigates by URL instead.
  */
 
-export type WorkspaceSection = 'detail' | 'investigation' | 'resolution' | 'communication' | 'history'
+export type WorkspaceSection = 'detail' | 'investigation' | 'resolution' | 'communication' | 'history' | 'sharing'
 
 /** Order is the prototype's and is load-bearing for pixel fidelity — Priority sits third. */
-const SECTIONS: { to: WorkspaceSection; label: string; icon: LucideIcon }[] = [
+const SECTIONS: { to: WorkspaceSection; label: string; icon: LucideIcon; capability?: 'approve' }[] = [
   { to: 'detail', label: 'Issue Detail', icon: LayoutPanelLeft },
   { to: 'investigation', label: 'Investigation', icon: Microscope },
   { to: 'resolution', label: 'Resolution', icon: GitBranch },
   { to: 'communication', label: 'Communication', icon: MessagesSquare },
   { to: 'history', label: 'History', icon: HistoryIcon },
+  // ASM/PQM only — see SharingSection for why the gate is repeated there too.
+  { to: 'sharing', label: 'Sharing', icon: Share2, capability: 'approve' },
 ]
 
 /** Where Issue Priority sits in the rendered order (after Investigation). */
 const PRIORITY_AFTER: WorkspaceSection = 'investigation'
 
 export function WorkspaceTabStrip({ issueId, commentCount, priorityOpen, onOpenPriority }: { issueId: string; commentCount: number; priorityOpen: boolean; onOpenPriority: () => void }) {
+  // Section visibility is a CAPABILITY check, never a role comparison (Tier 0's
+  // RBAC rule). Sharing is the only gated section today; the filter is written
+  // over `capability` so a second one needs no change here.
+  const { can } = useRole()
   const priorityPill = (
     <button
       key="priority"
@@ -105,7 +112,7 @@ export function WorkspaceTabStrip({ issueId, commentCount, priorityOpen, onOpenP
    */
   return (
     <nav aria-label="Issue sections" style={toggleGroupStyle('dark')}>
-      {SECTIONS.flatMap((s) => {
+      {SECTIONS.filter((s) => !s.capability || can(s.capability)).flatMap((s) => {
         const link = (
           <NavLink
             key={s.to}

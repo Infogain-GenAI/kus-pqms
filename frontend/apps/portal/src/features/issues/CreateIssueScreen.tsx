@@ -10,12 +10,13 @@ import { Icon } from '@pqms/ui-library'
 // `.formCard` and must not each carry their own border, radius and shadow; and
 // the section headings are 15px against `CardHead`'s inline `--fs-h4` (17px),
 // which a stylesheet cannot override — so they are local `<h2>`s instead.
-import { Modal, PageContainer, PageCrumb, ULabel } from '@/app/chrome'
+import { PageContainer, PageCrumb, ULabel } from '@/app/chrome'
 import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { LinkIssuesSection } from './LinkIssuesSection'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
+import { RequestNewSystemModal } from './classification/RequestNewSystemModal'
 import { relatedRank } from './issue-entry/relatedRank'
 import { DtcChipInput } from './issue-entry/DtcChipInput'
 import entryStyles from './issue-entry/issue-entry.module.css'
@@ -32,7 +33,6 @@ export function CreateIssueScreen() {
   const [sysId, setSysId] = useState(''); const [subId, setSubId] = useState(''); const [compId, setCompId] = useState(''); const [symId, setSymId] = useState('')
   const [pendingSymptom, setPendingSymptom] = useState('')
   const [requestOpen, setRequestOpen] = useState(false)
-  const [requestValue, setRequestValue] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [dtcCodes, setDtcCodes] = useState<string[]>([])
@@ -481,18 +481,31 @@ export function CreateIssueScreen() {
           lifetime to it. */}
 
       {/* Request-new classification (submits to approval queue; non-blocking) */}
-      <Modal open={requestOpen} onClose={() => setRequestOpen(false)} title="Request New Classification" footer={
-        <>
-          <Button variant="ghost" onClick={() => setRequestOpen(false)}>Cancel</Button>
-          <Button disabled={!requestValue.trim() || !compId} onClick={() => { setPendingSymptom(requestValue.trim()); setSymId(''); setRequestValue(''); setRequestOpen(false) }}>Submit Request</Button>
-        </>
-      }>
-        <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>
-          Submit a request. Once approved, it will be added.
-        </p>
-        <ULabel>New symptom value * {compId ? '' : '(select a component first)'}</ULabel>
-        <Input aria-label="New symptom" value={requestValue} onChange={(e) => setRequestValue(e.target.value)} placeholder="e.g. Latch fails to release" disabled={!compId} />
-      </Modal>
+      {/*
+        NOW PERSISTS. This modal used to write the requested symptom into one
+        local `pendingSymptom` string and nothing else — the request reached no
+        store, so it evaporated the moment the screen unmounted and no approver
+        would ever have seen it. It now goes through `requestClassification`,
+        landing in the taxonomy flagged `pendingApproval` like the Edit form's.
+        The `pendingSymptom` display and its "Pending Approval" badge are kept
+        exactly as they were.
+
+        Same shared modal as the Edit form's Request New System — one component,
+        level-aware copy, one store call.
+      */}
+      <RequestNewSystemModal
+        open={requestOpen}
+        level="symptom"
+        onClose={() => setRequestOpen(false)}
+        onSubmit={({ label: newLabel, justification }) => {
+          const node = store.requestClassification(
+            { level: 'symptom', parentId: compId || undefined, label: newLabel, justification },
+            { name: user.name, role: user.role },
+          )
+          setPendingSymptom(node.label)
+          setSymId('')
+        }}
+      />
 
       <ClearFormConfirmModal open={clearOpen} onClose={() => setClearOpen(false)} onConfirm={clearAll} />
 

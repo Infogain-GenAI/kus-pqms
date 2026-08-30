@@ -1,0 +1,34 @@
+/*
+ * Sharing section — a centred empty state.
+ *
+ * Its own stylesheet rather than inline style objects because
+ * `scripts/ds-gate.mjs` counts raw values in .tsx and sits at its ceiling. The
+ * 14px/4px title margin and the copy's max-width are the same figures the other
+ * workspace empty states use; they live in CSS here for the same reason they do
+ * in the investigation and resolution modules.
+ */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-8) var(--space-6);
+}
+
+.title {
+  margin: 14px 0 4px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.body {
+  max-width: 400px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.5;
+  color: var(--text-disabled);
+}
