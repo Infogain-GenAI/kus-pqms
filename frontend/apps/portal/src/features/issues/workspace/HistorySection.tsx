@@ -23,6 +23,7 @@ import { useStore } from '@/data/store'
 import { fmtHM, fmtMDY } from '@/data/util'
 import { NOW } from '@/data/types'
 import { useWorkspace } from './context'
+import { resolveHistoryEvent } from './history/history.catalogue'
 
 // Moved verbatim from IssueWorkspaceScreen.tsx's `HistoryTab` (2026-08-27).
 // Route path: /issues/:id/history.
@@ -36,12 +37,24 @@ import { useWorkspace } from './context'
 // Not to be confused with `store.activitiesFor()`, which is Investigation's
 // activity records and is unrelated to this naming.
 
+/**
+ * Segment for an action.
+ *
+ * THE CATALOGUE ANSWERS FIRST. These regexes remain only as the fallback for an
+ * action with no catalogue row — they were the whole mechanism, and they mis-file
+ * anything they were not written against, silently, because a wrongly-segmented
+ * row still renders perfectly.
+ */
 function classify(action: string): 'LIFECYCLE' | 'AUDIT LOG' {
+  const known = resolveHistoryEvent(action)
+  if (known) return known.segment === 'lifecycle' ? 'LIFECYCLE' : 'AUDIT LOG'
   if (/^issue record created$/i.test(action) || /^status initialized$/i.test(action)) return 'AUDIT LOG'
   if (/^initial owner assigned$/i.test(action)) return 'LIFECYCLE'
   return /status|created|submitted|approved|rejected|escalated|investigation|disposition/i.test(action) ? 'LIFECYCLE' : 'AUDIT LOG'
 }
 function iconFor(action: string): LucideIcon {
+  const known = resolveHistoryEvent(action)
+  if (known) return known.icon
   if (/initial owner assigned/i.test(action)) return UserRoundCheck
   if (/record created/i.test(action)) return FilePlus
   if (/created/i.test(action)) return Flag
@@ -61,12 +74,31 @@ export function HistorySection() {
   const store = useStore()
   const [filter, setFilter] = useState<'all' | 'lifecycle' | 'audit'>('all')
   const [q, setQ] = useState('')
+  /**
+   * Date range. This control existed but was INERT — a `<Select>` with one
+   * option, `value="all"` hard-coded and `onChange={() => undefined}`. It looked
+   * like a working filter and could not filter anything.
+   *
+   * Ranges are measured against the fixed `NOW` anchor, the same one the
+   * Today/Yesterday grouping below uses, so the buckets and the filter can never
+   * disagree about what "today" is.
+   */
+  const [range, setRange] = useState<'all' | '7' | '30' | '90'>('all')
   const entries = store.auditFor(issueId)
+  const nowMs = new Date(NOW).getTime()
   const shown = entries.filter((e) => {
     const cls = classify(e.action)
     if (filter === 'lifecycle' && cls !== 'LIFECYCLE') return false
     if (filter === 'audit' && cls !== 'AUDIT LOG') return false
-    if (q && !`${e.action} ${e.detail ?? ''} ${e.actor}`.toLowerCase().includes(q.toLowerCase())) return false
+    if (range !== 'all') {
+      const days = (nowMs - new Date(e.timestamp).getTime()) / 86400000
+      if (days > Number(range)) return false
+    }
+    // Searches the RENDERED label too, not only the raw action — a user who
+    // reads "Investigation started" and types it must find the row whose stored
+    // action is "Started investigation".
+    const label = resolveHistoryEvent(e.action)?.label ?? e.action
+    if (q && !`${e.action} ${label} ${e.detail ?? ''} ${e.actor}`.toLowerCase().includes(q.toLowerCase())) return false
     return true
   })
   const groups = useMemo(() => {
@@ -89,7 +121,19 @@ export function HistorySection() {
         <div style={{ width: 280 }}>
           <SearchField value={q} onChange={(e) => setQ(e.target.value)} onClear={() => setQ('')} placeholder="Search history…" size="sm" />
         </div>
-        <Select aria-label="Date range" size="sm" value="all" options={[{ value: 'all', label: 'Date: All time' }]} onChange={() => undefined} style={{ width: 150 }} />
+        <Select
+          aria-label="Date range"
+          size="sm"
+          value={range}
+          options={[
+            { value: 'all', label: 'Date: All time' },
+            { value: '7', label: 'Date: Last 7 days' },
+            { value: '30', label: 'Date: Last 30 days' },
+            { value: '90', label: 'Date: Last 90 days' },
+          ]}
+          onChange={(e) => setRange(e.target.value as typeof range)}
+          style={{ width: 170 }}
+        />
         <Button variant="secondary" size="sm" disabled iconLeft={<Icon icon={Expand} size={14} />}>Expand all</Button>
       </div>
       {groups.length === 0 && (
@@ -114,7 +158,12 @@ export function HistorySection() {
                 <IconChip icon={iconFor(e.action)} tint={cls === 'LIFECYCLE' ? 'var(--success-50)' : 'var(--neutral-100)'} color={cls === 'LIFECYCLE' ? 'var(--success-600)' : 'var(--neutral-600)'} size={34} iconSize={15} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{e.action}</span>
+                    {/* The catalogue's label where there is one — "Started
+                        investigation" is how the store writes it, "Investigation
+                        started" is how a reader expects to read it. Falls back
+                        to the raw action, so an uncatalogued event still shows
+                        something true rather than nothing. */}
+                    <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{resolveHistoryEvent(e.action)?.label ?? e.action}</span>
                     <TagChip tint={cls === 'LIFECYCLE' ? 'var(--success-50)' : '#EEEBFB'} color={cls === 'LIFECYCLE' ? 'var(--success-600)' : '#6B4EDB'}>{cls}</TagChip>
                   </div>
                   <div style={{ marginTop: 3, font: 'var(--fw-regular) var(--fs-caption)/1.3 var(--font-body)', color: 'var(--text-muted)' }}>

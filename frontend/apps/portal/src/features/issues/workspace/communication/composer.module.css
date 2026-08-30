@@ -1,0 +1,210 @@
+/*
+ * Communication composer — the formatting toolbar, the @mention menu and the
+ * attachment strip.
+ *
+ * Ported from `tabs/CommunicationTab/CommunicationTab.vue`.
+ *
+ * The toolbar buttons were previously non-interactive `<span>`s — decorative
+ * icons over a plain textarea. They are real buttons now, so they need the
+ * hover, active and disabled states a control has to have.
+ */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--neutral-25);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.toolBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: var(--control-sm);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.toolBtn:hover:not(:disabled) {
+  background: var(--neutral-100);
+  color: var(--text-primary);
+}
+
+.toolBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ── @mention menu ────────────────────────────────────────────────────────── */
+
+.mentionWrap {
+  position: relative;
+}
+
+/*
+ * Anchored to the composer rather than the caret. Caret-following would be
+ * closer to a chat client, but it needs a mirrored-div measurement pass that a
+ * textarea cannot give cheaply — and the list is short enough that a fixed
+ * anchor costs the user nothing.
+ */
+.mentionMenu {
+  position: absolute;
+  left: 12px;
+  bottom: 100%;
+  z-index: var(--z-dropdown);
+  min-width: 220px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 6px;
+  padding: 5px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.mentionItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  color: var(--text-primary);
+}
+
+.mentionItem:hover,
+.mentionActive {
+  background: var(--neutral-50);
+}
+
+.mentionRole {
+  margin-left: auto;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+/* ── Attachments ──────────────────────────────────────────────────────────── */
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 6px 0 10px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 7px;
+  background: var(--neutral-50);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.attachmentRemove {
+  display: inline-flex;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.attachmentRemove:hover {
+  color: var(--danger-500);
+}
+
+/*
+ * The staged-attachment warning. Deliberately prominent rather than a hint:
+ * a user who attaches a file and only discovers after posting that it vanished
+ * has lost work and trust. The Vue implementation says the same thing for the
+ * same reason, and its backend at least HAS a comment endpoint.
+ */
+.attachmentNote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--warning-50);
+  color: var(--warning-600);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Editor states ─────────────────────────────────────────────────────── */
+
+.editorLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+/* Contained failure: the surrounding form keeps working and its unsaved input
+   survives, which is the whole reason this is not a page-level reload. */
+.editorFailed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--warning-500);
+  border-radius: var(--radius-lg);
+  background: var(--warning-50);
+  color: var(--warning-600);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  line-height: 1.45;
+}
+
+.mentionSearch {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 4px;
+  padding: 6px 9px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: 7px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  outline: none;
+}

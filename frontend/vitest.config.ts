@@ -43,6 +43,14 @@ export default defineConfig({
       // The workspace packages are not dependencies of the ROOT, so vitest cannot
       // resolve them by specifier from tests/. Aliased to their source entries —
       // the same entries apps/portal resolves via pnpm's symlink.
+      // ⚠️ THE SUBPATH MUST COME FIRST. These aliases map a specifier to a FILE,
+      // and an alias to a file cannot have children — so with only the bare
+      // '@pqms/ui-library' entry below, '@pqms/ui-library/markdown-editor'
+      // resolves to '…/index.ts/markdown-editor' and fails to load. Vite matches
+      // in declaration order, so the more specific entry has to be listed above
+      // the general one. `apps/portal/vite.config.ts` records the same trap for
+      // the app build, where it produced an ENOENT on a design-token subpath.
+      '@pqms/ui-library/markdown-editor': fileURLToPath(new URL('./packages/ui-library/src/markdown-editor.ts', import.meta.url)),
       '@pqms/ui-library': fileURLToPath(new URL('./packages/ui-library/src/index.ts', import.meta.url)),
       '@pqms/design-tokens': fileURLToPath(new URL('./packages/design-tokens/src/index.ts', import.meta.url)),
     },

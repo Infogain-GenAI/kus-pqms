@@ -1,7 +1,10 @@
-import { useId, useMemo } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { ChevronRight, Info } from 'lucide-react'
 import { Combobox, Icon, type ComboboxOption } from '@pqms/ui-library'
 import { useStore } from '@/data/store'
+import { useRole } from '@/data/roles'
+import type { ClassLevel } from '@/data/types'
+import { RequestNewSystemModal } from './classification/RequestNewSystemModal'
 import styles from './SystemClassificationPicker.module.css'
 
 /**
@@ -42,17 +45,26 @@ export function SystemClassificationPicker({
   disabled = false,
   /** System is governance-locked in Edit mode: changing it is a request, not an edit. */
   systemReadOnly = false,
-  onRequestSystem,
+  issueId,
 }: {
   value: ClassificationValue
   onChange: (next: ClassificationValue) => void
   modelCodes: string[]
   disabled?: boolean
   systemReadOnly?: boolean
-  onRequestSystem?: () => void
+  /** Audits the request against this issue when raised from a workspace form. */
+  issueId?: string
 }) {
   const store = useStore()
+  const { user } = useRole()
   const ids = useId()
+  /**
+   * Which level the request modal is asking about. The affordance reads
+   * "Request New System" but the same flow serves every level — a user stuck at
+   * Symptom needs it just as much, and Create Issue already proved that by
+   * building a separate symptom-only version of it.
+   */
+  const [requesting, setRequesting] = useState<ClassLevel | null>(null)
 
   // The cascade resolves by label at each level, because that is what the issue
   // stores. `find` on label is safe here: the taxonomy's labels are unique
@@ -99,12 +111,35 @@ export function SystemClassificationPicker({
         </div>
       )}
 
+      {/* This button was DISABLED — rendered with no handler behind it, because
+          nothing implemented the flow. It now opens the request modal. */}
       <div className={styles.requestRow}>
         <span>Can&apos;t find the required System?</span>
-        <button type="button" className={styles.requestLink} onClick={onRequestSystem} disabled={!onRequestSystem}>
+        <button type="button" className={styles.requestLink} onClick={() => setRequesting('system')}>
           Request New System
         </button>
       </div>
+
+      {/* SYSTEM ONLY, matching the source. A user stuck at Symptom has no escape
+          hatch here either — that gap is inherited, not introduced, and closing
+          it is a product decision rather than a porting one. The modal itself is
+          level-capable, so Create Issue's symptom request reuses it unchanged. */}
+      <RequestNewSystemModal
+        open={requesting !== null}
+        level="system"
+        onClose={() => setRequesting(null)}
+        onSubmit={({ label, justification }) => {
+          const node = store.requestClassification(
+            { level: 'system', label, justification, issueId },
+            { name: user.name, role: user.role },
+          )
+          // Selected straight away. Making the user hunt for the value they just
+          // asked for would defeat the point of asking from inside the form —
+          // and the cascade below resets, because the old sub-system belongs to
+          // a different system.
+          onChange({ system: node.label })
+        }}
+      />
 
       <div className={styles.grid}>
         <Field

@@ -28,9 +28,22 @@ export function ChangeStatusModal({ open, issue, canApprove, onClose }: { open: 
   const [target, setTarget] = useState<StatusKey | ''>('')
   const [reason, setReason] = useState('')
   const actor = { name: user.name, role: user.role }
+  /**
+   * TERMINAL STATES ACCEPT NO FURTHER CHANGE.
+   *
+   * A closed or out-of-scope issue is finished. The modal previously offered the
+   * full status list for one anyway — so a closed issue could be walked back to
+   * `open` with a one-word reason, silently, and the audit trail would record it
+   * as an ordinary transition.
+   *
+   * The guard is stated here rather than by removing the header button, because
+   * a user who reaches for it needs to be told WHY it will not work; a control
+   * that has quietly vanished teaches nothing.
+   */
+  const terminal = issue.status === 'closed' || issue.status === 'outofscope'
   // NASO (no action) keeps the ≥30-char justification gate the disposition flow required.
   const minLen = target === 'outofscope' ? 30 : 1
-  const valid = target && reason.trim().length >= minLen
+  const valid = !terminal && target && reason.trim().length >= minLen
   const submit = () => {
     if (!valid || !target) return
     const oc: DispositionOutcome | undefined = target === 'outofscope' ? 'No Action' : target === 'monitoring' ? 'Monitoring' : undefined
@@ -54,10 +67,15 @@ export function ChangeStatusModal({ open, issue, canApprove, onClose }: { open: 
         <ULabel style={{ marginBottom: 0 }}>Current status</ULabel>
         <StatusBadge status={issue.status} />
       </div>
+      {terminal && (
+        <p style={{ margin: '0 0 var(--space-4)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'var(--neutral-50)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }} role="status">
+          This issue is <b style={{ color: 'var(--text-primary)' }}>{STATUS[issue.status].label}</b> and its status cannot be changed any further.
+        </p>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
         <div>
           <ULabel>New status *</ULabel>
-          <Select aria-label="New status" value={target} placeholder="Select status…" options={STATUS_KEYS.filter((k) => k !== issue.status).map((k) => ({ value: k, label: STATUS[k].label }))} onChange={(e) => setTarget(e.target.value as StatusKey)} />
+          <Select aria-label="New status" value={target} disabled={terminal} placeholder="Select status…" options={STATUS_KEYS.filter((k) => k !== issue.status).map((k) => ({ value: k, label: STATUS[k].label }))} onChange={(e) => setTarget(e.target.value as StatusKey)} />
         </div>
       </div>
       <ULabel>Reason / comment *</ULabel>

@@ -169,6 +169,7 @@ export function IssueEditForm({
           modelCodes={vehicle.codes}
           disabled={disabled}
           systemReadOnly
+          issueId={issue.id}
         />
       </div>
 

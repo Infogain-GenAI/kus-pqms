@@ -249,3 +249,45 @@ describe('the happy path — a complete form registers and confirms', () => {
     expect(idCell?.textContent).toMatch(/^[A-Z]{2,4}-\d+/)
   })
 })
+
+describe('Request New persists the request', () => {
+  // It used to write the requested symptom into ONE LOCAL STRING and nothing
+  // else — no store, so the request evaporated on unmount and no approver would
+  // ever have seen it. The screen looked identical either way, which is why this
+  // is pinned at the screen rather than left to the store test.
+  it('opens the request modal from the classification section', () => {
+    renderCreate()
+    fireEvent.click(btn(/Request New/i))
+    expect(body()).toContain('Request New Symptom')
+    expect(body()).toContain('Submit a request. Once approved, it will be added.')
+  })
+
+  it('requires both a name and a justification, and says which is missing', () => {
+    renderCreate()
+    fireEvent.click(btn(/Request New/i))
+    fireEvent.click(btn(/Submit request/i))
+
+    expect(body()).toContain('Provide a business justification.')
+    // Still open — nothing was submitted.
+    expect(body()).toContain('Request New Symptom')
+  })
+
+  it('a completed request becomes the selected symptom, marked pending', () => {
+    renderCreate()
+    fireEvent.click(btn(/Request New/i))
+
+    fireEvent.change(screen.getByRole('textbox', { name: /requested symptom name/i }), {
+      target: { value: 'Latch fails to release' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: /business justification/i }), {
+      target: { value: 'Observed on three vehicles in the field.' },
+    })
+    fireEvent.click(btn(/Submit request/i))
+
+    // The modal closed, and the value is now the form's symptom — a request the
+    // user then could not use would not have solved their problem.
+    expect(body()).not.toContain('Submit a request. Once approved')
+    expect(body()).toContain('Latch fails to release')
+    expect(body()).toContain('Pending Approval')
+  })
+})
