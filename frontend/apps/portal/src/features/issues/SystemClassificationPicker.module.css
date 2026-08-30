@@ -84,6 +84,20 @@
 
 /* ── Hint + request link ──────────────────────────────────────────────────── */
 
+/* ⚠️ DELIBERATE LOCAL DIVERGENCE FROM THE APP'S BASE RHYTHM.
+ *
+ * `global.css` sets `body { line-height: var(--lh-body-md) }` = 20px, which every
+ * element in the application inherits. The design leaves these three `normal`,
+ * and the difference is the whole of this section's +22px against it: the hint
+ * and the request row each rendered 20px tall against 15, and every field row
+ * ~6px tall in the label.
+ *
+ * Fixed HERE rather than in `global.css` because changing the base moves every
+ * screen. That makes this section — and `IssueEditForm`, which renders the same
+ * component — sit outside the app's rhythm on purpose.
+ *
+ * IF APP-WIDE `normal` IS EVER WANTED, THE FIX IS THE `--lh-body-md` TOKEN.
+ * Do not copy this override to more screens; delete it when the token moves. */
 .hint {
   display: flex;
   align-items: center;
@@ -91,6 +105,7 @@
   font-family: var(--font-body);
   font-size: var(--fs-caption);
   color: var(--text-disabled);
+  line-height: normal;
 }
 
 .requestRow {
@@ -101,6 +116,7 @@
   font-family: var(--font-body);
   font-size: 12.5px;
   color: var(--text-muted);
+  line-height: normal;
 }
 
 .requestLink {
@@ -144,6 +160,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
+  line-height: normal;
 }
 
 .error {

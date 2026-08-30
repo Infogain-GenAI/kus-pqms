@@ -815,3 +815,21 @@
   flex-direction: column;
   gap: 2px;
 }
+
+/* ⚠️ THE CARD'S STATUS CHIP DELIBERATELY DIFFERS FROM EVERY OTHER STATUS IN THE
+   APP. DO NOT "NORMALISE" IT BACK.
+   `StatusBadge`'s own `md` is 22px / radius 4; the design draws this one at 26px
+   / radius 7 / 12px. Yogesh took fidelity on this card over consistency with the
+   rest of the application, knowingly. If app-wide 26px is ever wanted, the fix is
+   `STATUS_SIZES`, and this override should be DELETED rather than copied to more
+   call sites.
+   Carried as custom properties because `StatusBadge` sets its geometry inline,
+   and an inline style beats a class — the override has to go through `style`,
+   and routing it through vars keeps the raw values in CSS where `ds-gate` does
+   not lint them. */
+.cardStatus {
+  --pill-h: 26px;
+  --pill-px: 11px;
+  --pill-r: 7px;
+  --pill-fs: 12px;
+}

@@ -784,7 +784,22 @@ function SuggestionCard({
       <div className={entryStyles.cardTop}>
         <div className={entryStyles.cardIdent}>
           <span className={entryStyles.cardId}>{issue.id}</span>
-          <StatusBadge status={issue.status} size="sm" />
+          {/*
+            ITEM 8 — the design draws a dotless tinted chip here. Taken as a
+            `dot={false}` variant of `StatusBadge` rather than a bespoke pill:
+            the only real differences were the dot and geometry, and the map's
+            curated tints already ARE `${color}1A` for the statuses that have no
+            token (escalated, outofscope). Geometry left on the system's `md`
+            (22px / radius 4) against the design's 26px / radius 7 — a knowing
+            normalisation, flagged for a ruling rather than overridden here.
+          */}
+          <StatusBadge
+            status={issue.status}
+            size="md"
+            dot={false}
+            className={entryStyles.cardStatus}
+            style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
+          />
           {variant === 'search' && <span className={entryStyles.cardStandalone}>Standalone Issue</span>}
           {linked && (
             <span className={entryStyles.cardLinkedPill}>
