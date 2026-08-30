@@ -1,0 +1,86 @@
+import { get, notificationApiClient, post } from '@/shared/http'
+import type { NotificationListResult, NotificationQuery } from '@/api/notifications'
+import type { AppNotification, NotificationCategory, NotificationRecordType } from '@/data/types'
+
+/**
+ * REAL-API NOTIFICATION SERVICE.
+ *
+ * Ported in shape from Vue's `services/notification.service.ts`.
+ *
+ * ⚠️ EVERY CALL PASSES `notificationApiClient`, NOT THE DEFAULT. The
+ * notification service lives on a genuinely different base path
+ * (`/api/notification/v1`), so a call that forgets the client argument silently
+ * goes to Issue Management and 404s. That is the single easiest mistake to make
+ * in this file, which is why the client is the last argument on every line
+ * below rather than left to a default.
+ */
+
+/** The row shape the notification service returns. */
+export interface BackendNotificationDto {
+  id: string
+  category: string
+  message: string
+  read: boolean
+  createdAt: string
+  relatedRecordType?: string
+  relatedRecordId?: string
+}
+
+const CATEGORY_FROM_BACKEND: Record<string, NotificationCategory> = {
+  CRITICAL: 'Critical',
+  WARNING: 'Warning',
+  ACTION_REQUIRED: 'Action Required',
+  INFORMATION: 'Information',
+}
+
+/**
+ * Maps one row.
+ *
+ * ⚠️ `recordType` IS ONLY SET WHEN IT IS ONE THIS APP KNOWS. `notificationTarget`
+ * refuses to route an unknown type, and that refusal is the correct behaviour —
+ * coercing an unrecognised value into `'issue'` here would send the user to
+ * `/issues/<something-that-is-not-an-issue>` and a Not Found page. The Vue
+ * mapper leaves it undefined for exactly the same reason.
+ */
+export function toNotification(dto: BackendNotificationDto): AppNotification {
+  const type = dto.relatedRecordType?.toLowerCase()
+  const recordType: NotificationRecordType | undefined =
+    type === 'issue' || type === 'qir' ? type : undefined
+
+  return {
+    id: dto.id,
+    category: CATEGORY_FROM_BACKEND[dto.category] ?? 'Information',
+    title: dto.message,
+    recordId: dto.relatedRecordId,
+    recordType,
+    read: dto.read,
+    createdAt: dto.createdAt,
+  }
+}
+
+/** `GET /notifications`. */
+export async function listNotifications(query: NotificationQuery = {}): Promise<NotificationListResult> {
+  const page = await get<{ content: BackendNotificationDto[]; unreadCount?: number }>(
+    '/notifications',
+    { params: { receiver: query.recipient, size: query.limit } },
+    notificationApiClient,
+  )
+  const rows = page.content.map(toNotification)
+  return {
+    // Prefer the server's own count: it knows the whole set, while this page may
+    // have been limited. Falling back to the page's own unread count is better
+    // than zero, and is flagged here so nobody reads it as authoritative.
+    unreadCount: page.unreadCount ?? rows.filter((n) => !n.read).length,
+    rows,
+  }
+}
+
+/** `POST /notifications/{id}/read`. */
+export function markRead(id: string): Promise<void> {
+  return post<void>(`/notifications/${encodeURIComponent(id)}/read`, undefined, undefined, notificationApiClient)
+}
+
+/** `POST /notifications/read-all`. */
+export function markAllRead(recipient?: string): Promise<void> {
+  return post<void>('/notifications/read-all', { receiver: recipient }, undefined, notificationApiClient)
+}
