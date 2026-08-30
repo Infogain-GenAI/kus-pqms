@@ -193,7 +193,7 @@ describe('the happy path — a complete form registers and confirms', () => {
 
   /**
    * Fills every gate the validator checks, in the order the form presents them.
-   * The classification selects are a CASCADE, so each must be set before the next
+   * The classification comboboxes are a CASCADE, so each must be set before the next
    * has any options at all — which is why this walks them rather than setting
    * four values at once.
    */
@@ -205,10 +205,24 @@ describe('the happy path — a complete form registers and confirms', () => {
     if (firstCode) fireEvent.mouseDown(firstCode)
 
     // Classification — walk the cascade top-down.
+    //
+    // These are `Combobox`es now, not native <select>s. This loop used to read
+    // `select.options` and fire a `change`, which is the native-select idiom and
+    // threw "undefined is not iterable" once the control changed. Driven the same
+    // way as the model-code box above: focus to open the panel, mouseDown to
+    // commit — mouseDown, not click, because the option must beat the input's
+    // blur.
+    // ⚠️ SCOPE EACH LOOKUP TO ITS OWN PANEL. The model-code box is `multiple`, so
+    // its panel stays open after a pick — a bare `getAllByRole('option')[0]`
+    // returns ITS first option, not this field's, and the cascade silently never
+    // advances. `aria-controls` names the open panel, so resolve through that.
     for (const name of [/^System$/i, /^Sub-system$/i, /^Component$/i, /^Symptom$/i]) {
-      const select = screen.getByRole('combobox', { name }) as HTMLSelectElement
-      const option = Array.from(select.options).find((o) => o.value !== '')
-      if (option) fireEvent.change(select, { target: { value: option.value } })
+      const box = screen.getByRole('combobox', { name })
+      fireEvent.focus(box)
+      const panelId = box.getAttribute('aria-controls')
+      const panel = panelId ? document.getElementById(panelId) : null
+      const option = panel?.querySelector('[role="option"]')
+      if (option) fireEvent.mouseDown(option)
     }
 
     // Issue information.

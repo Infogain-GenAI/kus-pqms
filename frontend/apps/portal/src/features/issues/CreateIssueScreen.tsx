@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, CopyCheck, Link2, RotateCcw, Search, SearchX, Send, X } from 'lucide-react'
+import { Check, CopyCheck, History, Link, Link2, RotateCcw, Search, SearchX, Send, Sparkles, X } from 'lucide-react'
 // `SOURCE`, `SOURCE_KEYS` and `SourceKey` went with the source selector, and
 // `SourceBadge` has now followed them: the suggestion card rendered one for the
 // issues it suggests, but the design's card has no source badge at all.
@@ -14,6 +14,8 @@ import { Icon } from '@pqms/ui-library'
 // which a stylesheet cannot override — so they are local `<h2>`s instead.
 import { Modal, PageContainer, PageCrumb, ULabel } from '@/app/chrome'
 import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
+import { fmtDate, fmtDateTime } from '@/data/util'
+import type { Issue } from '@/data/types'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { SystemClassificationPicker, type ClassificationValue } from './SystemClassificationPicker'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
@@ -49,6 +51,7 @@ export function CreateIssueScreen() {
   // The in-place "Search & link" panel inside Same Existing Issues.
   const [sameSearchOpen, setSameSearchOpen] = useState(false)
   const [sameSearchQ, setSameSearchQ] = useState('')
+  const [historyFor, setHistoryFor] = useState<string | null>(null)
   // Set only once Register has been pressed, so an untouched form shows no
   // errors — and clears field-by-field as each is fixed, because the errors are
   // derived from the draft rather than frozen at the moment of the attempt.
@@ -551,12 +554,14 @@ export function CreateIssueScreen() {
                     </div>
                     <div className={entryStyles.sameList}>
                       {searchResults.map((i) => (
-                        <SuggestionRow
+                        <SuggestionCard
                           key={i.id}
                           issue={i}
+                          variant="search"
                           linked={linkedIds.includes(i.id)}
                           onLink={() => setLinkedIds((l) => (l.includes(i.id) ? l : [...l, i.id]))}
                           onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== i.id))}
+                          onViewHistory={() => setHistoryFor(i.id)}
                         />
                       ))}
                     </div>
@@ -594,13 +599,16 @@ export function CreateIssueScreen() {
               </div>
             ) : (
               <div className={entryStyles.sameList}>
-                {correlated.map(({ issue: i }) => (
-                  <SuggestionRow
+                {correlated.map(({ issue: i, reasons }) => (
+                  <SuggestionCard
                     key={i.id}
                     issue={i}
+                    variant="suggestion"
+                    reasons={reasons}
                     linked={linkedIds.includes(i.id)}
                     onLink={() => setLinkedIds((l) => (l.includes(i.id) ? l : [...l, i.id]))}
                     onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== i.id))}
+                    onViewHistory={() => setHistoryFor(i.id)}
                   />
                 ))}
               </div>
@@ -673,6 +681,35 @@ export function CreateIssueScreen() {
         <Input aria-label="New symptom" value={requestValue} onChange={(e) => setRequestValue(e.target.value)} placeholder="e.g. Latch fails to release" disabled={!cls.component} />
       </Modal>
 
+      {/*
+        View History. `workspace/HistorySection.tsx` could NOT be reused: it takes
+        no props and reads its issue id from `useWorkspace()`, so it only renders
+        inside the workspace provider. The audit data is not coupled that way, so
+        this reads `store.auditFor(id)` directly rather than dragging a provider
+        onto Issue Entry.
+      */}
+      <Modal open={!!historyFor} onClose={() => setHistoryFor(null)} title={`History — ${historyFor ?? ''}`}>
+        {(() => {
+          const entries = historyFor ? store.auditFor(historyFor) : []
+          if (entries.length === 0) {
+            return <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)' }}>No history recorded for this issue yet.</p>
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {entries.map((e) => (
+                <div key={e.id} className={entryStyles.historyEntry}>
+                  <div style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{e.action}</div>
+                  {e.detail && <div style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-secondary)' }}>{e.detail}</div>}
+                  <div style={{ font: 'var(--fw-regular) var(--fs-caption)/1.4 var(--font-body)', color: 'var(--text-disabled)' }}>
+                    {e.actor} · {e.actorRole} · {fmtDateTime(e.timestamp)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+      </Modal>
+
       <ClearFormConfirmModal open={clearOpen} onClose={() => setClearOpen(false)} onConfirm={clearAll} />
 
       {created && (
@@ -689,40 +726,99 @@ export function CreateIssueScreen() {
 }
 
 /**
- * One issue in the Same Existing Issues block — used by both the ranked
- * suggestions and the search results, because the design renders them the same.
+ * One issue in the Same Existing Issues block — the design's BLOCK card:
+ * actions row · title line · meta line · annotations.
  *
- * ⚠️ THE ICON IS `Link2` IN BOTH STATES. Our earlier treatment used `Link2Off`
- * for unlink; the design does not — its `linkIcon` is `'link-2'`
- * unconditionally, and no `link-2-off` appears anywhere on this screen. The
- * state is carried by the LABEL and the button's colour, not by the glyph.
+ * It replaced a single flex row that carried four of the design's fourteen
+ * bindings, which is why both the suggestions panel and the search results read
+ * as wrong: they share this component.
  *
- * Labels are the design's: `Link to Issue` / `Unlink from Issue`.
+ * ⚠️ THE TWO VARIANTS ARE DELIBERATELY NOT UNIFIED. The design shows a
+ * `Standalone Issue` badge on SEARCH RESULTS and omits it on suggestions, and
+ * shows "Suggested because …" on suggestions and never on search results
+ * (`reasons` is `[]` there). That asymmetry is in the source, not an oversight.
+ *
+ * ⚠️ THE ICON IS `Link2` IN BOTH STATES — the design's `linkIcon` is `'link-2'`
+ * unconditionally and no `link-2-off` exists on this screen. State is carried by
+ * the label and the button's own style, not the glyph.
+ *
+ * ⚠️ STATUS STILL USES `StatusBadge`, and that is the one item from this pass
+ * left open. The design uses an inline pill — 26px, radius 7, `${color}1A` fill
+ * with `${color}` text. Reproducing it needs `STATUS` exported from the
+ * ui-library barrel, which it is not, and a bespoke pill here would mint a
+ * SECOND status rendering alongside the system's. Flagged for a ruling rather
+ * than decided unilaterally.
  */
-function SuggestionRow({
+function SuggestionCard({
   issue,
   linked,
+  reasons,
+  variant,
   onLink,
   onUnlink,
+  onViewHistory,
 }: {
-  issue: { id: string; title: string; status: Parameters<typeof StatusBadge>[0]['status'] }
+  issue: Issue
   linked: boolean
+  /** Empty for search results — the design computes no reasons there. */
+  reasons?: string[]
+  variant: 'suggestion' | 'search'
   onLink: () => void
   onUnlink: () => void
+  onViewHistory: () => void
 }) {
+  // `Model: … · Classification: … · Issue Date: …` — the design's `_rowMeta`.
+  // Note the TWO spaces either side of the outer separators, and that every
+  // field falls back to an em dash rather than being omitted.
+  const codes = issue.modelCodes?.length ? issue.modelCodes.join(', ') : (issue.model || '—')
+  const classif = [issue.system || '—', issue.subSystem || '—', issue.component || '—', issue.symptom || '—'].join(' · ')
+  const metaLine = `Model: ${codes}  ·  Classification: ${classif}  ·  Issue Date: ${fmtDate(issue.createdAt)}`
+  const suggestReasons = (reasons ?? []).filter((r) => r !== 'Manually linked')
+  const manualOnly = (reasons ?? []).length === 1 && reasons?.[0] === 'Manually linked'
+
   return (
-    <div className={entryStyles.sameCard}>
-      <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{issue.id}</span>
-      <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{issue.title}</span>
-      <StatusBadge status={issue.status} size="sm" />
-      <Button
-        variant={linked ? 'ghost' : 'secondary'}
-        size="sm"
-        iconLeft={<Icon icon={Link2} size={13} />}
-        onClick={linked ? onUnlink : onLink}
-      >
-        {linked ? 'Unlink from Issue' : 'Link to Issue'}
-      </Button>
+    <div className={entryStyles.card}>
+      <div className={entryStyles.cardTop}>
+        <div className={entryStyles.cardIdent}>
+          <span className={entryStyles.cardId}>{issue.id}</span>
+          <StatusBadge status={issue.status} size="sm" />
+          {variant === 'search' && <span className={entryStyles.cardStandalone}>Standalone Issue</span>}
+          {linked && (
+            <span className={entryStyles.cardLinkedPill}>
+              <Icon icon={Link} size={11} />
+              Linked
+            </span>
+          )}
+        </div>
+        <div className={entryStyles.cardActions}>
+          <button type="button" className={entryStyles.cardHistoryBtn} onClick={onViewHistory}>
+            <Icon icon={History} size={14} />
+            View History
+          </button>
+          <button
+            type="button"
+            className={linked ? entryStyles.cardLinkBtnOn : entryStyles.cardLinkBtn}
+            onClick={linked ? onUnlink : onLink}
+          >
+            <Icon icon={Link2} size={14} />
+            {linked ? 'Unlink from Issue' : 'Link to Issue'}
+          </button>
+        </div>
+      </div>
+      <div className={entryStyles.cardTitle}>{issue.title}</div>
+      <div className={entryStyles.cardMeta}>{metaLine}</div>
+      {manualOnly && (
+        <div className={entryStyles.cardNote}>
+          <Icon icon={Link2} size={12} />
+          Manually linked
+        </div>
+      )}
+      {suggestReasons.length > 0 && (
+        <div className={entryStyles.cardNote}>
+          <Icon icon={Sparkles} size={12} style={{ color: 'var(--accent-600)', flex: 'none' }} />
+          Suggested because: {suggestReasons.join(' · ')}
+        </div>
+      )}
     </div>
   )
 }

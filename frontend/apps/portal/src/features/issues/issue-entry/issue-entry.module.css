@@ -656,3 +656,162 @@
   margin-bottom: 8px;
   color: var(--text-disabled);
 }
+
+/* ─── Suggestion / search-result card ────────────────────────────────────────
+ * The design's block card: an actions row, then the title on its own line, then
+ * the meta line, then optional annotations. Replaces a single flex row that
+ * carried four of the design's fourteen bindings. */
+.card {
+  padding: 14px 16px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--surface-card);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cardIdent {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+
+.cardId {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--accent-700);
+}
+
+/* "Linked" — the state pill on the card, distinct from the header's count badge. */
+.cardLinkedPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #e7f6ef;
+  color: #15724a;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: var(--fw-bold);
+}
+
+.cardHistoryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 12px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.cardHistoryBtn:hover {
+  background: var(--neutral-50);
+}
+
+/* Two explicit link-button styles, not a variant mapping — the design gives the
+   linked state its own green outline and `cursor:default`. */
+.cardLinkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.cardLinkBtnOn {
+  composes: cardLinkBtn;
+  padding: 0 13px;
+  border: var(--border-width) solid #cde9dc;
+  background: #f6fcf9;
+  color: #15724a;
+}
+
+.cardTitle {
+  margin-top: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.cardMeta {
+  margin-top: 7px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* "Manually linked" and "Suggested because …" share one shape. */
+.cardNote {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
+/* Search-result only — the design shows this badge there and NOT on the
+   suggestion card. A deliberate asymmetry; do not unify the two variants. */
+.cardStandalone {
+  height: 20px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 5px;
+  background: #eef2fb;
+  color: var(--accent-700);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* One entry in the View History modal. Values live here so they cost no
+   `numeric` ceiling — the gate lints .ts/.tsx and never CSS. */
+.historyEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

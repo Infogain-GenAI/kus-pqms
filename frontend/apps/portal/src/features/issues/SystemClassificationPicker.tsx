@@ -216,7 +216,12 @@ function Field({
         placeholder={placeholder}
         emptyText={emptyText}
         invalid={!!error}
-        aria-labelledby={id}
+        // The accessible name is the field name WITHOUT the asterisk. Labelling
+        // via `aria-labelledby` on the visible span made the name "System *",
+        // which a screen reader reads out as "System star" — the required state
+        // belongs in `aria-required`, not in the name. This also restores the
+        // name the native <select> had before the combobox swap.
+        aria-label={label.replace(/\s*\*$/, '')}
       />
       {footer}
       {/* `note` is advisory (governance lock); `error` is a validation failure.
