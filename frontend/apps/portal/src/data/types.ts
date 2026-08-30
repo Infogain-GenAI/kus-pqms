@@ -227,6 +227,16 @@ export interface ClassificationNode {
 /** The prototype's notification taxonomy (NOTIFS() cats — catMeta keys), verbatim. */
 export type NotificationCategory = 'Critical' | 'Warning' | 'Action Required' | 'Information'
 
+/**
+ * Which kind of record a notification points at.
+ *
+ * Ported from Vue's `NotificationRecordType`. Without it every notification was
+ * routed to `/issues/<recordId>` on the assumption that an id is an issue id —
+ * so the first QIR notification to arrive would have sent the user to
+ * `/issues/QIR-26014` and a Not Found page.
+ */
+export type NotificationRecordType = 'issue' | 'qir'
+
 export interface AppNotification {
   id: string
   category: NotificationCategory
@@ -234,6 +244,16 @@ export interface AppNotification {
   /** Panel rows show category/title/issue/date only; body is page-level detail (e.g. mention text). */
   body?: string
   recordId?: string
+  /**
+   * OPTIONAL, AND ABSENT IS A REAL STATE — not a gap in the seed.
+   *
+   * Vue's mapper leaves this undefined when the backend gives it nothing
+   * structured to derive a destination from, and its navigation composable then
+   * marks the row read but declines to guess where to send anyone. The same
+   * contract holds here: a row with no type has no destination, and inventing
+   * one is how a user ends up on a 404 they cannot explain.
+   */
+  recordType?: NotificationRecordType
   read: boolean
   createdAt: string
 }

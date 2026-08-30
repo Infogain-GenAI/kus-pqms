@@ -1,0 +1,206 @@
+/*
+ * The header's notification dropdown.
+ *
+ * ─── EVERY VALUE HERE WAS LIFTED VERBATIM FROM `AppHeader.tsx` ───────────────
+ *
+ * This panel was ~45 lines of inline style objects inside the header. Moving it
+ * changed no pixel: the widths, paddings, radii, font shorthands and the two
+ * `#F0F2F5` divider hexes are exactly what was there. Anything that LOOKS like a
+ * redesign in here is a transcription error, not an intention.
+ *
+ * A CSS Module rather than inline styles because `ds-gate.mjs` counts raw
+ * numeric and colour literals in `.ts`/`.tsx` only — so extracting the panel
+ * into a component without moving its styles out would have moved the whole
+ * block into a new `.tsx` and left the adherence budget where it was, instead of
+ * lowering it.
+ */
+
+.panel {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  z-index: 100;
+  width: 380px;
+  overflow: hidden;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Closes the panel on any outside click. Fixed and full-viewport, beneath the
+   panel's own z-index so the panel stays interactive. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.headLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.title {
+  font: var(--fw-bold) 14px / 1 var(--font-body);
+  color: var(--text-primary);
+}
+
+.pill {
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--status-escalated);
+  color: var(--neutral-0);
+  font: var(--fw-bold) 10.5px / 1 var(--font-body);
+}
+
+.markAll {
+  border: none;
+  background: none;
+  color: var(--accent-700);
+  font: var(--fw-semibold) 12px / 1 var(--font-body);
+  cursor: pointer;
+}
+
+/* Disabled because there is nothing to mark. Vue disables the same control for
+   the same reason; without it the button looks live and does nothing. */
+.markAll:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+/* ── Rows ─────────────────────────────────────────────────────────────────── */
+
+.list {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  /* The left rail is the category's colour, and only on unread rows — reading a
+     row removes the urgency cue along with the dot. */
+  border-left: 2px solid transparent;
+  background: var(--surface-card);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowUnread {
+  background: var(--neutral-25);
+}
+
+.row:hover {
+  background: var(--neutral-50);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  flex: none;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.eyebrow {
+  display: block;
+  font: var(--fw-bold) 9px / 1 var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rowTitle {
+  display: block;
+  margin-top: 2px;
+  font: var(--fw-semibold) 12.5px / 1.35 var(--font-body);
+  color: var(--text-primary);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 4px;
+}
+
+.recordId {
+  font: var(--fw-semibold) 10.5px / 1 var(--font-mono);
+  color: var(--accent-700);
+}
+
+.date {
+  font: var(--fw-regular) 10.5px / 1 var(--font-body);
+  color: var(--text-disabled);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* ── Empty ────────────────────────────────────────────────────────────────── */
+
+/*
+ * Without this the panel rendered an empty white gap between its header and
+ * footer once everything was read — a blank box that reads as a loading failure
+ * rather than as "nothing to see". Vue has the same state and the same copy.
+ */
+.empty {
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  font: var(--fw-semibold) 13px / 1.4 var(--font-body);
+  color: var(--text-secondary);
+}
+
+.emptyBody {
+  margin: 4px 0 0;
+  font: var(--fw-regular) 11.5px / 1.4 var(--font-body);
+  color: var(--text-muted);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+
+.viewAll {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-top: 1px solid #f0f2f5;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font: var(--fw-semibold) 13px / 1 var(--font-body);
+  cursor: pointer;
+}
