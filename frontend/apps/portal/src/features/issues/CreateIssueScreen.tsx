@@ -87,25 +87,54 @@ export function CreateIssueScreen() {
    * throwing the reasons away here only to recompute them later is worse than
    * carrying them now.
    */
-  const correlated = useMemo(
-    () =>
-      symptomLabel
-        ? relatedRank(
-            {
-              system: systemLabel,
-              subSystem: subSystemLabel,
-              component: componentLabel,
-              symptom: symptomLabel,
-              title,
-              description,
-              dtcCodes: dtcCodes.length ? dtcCodes : undefined,
-              modelCode: anchorCode,
-            },
-            store.issues,
-          ).slice(0, 8)
-        : [],
-    [symptomLabel, systemLabel, subSystemLabel, componentLabel, title, description, dtcCodes, anchorCode, store.issues],
-  )
+  /**
+   * The panel's entries: the ranked top 8, then any LINKED issue that did not
+   * make that cut, appended.
+   *
+   * ⚠️ WITHOUT THE APPEND, LINKING AN UNRANKED ISSUE MAKES IT DISAPPEAR — you
+   * press Link, the card is not in the top 8, and it silently leaves the panel
+   * with no way back to it. That was a live defect, not a missing decoration.
+   *
+   * Three properties taken verbatim from the design, because each could
+   * plausibly have gone the other way:
+   *   · THE CAP APPLIES BEFORE THE APPEND. `_relatedRank(...).slice(0, 8)` runs
+   *     first; appended entries are pushed onto the result afterwards.
+   *   · THEY GO AT THE END, in link order. The design pushes and never re-sorts,
+   *     so an appended entry never displaces a ranked one.
+   *   · THERE IS NO SECOND CAP. The rendered list can exceed 8, and that is
+   *     correct: every extra entry is one the user linked deliberately.
+   *
+   * They carry `reasons: ['Manually linked']` and score 0, which is what drives
+   * the card's "Manually linked" note instead of a "Suggested because" line.
+   */
+  const correlated = useMemo(() => {
+    const ranked = symptomLabel
+      ? relatedRank(
+          {
+            system: systemLabel,
+            subSystem: subSystemLabel,
+            component: componentLabel,
+            symptom: symptomLabel,
+            title,
+            description,
+            dtcCodes: dtcCodes.length ? dtcCodes : undefined,
+            modelCode: anchorCode,
+          },
+          store.issues,
+        ).slice(0, 8)
+      : []
+
+    const alreadyShown = new Set(ranked.map((r) => r.issue.id))
+    const appended = linkedIds
+      .filter((id) => !alreadyShown.has(id))
+      .map((id) => store.issues.find((i) => i.id === id))
+      // A linked id with no matching issue is skipped rather than rendered as a
+      // blank card — the design guards the same way (`if(p)`).
+      .filter((i): i is Issue => !!i)
+      .map((issue) => ({ issue, exact: false, reasons: ['Manually linked'], score: 0 }))
+
+    return [...ranked, ...appended]
+  }, [symptomLabel, systemLabel, subSystemLabel, componentLabel, title, description, dtcCodes, anchorCode, linkedIds, store.issues])
 
   /**
    * Results for the in-place search panel — the design's `_ssResults`:
@@ -830,11 +859,11 @@ function SuggestionCard({
   // Note the TWO spaces either side of the outer separators, and that every
   // field falls back to an em dash rather than being omitted.
   const metaLine = metaLineFor(issue)
-  // NO `Manually linked` BRANCH. The design shows that note on issues appended
-  // to the list because they are linked but did not rank — and we do not append
-  // them yet (open item 11). Carrying the branch here would be dead code that
-  // can never be exercised, so it lands WITH that feature, not before it.
-  const suggestReasons = reasons ?? []
+  // `Manually linked` is not a suggestion reason — it marks an entry that is
+  // here because the user linked it, not because it ranked. The design shows the
+  // note INSTEAD of a "Suggested because" line, never both.
+  const manualOnly = (reasons ?? []).length === 1 && reasons?.[0] === 'Manually linked'
+  const suggestReasons = manualOnly ? [] : (reasons ?? [])
 
   return (
     <div className={entryStyles.card}>
@@ -882,6 +911,12 @@ function SuggestionCard({
       </div>
       <div className={entryStyles.cardTitle}>{issue.title}</div>
       <div className={entryStyles.cardMeta}>{metaLine}</div>
+      {manualOnly && (
+        <div className={entryStyles.cardNote}>
+          <Icon icon={Link2} size={12} />
+          Manually linked
+        </div>
+      )}
       {suggestReasons.length > 0 && (
         <div className={entryStyles.cardNote}>
           <Icon icon={Sparkles} size={12} style={{ color: 'var(--accent-600)', flex: 'none' }} />

@@ -708,3 +708,53 @@ describe('an issue group renders as one card with its children folded in', () =>
     expect(body()).not.toContain('Standalone Issue')
   })
 })
+
+/**
+ * Linked-but-unranked issues stay in the panel.
+ *
+ * The defect this pins: link an issue from the search panel that is not in the
+ * ranked top 8, close the search, and it was GONE — no card, no way back to it,
+ * while still counted as linked. Silent in both directions.
+ */
+describe('an issue linked from search survives closing the search panel', () => {
+  const linkFromSearch = (query: string) => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: query } })
+    const link = screen.queryAllByRole('button', { name: /^link to issue$/i })[0]
+    if (link) fireEvent.click(link)
+    fireEvent.click(screen.getByRole('button', { name: /close search/i }))
+  }
+
+  it('appends it to the suggestion list instead of dropping it', () => {
+    linkFromSearch('AC-260105')
+    // ⚠️ ASSERT THE APPENDED CARD, NOT JUST THE COUNT. "1 linked" and an unlink
+    // button are both true of an issue that merely RANKED and was then linked —
+    // this test would pass with the append deleted. The "Manually linked" note
+    // only exists on an appended entry, so it is what pins the behaviour.
+    expect(body()).toMatch(/1 linked/)
+    expect(body()).toContain('Manually linked')
+    expect(screen.queryAllByRole('button', { name: /^unlink from issue$/i }).length).toBeGreaterThan(0)
+  })
+
+  it('marks it "Manually linked" rather than inventing a reason for it', () => {
+    linkFromSearch('AC-260105')
+    expect(body()).toContain('Manually linked')
+  })
+
+  it('can be unlinked again from the appended card, which then leaves', () => {
+    linkFromSearch('AC-260105')
+    fireEvent.click(screen.getAllByRole('button', { name: /^unlink from issue$/i })[0])
+    expect(body()).not.toMatch(/\d+ linked/)
+    expect(body()).not.toContain('Manually linked')
+  })
+
+  it('lets the list exceed eight, because every extra is a deliberate link', () => {
+    linkFromSearch('AC-260105')
+    // The design caps the RANKED set at 8 and appends afterwards without a
+    // second cap. An appended entry never displaces a ranked one.
+    expect(body()).toContain('Manually linked')
+    expect(body()).toMatch(/suggested because/i)
+  })
+})
