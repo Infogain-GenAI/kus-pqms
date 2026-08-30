@@ -1,4 +1,5 @@
 import { useOutletContext } from 'react-router-dom'
+import type { IssueLock } from '@/data/issueLock'
 import type { Comment, Issue } from '@/data/types'
 
 export type WorkspaceModal = '' | 'status' | 'qir' | 'edit' | 'links'
@@ -34,6 +35,23 @@ export interface WorkspaceContext {
   canEditIssue: boolean
   /** can('propose') — the broader "may contribute" gate the sections use. */
   canPropose: boolean
+  /**
+   * The Closed-issue lock. See `@/data/issueLock`.
+   *
+   * IT IS NOT A THIRD PERMISSION FLAG and does not replace the two above. It is
+   * the orthogonal half of every write gate: capability answers "may this person
+   * write", the lock answers "is this record still writable at all". A surface
+   * ANDs both — `canPropose && lock.isEditable` — and keeping them separate is
+   * what lets a disabled control say WHICH of the two stopped it.
+   *
+   * It is in the context rather than derived per section for the reason the rest
+   * of this field set exists: computed once in the shell, so five sections
+   * cannot drift. `canEditIssue` already implies it (that gate requires status
+   * `open`), so Detail does not need to re-check — but Investigation,
+   * Communication and the linked-issues control all gate on `canPropose`, which
+   * does not.
+   */
+  lock: IssueLock
   /** Not escalated/closed, may propose, AND the issue is scored. V4-V5: an issue's priority is the QIR's. */
   canQir: boolean
   /** Visible comments only (hidden ones filtered), shared with the tab-strip badge. */

@@ -103,3 +103,16 @@
   line-height: 1.2;
   color: var(--text-primary);
 }
+
+/*
+ * The Manage-links action under the Closed lock.
+ *
+ * Disabled rather than hidden, and styled to LOOK disabled: this is a bare
+ * `<button>` styled as a link, so the `disabled` attribute alone changes nothing
+ * a user can see — it would read as a live link that silently ignores clicks,
+ * which is worse than either a working control or an obviously dead one.
+ */
+.manage:disabled {
+  cursor: not-allowed;
+  color: var(--text-disabled);
+}

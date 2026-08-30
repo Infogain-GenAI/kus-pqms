@@ -53,7 +53,15 @@ const NEXT_STATUS: Partial<Record<PartStatus, PartStatus>> = {
   Ordered: 'Received',
 }
 
-export function PartRequestsSection({ issueId, canEdit }: { issueId: string; canEdit: boolean }) {
+export function PartRequestsSection({ issueId, canEdit, lockNote }: {
+  issueId: string
+  canEdit: boolean
+  /**
+   * Why the form is disabled, when the caller knows. See AddActivityForm's
+   * matching prop — this note had the same "told the wrong cause" defect.
+   */
+  lockNote?: string
+}) {
   const store = useStore()
   const { user, can } = useRole()
   const canApprove = can('approve')
@@ -169,9 +177,7 @@ export function PartRequestsSection({ issueId, canEdit }: { issueId: string; can
           Submit request
         </Button>
 
-        {!canEdit && (
-          <p className={styles.closedNote}>This issue is closed — raising new part requests is disabled.</p>
-        )}
+        {lockNote && <p className={styles.closedNote}>{lockNote}</p>}
       </div>
 
       <div className={styles.column}>

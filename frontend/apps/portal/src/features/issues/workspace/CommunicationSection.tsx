@@ -3,6 +3,7 @@ import { Globe, Lock, Mail, Send, ShieldCheck } from 'lucide-react'
 import { Badge, Button, CommentCard } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
 import { SectionCard, ToggleGroup } from '@/app/chrome'
+import { CLOSED_NOTES } from '@/data/issueLock'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
 import { fmtHM, fmtMDY } from '@/data/util'
@@ -57,7 +58,7 @@ function CommentBody({ body }: { body: string }) {
 }
 
 export function CommunicationSection() {
-  const { issueId, comments } = useWorkspace()
+  const { issueId, comments, lock } = useWorkspace()
   const store = useStore()
   const { user } = useRole()
   const actor = { name: user.name, role: user.role }
@@ -81,19 +82,35 @@ export function CommunicationSection() {
           {type === 'Internal' ? 'Visible only to internal PQMS users.' : 'Visible to external partners on this issue.'}
         </span>
       </div>
+      {/*
+        ─── THE CONVERSATION STAYS READABLE; ONLY POSTING IS LOCKED ─────────────
+        The composer is disabled on a Closed issue and the thread below it is
+        not. That asymmetry is the point of the lock: Closed makes the record
+        read-ONLY, not invisible, and the history of what was said is often the
+        reason someone opens a closed issue in the first place.
+
+        The closed note sits beside the immutability note rather than replacing
+        it — both are true, and they answer different questions ("can I edit what
+        I post" versus "can I post at all"). Vue puts them in the same pair of
+        lines for the same reason.
+      */}
       <Composer
         value={body}
         onChange={setBody}
         attachments={attachments}
         onAttachmentsChange={setAttachments}
+        disabled={!lock.isEditable}
         placeholder="Write a message — use @ to notify a teammate…"
         onSubmitReady={
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <Icon icon={ShieldCheck} size={13} style={{ color: 'var(--text-muted)' }} />
             <span style={{ font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>Messages are immutable once posted.</span>
+            {lock.isClosed && (
+              <span style={{ font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>{CLOSED_NOTES.conversation}</span>
+            )}
             <span style={{ flex: 1 }} />
             <Button
-              disabled={isBlank(body)}
+              disabled={isBlank(body) || !lock.isEditable}
               iconLeft={<Icon icon={Send} size={14} />}
               onClick={() => {
                 // Attachment NAMES ride along on the body so the reference is not

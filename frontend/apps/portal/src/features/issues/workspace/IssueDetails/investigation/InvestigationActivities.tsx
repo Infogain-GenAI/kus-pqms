@@ -30,11 +30,14 @@ import styles from './investigation.module.css'
 export function InvestigationActivities({
   issueId,
   canEdit,
+  lockNote,
   expanded,
   onToggle,
 }: {
   issueId: string
   canEdit: boolean
+  /** Why editing is off, when the caller knows. See InvestigationTab's prop doc. */
+  lockNote?: string
   expanded: Set<string>
   onToggle: (id: string) => void
 }) {
@@ -59,6 +62,7 @@ export function InvestigationActivities({
         <AddActivityForm
           issueId={issueId}
           disabled={!canEdit}
+          lockNote={lockNote}
           onSave={(draft) =>
             store.addActivity(issueId, draft.type, draft.details, actor, {
               evaluationType: draft.evaluationType,
