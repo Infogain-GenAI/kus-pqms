@@ -192,6 +192,20 @@ export interface Issue {
   closedAt?: string
   isEws?: boolean
   linkedIssueIds?: string[]
+  /**
+   * Issue-group membership — the design's `_groupId`, whose value is the
+   * PARENT's own id.
+   *
+   * Distinct from `linkedIssueIds`, and deliberately not derived from it:
+   * links are many-to-many "related to", and taking connected components over
+   * the seed's links merges nine issues across three classifications into one
+   * blob. Groups are a disjoint partition of same-symptom issues.
+   *
+   * THE PARENT IS NOT STORED. It is the earliest-registered member (see
+   * `store.groupMembers`), so removing an issue from a group re-parents it
+   * automatically rather than leaving a dangling pointer.
+   */
+  groupId?: string
   /** Channel-specific origin evidence shown on the Issue source card. */
   sourceEvidence?: { label: string; value: string }[]
   /**

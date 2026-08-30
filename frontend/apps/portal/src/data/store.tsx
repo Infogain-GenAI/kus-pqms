@@ -79,6 +79,10 @@ interface StoreValue {
   auditFor: (issueId: string) => AuditEntry[]
   classChildren: (parentId?: string) => ClassificationNode[]
   classByLevel: (level: ClassLevel, parentId?: string) => ClassificationNode[]
+  /** Members of an issue's group, PARENT FIRST. Empty when it belongs to none. */
+  groupMembers: (issueId: string) => Issue[]
+  /** Where an issue sits in its group. Derived — nothing stores "parent". */
+  relKind: (issueId: string) => 'standalone' | 'parent' | 'child'
   correlations: (issueId: string) => Issue[]
   /** Saved priority for an issue; an unscored issue returns an empty, unscored record. */
   priorityFor: (issueId: string) => IssuePriority
@@ -203,6 +207,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (level: ClassLevel, parentId?: string) => classification.filter((c) => c.level === level && (parentId ? c.parentId === parentId : true)),
     [classification],
   )
+  /**
+   * Group membership, ordered by registration — earliest first.
+   *
+   * ⚠️ THE FIRST ELEMENT IS THE PARENT. That is the whole definition; there is
+   * no stored parent pointer, matching the design (`groupMembers()[0]` after a
+   * sort on `_registeredMs`). The consequence is deliberate: pull an issue out
+   * of a group and the next-earliest becomes parent on its own, with nothing to
+   * update and nothing left dangling.
+   */
+  const groupMembers = useCallback(
+    (issueId: string) => {
+      const self = issues.find((i) => i.id === issueId)
+      if (!self?.groupId) return []
+      return issues
+        .filter((i) => i.groupId === self.groupId)
+        .slice()
+        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
+    },
+    [issues],
+  )
+
+  const relKind = useCallback(
+    (issueId: string): 'standalone' | 'parent' | 'child' => {
+      const members = groupMembers(issueId)
+      if (members.length === 0) return 'standalone'
+      return members[0].id === issueId ? 'parent' : 'child'
+    },
+    [groupMembers],
+  )
+
   const correlations = useCallback(
     (issueId: string) => {
       const me = issues.find((i) => i.id === issueId)
@@ -461,7 +495,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: StoreValue = {
     issues, classification, notifications, unreadCount,
-    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, correlations,
+    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, groupMembers, relKind, correlations,
     priorityFor, priorityResult, savePriority,
     createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
     addComment, addActivity, addPart, setPartStatus,

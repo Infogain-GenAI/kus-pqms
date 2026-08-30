@@ -11,7 +11,53 @@ function fail(msg: string): never {
   throw new Error(`seed anchor drift: ${msg}`)
 }
 
+function failGroup(msg: string): never {
+  throw new Error(`seed group invariant: ${msg}`)
+}
+
+/**
+ * Issue groups are a hand-tagged partition, so the ways they break are the ways
+ * hand-tagging breaks. All four failures are silent in the UI — a wrong parent
+ * or a dropped member still renders a perfectly plausible card.
+ */
+function assertIssueGroups(): void {
+  const byGroup = new Map<string, typeof ISSUES>()
+  const ids = new Set(ISSUES.map((i) => i.id))
+
+  for (const issue of ISSUES) {
+    if (!issue.groupId) continue
+    // 4. A typo'd key makes a one-member group that quietly never renders.
+    if (!ids.has(issue.groupId)) failGroup(`${issue.id} has groupId "${issue.groupId}", which is not a seeded issue id`)
+    const bucket = byGroup.get(issue.groupId) ?? []
+    bucket.push(issue)
+    byGroup.set(issue.groupId, bucket)
+  }
+
+  for (const [groupId, members] of byGroup) {
+    // 2. A group of one is a standalone issue wearing a group card.
+    if (members.length < 2) failGroup(`group "${groupId}" has ${members.length} member(s); a group needs at least 2`)
+
+    // 3. The parent is DERIVED as the earliest member, so a tie makes it depend
+    //    on array order — and silently breaks "removal re-parents automatically".
+    const dates = members.map((m) => m.createdAt)
+    if (new Set(dates).size !== dates.length) {
+      failGroup(`group "${groupId}" has members sharing a createdAt; the derived parent would be ambiguous`)
+    }
+  }
+
+  // 1. Disjointness. `groupId` is a single field, so overlap is only possible via
+  //    a key that is itself a member of another group — which would chain two
+  //    cohorts into one card.
+  for (const groupId of byGroup.keys()) {
+    const key = ISSUES.find((i) => i.id === groupId)
+    if (key && key.groupId !== groupId) {
+      failGroup(`group "${groupId}" is keyed on an issue that belongs to group "${key.groupId}"; groups must be disjoint`)
+    }
+  }
+}
+
 export function assertSeedAnchors(): void {
+  assertIssueGroups()
   if (NOW !== '2026-07-09T09:00:00Z') fail(`NOW is ${NOW}, expected 2026-07-09T09:00:00Z`)
 
   // The rows the prototype dates relative to the anchor ('Today' / 'Yesterday' / '2h ago').

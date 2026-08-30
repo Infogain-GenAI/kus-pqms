@@ -614,3 +614,68 @@ describe('Requesting a classification that does not exist yet', () => {
     expect((screen.getByRole('combobox', { name: /^symptom$/i }) as HTMLInputElement).disabled).toBe(true)
   })
 })
+
+/**
+ * Issue groups.
+ *
+ * ⚠️ THE TAGGED COHORTS ARE ONLY REACHABLE THROUGH SEARCH, NOT THROUGH RANKING,
+ * and that is a property of the SEED rather than of the card.
+ *
+ * `EE-260023`'s cohort carries `system: 'Engine' / subSystem: 'Fuel System'`,
+ * and the classification tree has no such nodes — its systems are Electrical,
+ * Powertrain, Suspension and Body. So no classification a user can pick will
+ * ever produce an exact match against them; the ranking can only reach them via
+ * `Same model code` (+8), which loses the `.slice(0, 8)` cut to any exact
+ * classification match (+100). Tests here therefore drive the SEARCH path.
+ *
+ * If group cards are wanted among ranked suggestions, the fix is seed data — a
+ * cohort whose classification exists in the taxonomy, or those nodes added to it.
+ */
+describe('an issue group renders as one card with its children folded in', () => {
+  const openSearch = (q: string) => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: q } })
+  }
+
+  it('collapses a four-issue cohort into a single group card', () => {
+    openSearch('vibration')
+    // Four members share a groupId; de-duplication makes them one card.
+    expect(body()).toMatch(/issue group ·/i)
+    expect(body()).toContain('Parent')
+  })
+
+  it('hides the children behind an expander that names the count', () => {
+    openSearch('vibration')
+    expect(body()).toMatch(/show child issues \(\d\)/i)
+    fireEvent.click(screen.getAllByRole('button', { name: /show child issues/i })[0])
+    expect(body()).toMatch(/hide child issues/i)
+    expect(body()).toContain('Child')
+  })
+
+  it('links and unlinks every member at once', () => {
+    openSearch('vibration')
+    fireEvent.click(screen.getAllByRole('button', { name: /link to issue group/i })[0])
+    // The header count is the group's size, not 1.
+    expect(body()).toMatch(/[2-9] linked/)
+    fireEvent.click(screen.getAllByRole('button', { name: /unlink from issue group/i })[0])
+    expect(body()).not.toMatch(/\d+ linked/)
+  })
+
+  it('opens group history against the PARENT, not an arbitrary member', () => {
+    openSearch('vibration')
+    fireEvent.click(screen.getAllByRole('button', { name: /view group history/i })[0])
+    // The modal is titled with the id it was opened for; the parent is the
+    // group's identity, so that is the one it must use.
+    expect(body()).toMatch(/history — EE-260023/i)
+  })
+
+  it('derives the parent as the earliest member, and marks the rest Child', () => {
+    openSearch('vibration')
+    fireEvent.click(screen.getAllByRole('button', { name: /show child issues/i })[0])
+    // EE-260023 (2026-07-10) is earliest in its cohort; nothing stores that role.
+    expect(body()).toContain('EE-260023')
+    expect(body()).toContain('Child')
+  })
+})

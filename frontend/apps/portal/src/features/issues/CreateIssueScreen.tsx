@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, CopyCheck, History, Link, Link2, RotateCcw, Search, SearchX, Send, Sparkles, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, CornerDownRight, CopyCheck, Crown, GitBranch, History, Link, Link2, RotateCcw, Search, SearchX, Send, Sparkles, X } from 'lucide-react'
 // `SOURCE`, `SOURCE_KEYS` and `SourceKey` went with the source selector, and
 // `SourceBadge` has now followed them: the suggestion card rendered one for the
 // issues it suggests, but the design's card has no source badge at all.
@@ -141,6 +141,36 @@ export function CreateIssueScreen() {
    * has been linked — which IS reachable. Faithful to the intent, divergent from
    * the construction, and called out rather than quietly chosen either way.
    */
+  /**
+   * One card per GROUP, not per issue.
+   *
+   * A ranked hit that belongs to a group stands for the whole group, so the
+   * first member seen wins and the rest are folded into its card — the design
+   * does the same (`_seenSameGroup`). Without this a four-issue cohort renders
+   * as four near-identical cards and the ranking looks broken.
+   */
+  const toEntries = useCallback(
+    (list: { issue: Issue; reasons?: string[] }[]) => {
+      const seen = new Set<string>()
+      const out: { key: string; group?: { parent: Issue; children: Issue[] }; issue?: Issue; reasons?: string[] }[] = []
+      for (const { issue, reasons } of list) {
+        if (!issue.groupId) {
+          out.push({ key: issue.id, issue, reasons })
+          continue
+        }
+        if (seen.has(issue.groupId)) continue
+        seen.add(issue.groupId)
+        const members = store.groupMembers(issue.id)
+        // `groupMembers` is parent-first; a tagged issue always has >= 2 members
+        // (guarded in `assertSeed`), but fall back rather than crash if it does not.
+        if (members.length < 2) { out.push({ key: issue.id, issue, reasons }); continue }
+        out.push({ key: issue.groupId, group: { parent: members[0], children: members.slice(1) }, reasons })
+      }
+      return out
+    },
+    [store],
+  )
+
   const allSuggestionsLinked = correlated.length > 0 && correlated.every(({ issue }) => linkedIds.includes(issue.id))
 
   /**
@@ -553,17 +583,32 @@ export function CreateIssueScreen() {
                       <span className={entryStyles.searchCount}>{searchResults.length} {searchResults.length === 1 ? 'issue' : 'issues'}</span>
                     </div>
                     <div className={entryStyles.sameList}>
-                      {searchResults.map((i) => (
-                        <SuggestionCard
-                          key={i.id}
-                          issue={i}
-                          variant="search"
-                          linked={linkedIds.includes(i.id)}
-                          onLink={() => setLinkedIds((l) => (l.includes(i.id) ? l : [...l, i.id]))}
-                          onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== i.id))}
-                          onViewHistory={() => setHistoryFor(i.id)}
-                        />
-                      ))}
+                      {toEntries(searchResults.map((i) => ({ issue: i }))).map((e) =>
+                        e.group ? (
+                          <GroupCard
+                            key={e.key}
+                            parent={e.group.parent}
+                            children={e.group.children}
+                            variant="search"
+                            
+                            linked={[e.group.parent, ...e.group.children].every((m) => linkedIds.includes(m.id))}
+                            onLink={() => setLinkedIds((l) => Array.from(new Set([...l, e.group!.parent.id, ...e.group!.children.map((c) => c.id)])))}
+                            onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.group!.parent.id && !e.group!.children.some((c) => c.id === x)))}
+                            onViewHistory={() => setHistoryFor(e.group!.parent.id)}
+                          />
+                        ) : (
+                          <SuggestionCard
+                            key={e.key}
+                            issue={e.issue!}
+                            variant="search"
+                            
+                            linked={linkedIds.includes(e.issue!.id)}
+                            onLink={() => setLinkedIds((l) => (l.includes(e.issue!.id) ? l : [...l, e.issue!.id]))}
+                            onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.issue!.id))}
+                            onViewHistory={() => setHistoryFor(e.issue!.id)}
+                          />
+                        ),
+                      )}
                     </div>
                   </>
                 )}
@@ -599,18 +644,32 @@ export function CreateIssueScreen() {
               </div>
             ) : (
               <div className={entryStyles.sameList}>
-                {correlated.map(({ issue: i, reasons }) => (
-                  <SuggestionCard
-                    key={i.id}
-                    issue={i}
-                    variant="suggestion"
-                    reasons={reasons}
-                    linked={linkedIds.includes(i.id)}
-                    onLink={() => setLinkedIds((l) => (l.includes(i.id) ? l : [...l, i.id]))}
-                    onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== i.id))}
-                    onViewHistory={() => setHistoryFor(i.id)}
-                  />
-                ))}
+                {toEntries(correlated).map((e) =>
+                        e.group ? (
+                          <GroupCard
+                            key={e.key}
+                            parent={e.group.parent}
+                            children={e.group.children}
+                            variant="suggestion"
+                            reasons={e.reasons}
+                            linked={[e.group.parent, ...e.group.children].every((m) => linkedIds.includes(m.id))}
+                            onLink={() => setLinkedIds((l) => Array.from(new Set([...l, e.group!.parent.id, ...e.group!.children.map((c) => c.id)])))}
+                            onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.group!.parent.id && !e.group!.children.some((c) => c.id === x)))}
+                            onViewHistory={() => setHistoryFor(e.group!.parent.id)}
+                          />
+                        ) : (
+                          <SuggestionCard
+                            key={e.key}
+                            issue={e.issue!}
+                            variant="suggestion"
+                            reasons={e.reasons}
+                            linked={linkedIds.includes(e.issue!.id)}
+                            onLink={() => setLinkedIds((l) => (l.includes(e.issue!.id) ? l : [...l, e.issue!.id]))}
+                            onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.issue!.id))}
+                            onViewHistory={() => setHistoryFor(e.issue!.id)}
+                          />
+                        ),
+                      )}
               </div>
             )}
             </>
@@ -770,9 +829,7 @@ function SuggestionCard({
   // `Model: … · Classification: … · Issue Date: …` — the design's `_rowMeta`.
   // Note the TWO spaces either side of the outer separators, and that every
   // field falls back to an em dash rather than being omitted.
-  const codes = issue.modelCodes?.length ? issue.modelCodes.join(', ') : (issue.model || '—')
-  const classif = [issue.system || '—', issue.subSystem || '—', issue.component || '—', issue.symptom || '—'].join(' · ')
-  const metaLine = `Model: ${codes}  ·  Classification: ${classif}  ·  Issue Date: ${fmtDate(issue.createdAt)}`
+  const metaLine = metaLineFor(issue)
   // NO `Manually linked` BRANCH. The design shows that note on issues appended
   // to the list because they are linked but did not rank — and we do not append
   // them yet (open item 11). Carrying the branch here would be dead code that
@@ -825,6 +882,141 @@ function SuggestionCard({
       </div>
       <div className={entryStyles.cardTitle}>{issue.title}</div>
       <div className={entryStyles.cardMeta}>{metaLine}</div>
+      {suggestReasons.length > 0 && (
+        <div className={entryStyles.cardNote}>
+          <Icon icon={Sparkles} size={12} style={{ color: 'var(--accent-600)', flex: 'none' }} />
+          Suggested because: {suggestReasons.join(' · ')}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** `Model: … · Classification: … · Issue Date: …` — the design's `_rowMeta`. */
+function metaLineFor(issue: Issue): string {
+  const codes = issue.modelCodes?.length ? issue.modelCodes.join(', ') : (issue.model || '—')
+  const classif = [issue.system || '—', issue.subSystem || '—', issue.component || '—', issue.symptom || '—'].join(' · ')
+  return `Model: ${codes}  ·  Classification: ${classif}  ·  Issue Date: ${fmtDate(issue.createdAt)}`
+}
+
+/**
+ * A whole issue group as one card: parent in a tinted well, children behind an
+ * expander.
+ *
+ * ⚠️ THE PARENT IS `members[0]`, NOTHING MORE. `store.groupMembers` sorts by
+ * registration and the earliest member IS the parent — no issue stores the role.
+ * Pull one out of the group and the next-earliest takes over with nothing to
+ * update.
+ *
+ * ⚠️ THE SEARCH VARIANT CARRIES EXTRA ICONS AND THE SUGGESTION VARIANT DOES NOT
+ * — `git-branch` on the header, `crown` on the parent, `corner-down-right` on
+ * each child. That is the design's own asymmetry, matching the `Standalone
+ * Issue` badge that only search results show. It looks like an inconsistency and
+ * is not one; do not unify the variants.
+ */
+function GroupCard({
+  parent,
+  children,
+  linked,
+  reasons,
+  variant,
+  onLink,
+  onUnlink,
+  onViewHistory,
+}: {
+  parent: Issue
+  children: Issue[]
+  linked: boolean
+  reasons?: string[]
+  variant: 'suggestion' | 'search'
+  onLink: () => void
+  onUnlink: () => void
+  onViewHistory: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const count = children.length + 1
+  const suggestReasons = reasons ?? []
+
+  return (
+    <div className={entryStyles.card}>
+      <div className={entryStyles.groupHead}>
+        <div className={entryStyles.groupHeadLeft}>
+          <span className={entryStyles.groupLabel}>
+            {variant === 'search' && <Icon icon={GitBranch} size={13} />}
+            Issue Group · {count} Issues
+          </span>
+          {linked && (
+            <span className={entryStyles.cardLinkedPill}>
+              <Icon icon={Link} size={11} />
+              Linked
+            </span>
+          )}
+        </div>
+        <div className={entryStyles.cardActions}>
+          <button type="button" className={entryStyles.cardHistoryBtn} onClick={onViewHistory}>
+            <Icon icon={History} size={14} />
+            View Group History
+          </button>
+          <button
+            type="button"
+            className={linked ? entryStyles.cardLinkBtnOn : entryStyles.cardLinkBtn}
+            onClick={linked ? onUnlink : onLink}
+          >
+            <Icon icon={Link2} size={14} />
+            {linked ? 'Unlink from Issue Group' : 'Link to Issue Group'}
+          </button>
+        </div>
+      </div>
+
+      <div className={entryStyles.parentBlock}>
+        {variant === 'search' && <Icon icon={Crown} size={14} style={{ color: 'var(--accent-700)', flex: 'none' }} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className={entryStyles.groupIdent}>
+            <span className={entryStyles.cardId}>{parent.id}</span>
+            <StatusBadge
+              status={parent.status}
+              size="md"
+              dot={false}
+              className={entryStyles.cardStatus}
+              style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
+            />
+            <span className={entryStyles.badgeParent}>Parent</span>
+          </div>
+          <div className={entryStyles.groupTitle}>{parent.title}</div>
+          <div className={entryStyles.groupMeta}>{metaLineFor(parent)}</div>
+        </div>
+      </div>
+
+      <button type="button" className={entryStyles.expander} onClick={() => setExpanded((e) => !e)}>
+        <Icon icon={expanded ? ChevronUp : ChevronDown} size={14} />
+        {expanded ? `Hide Child Issues (${children.length})` : `Show Child Issues (${children.length})`}
+      </button>
+
+      {expanded && (
+        <div className={entryStyles.childList}>
+          {children.map((c) => (
+            <div key={c.id} className={entryStyles.childRow}>
+              {variant === 'search' && <Icon icon={CornerDownRight} size={13} style={{ color: 'var(--text-disabled)', flex: 'none' }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className={entryStyles.groupIdent}>
+                  <span className={entryStyles.childId}>{c.id}</span>
+                  <StatusBadge
+                    status={c.status}
+                    size="md"
+                    dot={false}
+                    className={entryStyles.cardStatus}
+                    style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
+                  />
+                  <span className={entryStyles.badgeChild}>Child</span>
+                </div>
+                <div className={entryStyles.childTitle}>{c.title}</div>
+                <div className={entryStyles.childMeta}>{metaLineFor(c)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {suggestReasons.length > 0 && (
         <div className={entryStyles.cardNote}>
           <Icon icon={Sparkles} size={12} style={{ color: 'var(--accent-600)', flex: 'none' }} />
