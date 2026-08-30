@@ -37,3 +37,38 @@ import { configure } from '@testing-library/dom'
  * `lazy()` for exactly this reason) — not to raise this number again.
  */
 configure({ asyncUtilTimeout: 5000 })
+
+/**
+ * ─── ProseMirror / TipTap needs two Range measurements jsdom does not implement ──
+ *
+ * `Range.prototype.getClientRects` and `getBoundingClientRect` are part of the
+ * CSSOM View spec and jsdom ships neither — it has no layout engine, so there
+ * are no boxes to measure. ProseMirror calls them on every selection change to
+ * decide where the caret and decorations sit, and throws
+ * `target.getClientRects is not a function` before any assertion runs.
+ *
+ * WHAT THE STUB COSTS, said plainly so the limit is visible: every rect is
+ * zero-sized at the origin, so anything that depends on real GEOMETRY is not
+ * exercised — caret coordinates, cursor-position-from-point, decoration
+ * placement. That is acceptable because nothing in this suite asserts on
+ * geometry; the editor tests assert on the DOCUMENT ProseMirror produces
+ * (`<strong>`, `<ol>`, `<li>`), which is computed from the schema and the
+ * transaction, not from layout.
+ *
+ * THE MOMENT A TEST ASSERTS ON A POSITION OR SIZE, this stub is hiding the
+ * answer rather than enabling the test, and the fix then is a real layout
+ * environment (a browser runner), not a richer fake.
+ *
+ * Global rather than per-file: any test that mounts the editor needs it, and a
+ * per-file copy is one someone forgets on the next one.
+ */
+if (typeof Range !== 'undefined' && !Range.prototype.getClientRects) {
+  const emptyRect = () =>
+    ({ top: 0, left: 0, bottom: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect
+
+  Range.prototype.getClientRects = function getClientRects() {
+    const list = [emptyRect()] as unknown as DOMRectList
+    return Object.assign(list, { item: (i: number) => list[i] ?? null }) as DOMRectList
+  }
+  Range.prototype.getBoundingClientRect = emptyRect
+}
