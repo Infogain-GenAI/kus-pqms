@@ -42,11 +42,6 @@ export function apiBaseUrl(): string {
   return import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 }
 
-/** Base URL for `pqms-notification-service` — a different base path, not a port. */
-export function notificationApiBaseUrl(): string {
-  return import.meta.env.VITE_NOTIFICATION_API_BASE_URL ?? '/api/notification/v1'
-}
-
 export type DataSourceMode = 'fixtures' | 'api'
 
 /**

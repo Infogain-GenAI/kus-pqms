@@ -21,12 +21,6 @@ interface ImportMetaEnv {
    */
   readonly VITE_API_BASE_URL?: string
 
-  /**
-   * Base URL for `pqms-notification-service`. A genuinely DIFFERENT BASE PATH
-   * (`/api/notification/v1`), not just a different port — which is why
-   * `shared/http` exposes a second client rather than a second path on the first.
-   */
-  readonly VITE_NOTIFICATION_API_BASE_URL?: string
 
   /**
    * Where runtime errors are reported. UNSET BY DEFAULT, AND THAT IS THE SAFE

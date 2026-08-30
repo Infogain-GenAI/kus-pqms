@@ -25,6 +25,7 @@ import {
   toIssue,
 } from '@/services/issue.mappers'
 import { toNotification } from '@/services/notification.service'
+import { apiClient } from '@/shared/http'
 import { services } from '@/services'
 import { dataSourceMode, useFixtures } from '@/config/data-source'
 import { ISSUES, NOTIFICATIONS } from '@/data/seed'
@@ -32,7 +33,28 @@ import { ISSUES, NOTIFICATIONS } from '@/data/seed'
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.restoreAllMocks()
+  apiClient.defaults.adapter = realAdapter
 })
+
+/**
+ * Records every request the HTTP client actually makes.
+ *
+ * ⚠️ STUBS THE AXIOS ADAPTER, NOT `fetch`. These tests used to spy on
+ * `globalThis.fetch`, because the client was built on it. `05` specifies Axios,
+ * and axios does not use `fetch` here — a fetch spy against an axios client
+ * records nothing, so "did the facade hit HTTP?" would answer NO on both
+ * branches and the test would pass for the wrong reason on the fixture side
+ * while failing on the live side.
+ */
+const realAdapter = apiClient.defaults.adapter
+function stubTransport() {
+  const calls: string[] = []
+  apiClient.defaults.adapter = (async (config) => {
+    calls.push(`${config.baseURL ?? ''}${config.url ?? ''}`)
+    return { data: { content: [], totalElements: 0 }, status: 200, statusText: 'OK', headers: {}, config }
+  }) as typeof realAdapter
+  return { calls }
+}
 
 /* -------------------------------------------------------------------------- */
 /* The fixture endpoints                                                      */
@@ -293,22 +315,20 @@ describe('VITE_USE_FIXTURES actually switches the implementation', () => {
   })
 
   it('the facade serves fixtures by default WITHOUT touching the network', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    const { calls } = stubTransport()
     const out = await services.issues.list({ pageSize: 2 })
     expect(out.rows).toHaveLength(2)
-    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(calls).toHaveLength(0)
   })
 
   it('the facade hits HTTP once the flag says so', async () => {
     // THE POINT OF THE WHOLE LAYER: same call, different implementation.
     vi.stubEnv('VITE_USE_FIXTURES', 'false')
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify({ content: [], totalElements: 0 }), { status: 200 }))
+    const { calls } = stubTransport()
 
     await services.issues.list()
-    expect(fetchSpy).toHaveBeenCalledOnce()
-    expect(String(fetchSpy.mock.calls[0][0])).toContain('/issues')
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toContain('/issues')
   })
 
   it('reads the flag PER CALL, so a change mid-session is honoured', async () => {
@@ -317,11 +337,9 @@ describe('VITE_USE_FIXTURES actually switches the implementation', () => {
     expect((await services.issues.list({ pageSize: 1 })).rows).toHaveLength(1)
 
     vi.stubEnv('VITE_USE_FIXTURES', 'false')
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify({ content: [], totalElements: 0 }), { status: 200 }))
+    const { calls } = stubTransport()
     await services.issues.list()
-    expect(fetchSpy).toHaveBeenCalled()
+    expect(calls.length).toBeGreaterThan(0)
   })
 
   it('exposes every service through the one object', () => {

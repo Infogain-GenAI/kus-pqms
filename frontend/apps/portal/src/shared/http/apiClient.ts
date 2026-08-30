@@ -1,51 +1,58 @@
+import axios, {
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios'
+
 /**
  * THE SANCTIONED HTTP ENTRY POINT.
  *
- * Ported from `shared/http/apiClient.ts` in the Vue app. Exports the primary
- * `apiClient` (Issue Management / Master Data) and `notificationApiClient`
- * (`pqms-notification-service` — a genuinely different base path, not just a
- * different port). Every `api/*.ts` and `services/*.service.ts` module must use
- * one of these two, or the helpers below; NO COMPONENT EVER CONSTRUCTS ITS OWN.
- *
- * That rule is the whole point. The moment a component calls `fetch` directly it
+ * Built to `05-api-integration-and-data-fetching.md`'s five-property
+ * specification, at the exact path 05 names. Every `api/*.ts` and
+ * `services/*.service.ts` module must use this client or the helpers below;
+ * NO COMPONENT EVER CONSTRUCTS ITS OWN. A component calling `fetch` directly
  * bypasses the correlation ID, the auth token, the timeout and — worst — the
- * error normalisation, so its failures arrive in a shape nothing else in the app
- * knows how to handle.
+ * error normalisation, so its failures arrive in a shape nothing else knows how
+ * to handle.
  *
- * ─── ⚠️ BUILT ON `fetch`, NOT axios. READ THIS BEFORE "FIXING" IT. ───────────
+ * ─── ⚠️ THIS WAS BUILT ON `fetch` AND WAS WRONG ──────────────────────────────
  *
- * The Vue original is axios. This is not, and that is a deliberate decision
- * rather than an oversight:
+ * The first version of this file used `fetch` + `AbortController`, justified as
+ * a minimal-dependency choice. That reasoning was never checked against 05,
+ * which says in its first clause: "One **Axios** setup at
+ * `apps/portal/src/shared/http/apiClient.ts` … Treat the list below as a
+ * specification rather than a summary."
  *
- *   1. AXIOS IS NOT A DEPENDENCY OF THIS REPO, and adding one is governed by
- *      `14-heavy-dependency-*`. The repo's stated minimal-dependency posture is
- *      why there is no lodash here either — the Vue debounce composable records
- *      the same reasoning.
- *   2. NOTHING IN THE CONTRACT NEEDS IT. Interceptors, timeout and JSON
- *      unwrapping are what axios was used for; `AbortController` and ~100 lines
- *      cover all three.
+ * Unlike the state-library question — where 04 carries an explicit "a decision
+ * the client owns" clause and an open placeholder — 05 has NO adoption gate on
+ * the library itself. Axios is simply specified. Converted 2026-08-31.
  *
- * WHAT IS PRESERVED IS THE PUBLIC CONTRACT, EXACTLY: the same two clients, the
- * same `registerAccessTokenGetter` / `registerUnauthorizedHandler` seams, the
- * same `ApiError` shape and `isApiError` guard, and the same helper set
- * (`get`/`post`/`put`/`patch`/`del`/`getBlob`/`postBlob`/`postForm`). Every
- * call site is identical to the Vue one, so swapping the transport back to axios
- * later is a change to THIS FILE ONLY.
+ * ─── ⚠️ AND IT HAD TWO INSTANCES, WHICH THE CORPUS FORBIDS ───────────────────
  *
- * ─── AUTH IS NOT WIRED HERE, ON PURPOSE ──────────────────────────────────────
+ * It exported `apiClient` AND `notificationApiClient`, carried over from the Vue
+ * app's microservices topology. That topology is replaced: BRD `AR-01`/`DEC-08`
+ * commit to a single backend deployable behind one `/api/v1/**` surface, and the
+ * corpus is explicit — *"Delete the second instance; do not port it."* A second
+ * instance under a monolith is, in 05's words, "a distinction with nothing
+ * behind it".
  *
- * Token attachment and 401 handling are registerable hooks, so the auth layer
- * plugs in WITHOUT editing this file. Until something registers them, the
- * getter returns null and the 401 handler is a no-op beyond rejecting.
+ * THE FACTORY STAYS. 05 requires it precisely because the origin count is not
+ * this file's to assume: "Build the factory regardless; instantiate against
+ * however many origins the answer produces. **Do not hard-code two.**" One
+ * origin today; adding a second is one `createHttpClient` call, not a rewrite.
  */
 
 /* -------------------------------------------------------------------------- */
-/* Pluggable seams for the future auth layer                                  */
+/* Pluggable seams for the auth layer                                         */
 /* -------------------------------------------------------------------------- */
+//
+// 05: "This file owns the SEAMS; the Azure AD OIDC+PKCE token source that fills
+// them is 08's. Build the seams even before there is a token source to register
+// — an unregistered seam is the correct intermediate state, not a gap."
 
 type AccessTokenGetter = () => string | null | undefined
 
-/** No-op until the auth layer registers a real token source. */
 let getAccessToken: AccessTokenGetter = () => null
 
 /** Called by the auth layer to supply the current access token per request. */
@@ -57,10 +64,7 @@ type UnauthorizedHandler = () => void
 
 let onUnauthorized: UnauthorizedHandler | null = null
 
-/**
- * Called by the auth layer to react to a 401 (refresh / redirect). No token
- * refresh exists yet — this is the seam it will attach to.
- */
+/** Called by the auth layer to react to a 401 (refresh / redirect). */
 export function registerUnauthorizedHandler(handler: UnauthorizedHandler): void {
   onUnauthorized = handler
 }
@@ -76,15 +80,16 @@ export function __resetHttpSeams(): void {
 /* -------------------------------------------------------------------------- */
 
 /**
- * One id per request, echoed in the normalised error so a user can quote it to
- * support and have the server-side log found. Without it a report is "it failed
- * this morning".
+ * One id per request, echoed in the normalised error so a user can quote it and
+ * have the server-side log found. Without it a report is "it failed this
+ * morning".
  */
 function correlationId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
-  // Older jsdom and non-secure contexts have no randomUUID.
+  // 05 requires a manual fallback: older jsdom and non-secure contexts have no
+  // `randomUUID`, and a request with no id is worse than a non-UUID one.
   return `cid-${Date.now().toString(36)}-${Math.round(Math.random() * 1e9).toString(36)}`
 }
 
@@ -111,10 +116,9 @@ export interface ApiError {
   /**
    * Field-level failures, when the backend supplies them — a 400 answering
    * `details: [{ field: "newStatus", message: "…" }]` is what lets a form show
-   * the error against the offending control instead of as a generic toast.
+   * the error against the offending control instead of a generic toast.
    *
-   * Optional, and absent rather than empty, so callers branch on presence
-   * without also checking length.
+   * Absent rather than empty, so callers branch on presence alone.
    */
   details?: ApiErrorDetail[]
 }
@@ -128,48 +132,176 @@ const TIMEOUT_MESSAGE = 'The request timed out. Please try again.'
 const DEFAULT_TIMEOUT_MS = 30_000
 
 /* -------------------------------------------------------------------------- */
-/* The client                                                                 */
+/* The factory                                                                */
 /* -------------------------------------------------------------------------- */
 
-export interface RequestConfig {
-  /** Query parameters. `undefined` and `null` values are omitted, not sent as "undefined". */
-  params?: Record<string, unknown>
-  headers?: Record<string, string | undefined>
-  signal?: AbortSignal
-  /** Overrides the 30s default. */
-  timeoutMs?: number
+/**
+ * Recovers the backend's message from an error body.
+ *
+ * ⚠️ HANDLES A `Blob` BODY — 05 names this special case explicitly. When a
+ * request asked for binary (an export), an ERROR response also arrives as a
+ * Blob, so the usual `data.message` access sees nothing and the user gets
+ * axios's generic message instead of the real reason.
+ */
+async function extractResponseMessage(response: AxiosResponse): Promise<string | undefined> {
+  const data: unknown = response.data
+  if (data instanceof Blob) {
+    try {
+      return (JSON.parse(await data.text()) as { message?: string })?.message
+    } catch {
+      return undefined
+    }
+  }
+  return (data as { message?: string } | undefined)?.message
 }
 
-export interface HttpClient {
-  readonly baseUrl: string
-  request: <T>(method: string, url: string, body?: unknown, config?: RequestConfig) => Promise<T>
-  requestBlob: (method: string, url: string, body?: unknown, config?: RequestConfig) => Promise<BlobDownload>
+/** Field-level failures, or `undefined` when there are none worth reporting. */
+function extractResponseDetails(response: AxiosResponse): ApiErrorDetail[] | undefined {
+  const details = (response.data as { details?: unknown } | undefined)?.details
+  if (!Array.isArray(details) || details.length === 0) return undefined
+
+  const usable = details.filter(
+    (d): d is ApiErrorDetail =>
+      typeof (d as ApiErrorDetail)?.field === 'string' && typeof (d as ApiErrorDetail)?.message === 'string',
+  )
+  return usable.length > 0 ? usable : undefined
 }
 
 /**
- * Builds a query string, omitting empty values.
+ * Builds one instance with the shared interceptors attached.
  *
- * ARRAYS REPEAT THE KEY (`?status=open&status=review`) rather than joining with
- * commas — that is what Spring's binder expects, and a comma-joined value
- * arrives as one string containing a comma, which matches no enum.
+ * `envVarName` is carried only so the HTTPS tripwire can name the variable that
+ * is wrong. A message saying "the base URL must be HTTPS" sends someone reading
+ * code; one naming `VITE_API_BASE_URL` sends them to their environment.
  */
-function toQuery(params: Record<string, unknown> | undefined): string {
-  if (!params) return ''
-  const usp = new URLSearchParams()
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null || value === '') continue
-    if (Array.isArray(value)) {
-      for (const v of value) if (v !== undefined && v !== null && v !== '') usp.append(key, String(v))
-    } else {
-      usp.append(key, String(value))
-    }
+export function createHttpClient(baseURL: string | undefined, envVarName: string): AxiosInstance {
+  /*
+   * Production HTTPS tripwire. 05: "throw at boot if a production build's base
+   * URL is not HTTPS. Cheap, and it catches a misconfigured environment at
+   * startup rather than on the first request."
+   */
+  if (import.meta.env.PROD && !baseURL?.startsWith('https://')) {
+    throw new Error(`${envVarName} must be HTTPS in production: ${baseURL}`)
   }
-  const q = usp.toString()
-  return q ? `?${q}` : ''
+
+  const client = axios.create({
+    baseURL,
+    headers: { 'Content-Type': 'application/json' },
+    timeout: DEFAULT_TIMEOUT_MS,
+  })
+
+  client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+    // Attached ONLY IF a token exists — an unregistered seam must send no
+    // Authorization header at all, not `Bearer null`.
+    const token = getAccessToken()
+    if (token) config.headers.set('Authorization', `Bearer ${token}`)
+    config.headers.set('X-Correlation-ID', correlationId())
+    return config
+  })
+
+  client.interceptors.response.use(
+    (response) => response,
+    async (error: unknown) => {
+      // Hand off to the auth layer before rejecting, so it can refresh/redirect.
+      if (axios.isAxiosError(error) && error.response?.status === 401) onUnauthorized?.()
+
+      if (!axios.isAxiosError(error)) {
+        return Promise.reject({
+          status: null,
+          code: 'UNKNOWN_ERROR',
+          message: 'Something went wrong.',
+          correlationId: 'unknown',
+        } satisfies ApiError)
+      }
+
+      const cid = error.config?.headers?.get?.('X-Correlation-ID')?.toString() ?? 'unknown'
+
+      let code: string
+      let message: string
+      let details: ApiErrorDetail[] | undefined
+
+      if (error.code === 'ECONNABORTED') {
+        // A timeout and a dropped connection need different words in front of a
+        // user, and lumping them together hides an overloaded backend behind
+        // "check your connection".
+        code = 'TIMEOUT'
+        message = TIMEOUT_MESSAGE
+      } else if (!error.response) {
+        code = 'NETWORK_ERROR'
+        message = NETWORK_ERROR_MESSAGE
+      } else {
+        code = String(error.response.status)
+        message = (await extractResponseMessage(error.response)) ?? error.message
+        details = extractResponseDetails(error.response)
+      }
+
+      return Promise.reject({
+        status: error.response?.status ?? null,
+        code,
+        message,
+        correlationId: cid,
+        ...(details ? { details } : {}),
+      } satisfies ApiError)
+    },
+  )
+
+  return client
+}
+
+/**
+ * THE ONE ORIGIN.
+ *
+ * `DEC-08` commits to a single backend deployable behind one `/api/v1/**`
+ * surface, so there is one instance. A second is added by calling
+ * `createHttpClient` again — the factory exists so that is a line, not a
+ * refactor — but only once a real second origin exists to point it at.
+ */
+export const apiClient: AxiosInstance = createHttpClient(
+  import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
+  'VITE_API_BASE_URL',
+)
+
+/* -------------------------------------------------------------------------- */
+/* Helpers, so api/*.ts modules do not repeat `.data` unwrapping              */
+/* -------------------------------------------------------------------------- */
+//
+// Each takes an optional trailing `client`, defaulting to the one instance. The
+// parameter is kept even at one origin: it is what makes a second instance a
+// call-site argument rather than a change to every helper.
+
+export async function get<T>(url: string, config?: AxiosRequestConfig, client: AxiosInstance = apiClient): Promise<T> {
+  const { data } = await client.get<T>(url, config)
+  return data
+}
+
+export async function post<T>(url: string, body?: unknown, config?: AxiosRequestConfig, client: AxiosInstance = apiClient): Promise<T> {
+  const { data } = await client.post<T>(url, body, config)
+  return data
+}
+
+export async function put<T>(url: string, body?: unknown, config?: AxiosRequestConfig, client: AxiosInstance = apiClient): Promise<T> {
+  const { data } = await client.put<T>(url, body, config)
+  return data
+}
+
+export async function patch<T>(url: string, body?: unknown, config?: AxiosRequestConfig, client: AxiosInstance = apiClient): Promise<T> {
+  const { data } = await client.patch<T>(url, body, config)
+  return data
+}
+
+export async function del<T>(url: string, config?: AxiosRequestConfig, client: AxiosInstance = apiClient): Promise<T> {
+  const { data } = await client.delete<T>(url, config)
+  return data
+}
+
+/** A streamed binary download plus the filename parsed from Content-Disposition. */
+export interface BlobDownload {
+  blob: Blob
+  filename?: string
 }
 
 /** Extracts `filename` from Content-Disposition (RFC 5987 `filename*` or plain). */
-function parseContentDispositionFilename(header: string | null): string | undefined {
+function parseContentDispositionFilename(header: string | undefined): string | undefined {
   if (!header) return undefined
   const encoded = /filename\*=(?:UTF-8'')?"?([^";]+)"?/i.exec(header)
   if (encoded?.[1]) {
@@ -182,196 +314,46 @@ function parseContentDispositionFilename(header: string | null): string | undefi
   return /filename="?([^";]+)"?/i.exec(header)?.[1]
 }
 
-/** A streamed binary download plus the filename parsed from Content-Disposition. */
-export interface BlobDownload {
-  blob: Blob
-  filename?: string
-}
-
 /**
- * Recovers the backend's message from an error body.
+ * GET a binary body as a `Blob`.
  *
- * ⚠️ HANDLES A `Blob` BODY. When a request asked for binary (an export), an
- * ERROR response also arrives as a Blob, so the usual `data.message` access sees
- * nothing and the user gets axios/fetch's generic message instead of the real
- * reason. Reading the blob back as text and parsing it is what fixes that, and
- * it benefits every future binary endpoint, not just export.
+ * Unlike `get<T>()` this needs the response HEADERS to recover the download
+ * filename, so it does not use that unwrapping helper. Errors still flow through
+ * the shared `ApiError` interceptor, which reads Blob error bodies.
  */
-async function readErrorBody(response: Response): Promise<{ message?: string; details?: ApiErrorDetail[] }> {
-  try {
-    const text = await response.text()
-    if (!text) return {}
-    const parsed = JSON.parse(text) as { message?: string; details?: unknown }
-    const details = Array.isArray(parsed.details)
-      ? parsed.details.filter(
-          (d): d is ApiErrorDetail =>
-            typeof (d as ApiErrorDetail)?.field === 'string' && typeof (d as ApiErrorDetail)?.message === 'string',
-        )
-      : []
-    return {
-      message: typeof parsed.message === 'string' ? parsed.message : undefined,
-      details: details.length > 0 ? details : undefined,
-    }
-  } catch {
-    // A non-JSON error body (an HTML 502 page from a proxy) is not a reason to
-    // lose the status — the caller still gets a normalised ApiError.
-    return {}
-  }
-}
-
-function createHttpClient(baseUrl: string, envVarName: string): HttpClient {
-  /*
-   * Tripwire: refuse to boot a production build against a non-HTTPS API.
-   * Carried over from the Vue original — it closes a security to-do that would
-   * otherwise depend on infra-level enforcement nobody has set up yet.
-   */
-  if (import.meta.env.PROD && !baseUrl.startsWith('https://')) {
-    throw new Error(`${envVarName} must be HTTPS in production: ${baseUrl}`)
-  }
-
-  const send = async (method: string, url: string, body: unknown, config: RequestConfig | undefined, asBlob: boolean) => {
-    const cid = correlationId()
-    const isForm = body instanceof FormData
-
-    const headers: Record<string, string> = {
-      'X-Correlation-ID': cid,
-      ...Object.fromEntries(Object.entries(config?.headers ?? {}).filter(([, v]) => v !== undefined) as [string, string][]),
-    }
-
-    /*
-     * ⚠️ NEVER SET Content-Type FOR FormData. A multipart body is not
-     * self-describing — the server needs a `boundary` token to find each part,
-     * and only whatever assembles the body can produce it. Setting the header
-     * yourself (even to the correct "multipart/form-data") suppresses the
-     * generated boundary and causes a server-side parse failure that surfaces as
-     * an opaque 400 on a request that looks perfectly correct in devtools. The
-     * Vue original documents the same trap. Do not "tidy" this.
-     */
-    if (!isForm && body !== undefined && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json'
-    }
-
-    const token = getAccessToken()
-    if (token) headers.Authorization = `Bearer ${token}`
-
-    /*
-     * Timeout via AbortController — this is what axios' `timeout` option did.
-     * The caller's own signal is honoured too: whichever aborts first wins.
-     */
-    const controller = new AbortController()
-    const timeoutMs = config?.timeoutMs ?? DEFAULT_TIMEOUT_MS
-    const timer = setTimeout(() => controller.abort(new DOMException('timeout', 'TimeoutError')), timeoutMs)
-    const onExternalAbort = () => controller.abort(config?.signal?.reason)
-    config?.signal?.addEventListener('abort', onExternalAbort)
-
-    let response: Response
-    try {
-      response = await fetch(`${baseUrl}${url}${toQuery(config?.params)}`, {
-        method,
-        headers,
-        body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
-        signal: controller.signal,
-      })
-    } catch (err) {
-      // Distinguish a timeout from a genuine network failure — they need
-      // different words in front of a user ("try again" vs "check your
-      // connection"), and lumping them together hides an overloaded backend.
-      const timedOut = err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')
-      throw {
-        status: null,
-        code: timedOut ? 'TIMEOUT' : 'NETWORK_ERROR',
-        message: timedOut ? TIMEOUT_MESSAGE : NETWORK_ERROR_MESSAGE,
-        correlationId: cid,
-      } satisfies ApiError
-    } finally {
-      clearTimeout(timer)
-      config?.signal?.removeEventListener('abort', onExternalAbort)
-    }
-
-    if (!response.ok) {
-      // Hand off to the auth layer before rejecting, so it can refresh/redirect.
-      if (response.status === 401) onUnauthorized?.()
-
-      const { message, details } = await readErrorBody(response)
-      throw {
-        status: response.status,
-        code: String(response.status),
-        message: message ?? `${response.status} ${response.statusText}`.trim(),
-        correlationId: cid,
-        ...(details ? { details } : {}),
-      } satisfies ApiError
-    }
-
-    if (asBlob) {
-      return {
-        blob: await response.blob(),
-        filename: parseContentDispositionFilename(response.headers.get('content-disposition')),
-      }
-    }
-
-    // 204 and an empty 200 both have no body; parsing them would throw.
-    if (response.status === 204) return undefined
-    const text = await response.text()
-    return text ? JSON.parse(text) : undefined
-  }
-
+export async function getBlob(url: string, config?: AxiosRequestConfig, client: AxiosInstance = apiClient): Promise<BlobDownload> {
+  const response = await client.get<Blob>(url, { ...config, responseType: 'blob' })
   return {
-    baseUrl,
-    request: <T>(method: string, url: string, body?: unknown, config?: RequestConfig) =>
-      send(method, url, body, config, false) as Promise<T>,
-    requestBlob: (method: string, url: string, body?: unknown, config?: RequestConfig) =>
-      send(method, url, body, config, true) as Promise<BlobDownload>,
+    blob: response.data,
+    filename: parseContentDispositionFilename(response.headers?.['content-disposition'] as string | undefined),
   }
 }
-
-/** Issue Management / Master Data. */
-export const apiClient: HttpClient = createHttpClient(
-  import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
-  'VITE_API_BASE_URL',
-)
-
-/**
- * `pqms-notification-service`. A SECOND CLIENT, not a path on the first: it
- * lives on a genuinely different base path, and giving it its own instance is
- * what lets it get its own base URL, and later its own auth, without either
- * duplicating the interceptor logic above.
- */
-export const notificationApiClient: HttpClient = createHttpClient(
-  import.meta.env.VITE_NOTIFICATION_API_BASE_URL ?? '/api/notification/v1',
-  'VITE_NOTIFICATION_API_BASE_URL',
-)
-
-/* -------------------------------------------------------------------------- */
-/* Helpers, so api/*.ts modules do not repeat unwrapping                      */
-/* -------------------------------------------------------------------------- */
-//
-// Each takes an optional trailing `client`, defaulting to the primary one, so a
-// notification-service module passes `notificationApiClient` explicitly and
-// nothing else has to change.
-
-export const get = <T>(url: string, config?: RequestConfig, client: HttpClient = apiClient): Promise<T> =>
-  client.request<T>('GET', url, undefined, config)
-
-export const post = <T>(url: string, body?: unknown, config?: RequestConfig, client: HttpClient = apiClient): Promise<T> =>
-  client.request<T>('POST', url, body, config)
-
-export const put = <T>(url: string, body?: unknown, config?: RequestConfig, client: HttpClient = apiClient): Promise<T> =>
-  client.request<T>('PUT', url, body, config)
-
-export const patch = <T>(url: string, body?: unknown, config?: RequestConfig, client: HttpClient = apiClient): Promise<T> =>
-  client.request<T>('PATCH', url, body, config)
-
-export const del = <T>(url: string, config?: RequestConfig, client: HttpClient = apiClient): Promise<T> =>
-  client.request<T>('DELETE', url, undefined, config)
-
-/** GET a binary body plus its Content-Disposition filename (e.g. a streamed export). */
-export const getBlob = (url: string, config?: RequestConfig, client: HttpClient = apiClient): Promise<BlobDownload> =>
-  client.requestBlob('GET', url, undefined, config)
 
 /** The `getBlob` counterpart for endpoints that take a request body. */
-export const postBlob = (url: string, body?: unknown, config?: RequestConfig, client: HttpClient = apiClient): Promise<BlobDownload> =>
-  client.requestBlob('POST', url, body, config)
+export async function postBlob(url: string, body?: unknown, config?: AxiosRequestConfig, client: AxiosInstance = apiClient): Promise<BlobDownload> {
+  const response = await client.post<Blob>(url, body, { ...config, responseType: 'blob' })
+  return {
+    blob: response.data,
+    filename: parseContentDispositionFilename(response.headers?.['content-disposition'] as string | undefined),
+  }
+}
 
-/** POST a `multipart/form-data` body — see the Content-Type note in `send`. */
-export const postForm = <T>(url: string, form: FormData, config?: RequestConfig, client: HttpClient = apiClient): Promise<T> =>
-  client.request<T>('POST', url, form, config)
+/**
+ * POST a `multipart/form-data` body.
+ *
+ * ⚠️ `Content-Type` IS SET TO `undefined`, NOT TO `"multipart/form-data"`. A
+ * multipart body is not self-describing — the server needs a `boundary` token to
+ * find each part, and only whatever assembles the body can produce it. Axios
+ * generates the boundary, and the full header, ONLY when no Content-Type is
+ * already set. Both this instance's `application/json` default and a hardcoded
+ * boundary-less `"multipart/form-data"` suppress that, causing a server-side
+ * parse failure that surfaces as an opaque 400 on a request which looks correct
+ * in devtools. Do not "tidy" it into a literal string.
+ */
+export async function postForm<T>(url: string, form: FormData, config?: AxiosRequestConfig, client: AxiosInstance = apiClient): Promise<T> {
+  const { data } = await client.post<T>(url, form, {
+    ...config,
+    headers: { ...config?.headers, 'Content-Type': undefined },
+  })
+  return data
+}

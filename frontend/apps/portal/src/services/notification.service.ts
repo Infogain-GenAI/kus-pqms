@@ -1,4 +1,4 @@
-import { get, notificationApiClient, post } from '@/shared/http'
+import { get, post } from '@/shared/http'
 import type { NotificationListResult, NotificationQuery } from '@/api/notifications'
 import type { AppNotification, NotificationCategory, NotificationRecordType } from '@/data/types'
 
@@ -7,12 +7,14 @@ import type { AppNotification, NotificationCategory, NotificationRecordType } fr
  *
  * Ported in shape from Vue's `services/notification.service.ts`.
  *
- * ⚠️ EVERY CALL PASSES `notificationApiClient`, NOT THE DEFAULT. The
- * notification service lives on a genuinely different base path
- * (`/api/notification/v1`), so a call that forgets the client argument silently
- * goes to Issue Management and 404s. That is the single easiest mistake to make
- * in this file, which is why the client is the last argument on every line
- * below rather than left to a default.
+ * ⚠️ ONE ORIGIN, NOT TWO — CHANGED 2026-08-31. Every call here used to pass a
+ * separate `notificationApiClient` on `/api/notification/v1`, carried over from
+ * the Vue app's microservices topology.
+ *
+ * That topology is replaced. BRD `AR-01`/`DEC-08` commit to a single backend
+ * deployable behind one `/api/v1/**` surface, and the corpus is explicit about
+ * the port: *"Delete the second instance; do not port it."* Notifications are a
+ * path under the one origin now, not an origin of their own.
  */
 
 /** The row shape the notification service returns. */
@@ -63,7 +65,6 @@ export async function listNotifications(query: NotificationQuery = {}): Promise<
   const page = await get<{ content: BackendNotificationDto[]; unreadCount?: number }>(
     '/notifications',
     { params: { receiver: query.recipient, size: query.limit } },
-    notificationApiClient,
   )
   const rows = page.content.map(toNotification)
   return {
@@ -77,10 +78,10 @@ export async function listNotifications(query: NotificationQuery = {}): Promise<
 
 /** `POST /notifications/{id}/read`. */
 export function markRead(id: string): Promise<void> {
-  return post<void>(`/notifications/${encodeURIComponent(id)}/read`, undefined, undefined, notificationApiClient)
+  return post<void>(`/notifications/${encodeURIComponent(id)}/read`)
 }
 
 /** `POST /notifications/read-all`. */
 export function markAllRead(recipient?: string): Promise<void> {
-  return post<void>('/notifications/read-all', { receiver: recipient }, undefined, notificationApiClient)
+  return post<void>('/notifications/read-all', { receiver: recipient })
 }
