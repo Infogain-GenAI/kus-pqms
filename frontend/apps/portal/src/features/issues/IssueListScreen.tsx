@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Car, Check, ChevronDown, ChevronUp, CircleCheck, ClipboardList, Columns3, Download, FileOutput, Flame, FolderOpen, Layers, Link2, Plus, RefreshCw, RotateCcw, Search, SlidersHorizontal, TriangleAlert, X } from 'lucide-react'
+import { AlertTriangle, Car, Check, ChevronDown, ChevronUp, CircleCheck, ClipboardList, Columns3, Download, FileOutput, Flame, FolderOpen, Layers, Link2, Plus, RefreshCw, RotateCcw, Search, SlidersHorizontal, TriangleAlert, UserCog, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Avatar,
@@ -31,6 +31,7 @@ import { useStore } from '@/data/store'
 import { daysOpen, fmtMDY, modelCodeLabel } from '@/data/util'
 import { PRIORITY_BANDS } from '@/data/priorityMatrix'
 import { LinkedIssuesModal } from './LinkedIssuesModal'
+import { downloadIssuesCsv, exportFilename } from './issue-list/issue-export'
 import type { Issue } from '@/data/types'
 
 const PAGE_SIZES = [20, 50, 100]
@@ -287,7 +288,7 @@ function DrawerSection({ icon, label, open, onToggle, children }: { icon: Lucide
 export function IssueListScreen() {
   const nav = useNavigate()
   const { user, scope } = useRole()
-  const { issues, bulkStatus, priorityResult } = useStore()
+  const { issues, bulkStatus, bulkAssignRole, priorityResult } = useStore()
 
   const [tab, setTab] = useState<'my' | 'all'>(scope === 'own' ? 'my' : 'all')
   const [q, setQ] = useState('')
@@ -307,6 +308,7 @@ export function IssueListScreen() {
   const [bulkTarget, setBulkTarget] = useState('')
   const [bulkReason, setBulkReason] = useState('')
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
+  const [assignOpen, setAssignOpen] = useState(false)
 
   const myIssues = useMemo(() => issues.filter((i) => i.assignee === user.name || i.owner === user.name), [issues, user.name])
   const scoped = tab === 'my' ? myIssues : issues
@@ -566,7 +568,18 @@ export function IssueListScreen() {
           <p style={{ margin: 'var(--space-2) 0 0', font: 'var(--fw-regular) var(--fs-body-md)/1 var(--font-body)', color: 'var(--text-secondary)' }}>Monitor, prioritize and manage product quality issues.</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <Button variant="secondary" iconLeft={<Icon icon={Download} size={16} />}>Export</Button>
+          {/* Exports the CURRENT VIEW — every row the active tab, search and
+              filters produce, not just the page on screen. A user who has
+              filtered to 40 of 300 issues means those 40; silently exporting
+              the visible 20, or all 300, would both be wrong. */}
+          <Button
+            variant="secondary"
+            iconLeft={<Icon icon={Download} size={16} />}
+            disabled={filtered.length === 0}
+            onClick={() => downloadIssuesCsv(filtered, exportFilename())}
+          >
+            Export
+          </Button>
           <Button iconLeft={<Icon icon={Plus} size={16} />} onClick={() => nav('/issues/new')}>New issue</Button>
         </div>
       </div>
@@ -645,11 +658,25 @@ export function IssueListScreen() {
             Change Status
           </button>
           <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
+          {/* The bulk export is the SELECTION, not the view — that is the whole
+              point of having selected rows. */}
           <button
+            onClick={() => {
+              const chosen = new Set(selected.map(String))
+              downloadIssuesCsv(filtered.filter((i) => chosen.has(i.id)), exportFilename('issues-selected'))
+            }}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', border: 'none', background: 'transparent', padding: 0, color: 'var(--neutral-0)', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', whiteSpace: 'nowrap', cursor: 'pointer' }}
           >
             <Icon icon={FileOutput} size={16} />
-            Export XLSX
+            Export
+          </button>
+          <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
+          <button
+            onClick={() => setAssignOpen(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', border: 'none', background: 'transparent', padding: 0, color: 'var(--neutral-0)', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+          >
+            <Icon icon={UserCog} size={16} />
+            Assign Role
           </button>
           <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
           <button
@@ -661,6 +688,42 @@ export function IssueListScreen() {
           </button>
         </div>
       )}
+      {/* Bulk role assignment. A modal rather than the inline dropdown the Vue
+          bar uses: this writes to every selected issue at once, and a menu that
+          commits on hover-and-click gives no moment to notice the count is 40
+          rather than the 4 you meant. The count is restated in the body. */}
+      <Modal
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        title="Assign role"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setAssignOpen(false)}>Cancel</Button>
+          </>
+        }
+      >
+        <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>
+          Reassign <b style={{ color: 'var(--text-primary)' }}>{selected.length}</b> selected issue
+          {selected.length === 1 ? '' : 's'} to a role. This changes who the issue is assigned to —
+          the original owner is unchanged.
+        </p>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          {(['SE', 'ASM', 'PQM'] as const).map((r) => (
+            <Button
+              key={r}
+              variant="secondary"
+              onClick={() => {
+                bulkAssignRole(selected.map(String), r, { name: user.name, role: user.role })
+                setAssignOpen(false)
+                setSelected([])
+              }}
+            >
+              {r}
+            </Button>
+          ))}
+        </div>
+      </Modal>
+
       {bulkModalOpen && (
         <Modal
           open={bulkModalOpen}
