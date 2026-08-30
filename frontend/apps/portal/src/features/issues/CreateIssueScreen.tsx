@@ -52,6 +52,21 @@ export function CreateIssueScreen() {
   const [sameSearchOpen, setSameSearchOpen] = useState(false)
   const [sameSearchQ, setSameSearchQ] = useState('')
   const [historyFor, setHistoryFor] = useState<string | null>(null)
+  /**
+   * Link confirmation — a governance control, not a courtesy prompt.
+   *
+   * The design gates EVERY link action behind a justification of at least 20
+   * characters: `openLinkConfirm('standalone', id)` from a card, and
+   * `openLinkConfirm('group', parentId)` from a group card, which expands to all
+   * its members. UNLINK IS NOT GATED by this modal — it routes to a separate
+   * confirm that asks for no justification, so removing a link is cheaper than
+   * making one. That asymmetry is deliberate and is preserved here.
+   */
+  const [linkConfirm, setLinkConfirm] = useState<{ ids: string[]; label: string } | null>(null)
+  const [justify, setJustify] = useState('')
+  const [justifyErr, setJustifyErr] = useState('')
+  /** Accumulated until registration, then written to the audit trail. */
+  const [linkLogs, setLinkLogs] = useState<{ ids: string[]; justification: string }[]>([])
   // Set only once Register has been pressed, so an untouched form shows no
   // errors — and clears field-by-field as each is fixed, because the errors are
   // derived from the draft rather than frozen at the moment of the attempt.
@@ -258,8 +273,35 @@ export function CreateIssueScreen() {
     dtcCodes.length > 0 ||
     linkedIds.length > 0
 
+  const askToLink = (ids: string[], label: string) => {
+    setJustify('')
+    setJustifyErr('')
+    setLinkConfirm({ ids, label })
+  }
+
+  /**
+   * ⚠️ THE COUNT IS TRIMMED, in the gate AND in the message. The design computes
+   * `text = justify.trim()` once and uses it for both, so whitespace never counts
+   * toward the 20 and the "N entered" figure agrees with the rule it is
+   * explaining. Reporting an untrimmed count next to a trimmed gate would tell a
+   * user they have 20 when the button stays disabled.
+   */
+  const justifyText = justify.trim()
+  const justifyTooShort = justifyText.length < 20
+
+  const commitLink = () => {
+    if (!linkConfirm) return
+    if (justifyTooShort) {
+      setJustifyErr(`Enter a justification of at least 20 characters. ${justifyText.length} entered.`)
+      return
+    }
+    setLinkedIds((l) => Array.from(new Set([...l, ...linkConfirm.ids])))
+    setLinkLogs((g) => [...g, { ids: linkConfirm.ids, justification: justifyText }])
+    setLinkConfirm(null)
+  }
+
   const clearAll = () => {
-    setVehicle({ codes: [], yearsByCode: {} }); setLinkedIds([]); setCls({}); setPendingSymptom('')
+    setVehicle({ codes: [], yearsByCode: {} }); setLinkedIds([]); setLinkLogs([]); setCls({}); setPendingSymptom('')
     setTitle(''); setDescription(''); setDtcCodes([])
     setAttempted(false)
   }
@@ -280,6 +322,7 @@ export function CreateIssueScreen() {
         // The record carries one year; use the earliest selected on the anchor code.
         modelYear: Number(anchorYears[0]) || 2026,
         linkedIssueIds: linkedIds,
+        linkJustifications: linkLogs,
         system: systemLabel,
         subSystem: subSystemLabel,
         component: componentLabel,
@@ -621,7 +664,7 @@ export function CreateIssueScreen() {
                             variant="search"
                             
                             linked={[e.group.parent, ...e.group.children].every((m) => linkedIds.includes(m.id))}
-                            onLink={() => setLinkedIds((l) => Array.from(new Set([...l, e.group!.parent.id, ...e.group!.children.map((c) => c.id)])))}
+                            onLink={() => askToLink([e.group!.parent.id, ...e.group!.children.map((c) => c.id)], `${e.group!.parent.id} + ${e.group!.children.length} child issue(s)`)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.group!.parent.id && !e.group!.children.some((c) => c.id === x)))}
                             onViewHistory={() => setHistoryFor(e.group!.parent.id)}
                           />
@@ -632,7 +675,7 @@ export function CreateIssueScreen() {
                             variant="search"
                             
                             linked={linkedIds.includes(e.issue!.id)}
-                            onLink={() => setLinkedIds((l) => (l.includes(e.issue!.id) ? l : [...l, e.issue!.id]))}
+                            onLink={() => askToLink([e.issue!.id], e.issue!.id)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.issue!.id))}
                             onViewHistory={() => setHistoryFor(e.issue!.id)}
                           />
@@ -682,7 +725,7 @@ export function CreateIssueScreen() {
                             variant="suggestion"
                             reasons={e.reasons}
                             linked={[e.group.parent, ...e.group.children].every((m) => linkedIds.includes(m.id))}
-                            onLink={() => setLinkedIds((l) => Array.from(new Set([...l, e.group!.parent.id, ...e.group!.children.map((c) => c.id)])))}
+                            onLink={() => askToLink([e.group!.parent.id, ...e.group!.children.map((c) => c.id)], `${e.group!.parent.id} + ${e.group!.children.length} child issue(s)`)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.group!.parent.id && !e.group!.children.some((c) => c.id === x)))}
                             onViewHistory={() => setHistoryFor(e.group!.parent.id)}
                           />
@@ -693,7 +736,7 @@ export function CreateIssueScreen() {
                             variant="suggestion"
                             reasons={e.reasons}
                             linked={linkedIds.includes(e.issue!.id)}
-                            onLink={() => setLinkedIds((l) => (l.includes(e.issue!.id) ? l : [...l, e.issue!.id]))}
+                            onLink={() => askToLink([e.issue!.id], e.issue!.id)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.issue!.id))}
                             onViewHistory={() => setHistoryFor(e.issue!.id)}
                           />
@@ -796,6 +839,44 @@ export function CreateIssueScreen() {
             </div>
           )
         })()}
+      </Modal>
+
+      {/*
+        Link confirmation. Gates every LINK; unlink is deliberately not gated —
+        see `linkConfirm`'s note. The 500-character cap is the design's own
+        (`slice(0, 500)` on input), and the confirm stays disabled until the
+        TRIMMED text reaches 20 so the button and the message never disagree.
+      */}
+      <Modal
+        open={!!linkConfirm}
+        onClose={() => setLinkConfirm(null)}
+        title="Link issue"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setLinkConfirm(null)}>Cancel</Button>
+            <Button disabled={justifyTooShort} onClick={commitLink}>
+              {linkConfirm && linkConfirm.ids.length > 1 ? 'Link Issues' : 'Link Issue'}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>
+          Linking {linkConfirm?.label} to this issue. Record why these belong together — it
+          becomes part of the issue&apos;s history.
+        </p>
+        <ULabel>Justification *</ULabel>
+        <textarea
+          className={justifyErr ? entryStyles.justifyBoxError : entryStyles.justifyBox}
+          aria-label="Justification"
+          value={justify}
+          maxLength={500}
+          onChange={(e) => { setJustify(e.target.value.slice(0, 500)); setJustifyErr('') }}
+          placeholder="e.g. Same charge-port lock failure on the same model year; likely one root cause."
+        />
+        <div className={entryStyles.justifyFoot}>
+          {justifyErr && <span className={entryStyles.justifyError}>{justifyErr}</span>}
+          <span className={entryStyles.justifyCount}>{justify.length}/500</span>
+        </div>
       </Modal>
 
       <ClearFormConfirmModal open={clearOpen} onClose={() => setClearOpen(false)} onConfirm={clearAll} />

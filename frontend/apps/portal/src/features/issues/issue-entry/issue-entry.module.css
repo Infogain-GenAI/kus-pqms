@@ -969,3 +969,45 @@
   align-items: center;
   gap: 8px;
 }
+
+/* ── Link confirmation ───────────────────────────────────────────────────────
+   A governance control: no link commits without a justification of at least 20
+   characters. Values are the design's own. */
+.justifyBox {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 78px;
+  padding: 11px 13px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+  outline: none;
+  resize: vertical;
+}
+
+.justifyBoxError {
+  composes: justifyBox;
+  border-color: var(--danger-500);
+}
+
+.justifyFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+  font-family: var(--font-body);
+  font-size: 11px;
+}
+
+.justifyError {
+  color: var(--danger-500);
+}
+
+.justifyCount {
+  margin-left: auto;
+  color: var(--text-disabled);
+}

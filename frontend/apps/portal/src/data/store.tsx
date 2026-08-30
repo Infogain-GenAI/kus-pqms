@@ -56,6 +56,15 @@ export interface NewIssueInput {
   modelYear: number
   /** Issues linked at creation time. Linked reciprocally, same as linkIssue(). */
   linkedIssueIds?: string[]
+  /**
+   * Justifications captured by the link-confirmation modal, one per link action.
+   *
+   * They are held on the DRAFT until registration and written to the audit trail
+   * here — the design does the same, accumulating `pendingLinkLogs` and applying
+   * them when the issue is registered. Linking during a draft has no issue to
+   * hang an audit entry on until that moment.
+   */
+  linkJustifications?: { ids: string[]; justification: string }[]
   system?: string
   subSystem?: string
   component?: string
@@ -281,6 +290,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ])
     appendAudit(issue.id, actor, input.submit ? 'Submitted' : 'Draft saved', input.submit ? 'Draft → Open' : undefined)
     if (links.length) appendAudit(issue.id, actor, 'Issues linked', links.join(', '))
+    for (const log of input.linkJustifications ?? []) {
+      appendAudit(issue.id, actor, 'Linked issue(s) added', `${log.ids.join(', ')} — ${log.justification}`)
+    }
     return issue
   }, [issues, appendAudit])
 

@@ -28,6 +28,22 @@ const btn = (name: RegExp) => screen.getByRole('button', { name })
 const queryBtn = (name: RegExp) => screen.queryByRole('button', { name })
 const body = () => document.body.textContent ?? ''
 
+/**
+ * Link through the confirmation modal.
+ *
+ * Every link is gated on a >=20-character justification, so no test can link by
+ * clicking one button any more. That is the control working, not a test problem.
+ */
+function linkVia(name: RegExp, justification = 'Same root cause suspected across these records.') {
+  const btns = screen.queryAllByRole('button', { name })
+  if (!btns.length) return false
+  fireEvent.click(btns[0])
+  fireEvent.change(screen.getByRole('textbox', { name: /justification/i }), { target: { value: justification } })
+  const confirm = screen.getAllByRole('button', { name: /^link issues?$/i }).pop()
+  if (confirm) fireEvent.click(confirm)
+  return true
+}
+
 function fillCompleteForm() {
   // Vehicle — pick the first model code from the combobox.
   const codeBox = screen.getByRole('combobox', { name: /model code/i })
@@ -316,8 +332,7 @@ describe('Same Existing Issues — cards, search and history', () => {
   describe('linking is a toggle, and the card shows which state it is in', () => {
     it('goes Link to Issue → Unlink from Issue, and shows the linked pill', () => {
       openBlock()
-      const link = screen.getAllByRole('button', { name: /^link to issue$/i })[0]
-      fireEvent.click(link)
+      linkVia(/^link to issue$/i)
       expect(queryBtn(/^unlink from issue$/i)).not.toBeNull()
       // The count badge in the header is a separate thing from the card's pill;
       // both should now be present.
@@ -326,7 +341,7 @@ describe('Same Existing Issues — cards, search and history', () => {
 
     it('unlinks again, restoring the offer', () => {
       openBlock()
-      fireEvent.click(screen.getAllByRole('button', { name: /^link to issue$/i })[0])
+      linkVia(/^link to issue$/i)
       fireEvent.click(screen.getAllByRole('button', { name: /^unlink from issue$/i })[0])
       expect(body()).not.toContain('1 linked')
       // `queryBtn` is singular and there are several cards, so count instead.
@@ -436,9 +451,7 @@ describe('Same Existing Issues — the edge states', () => {
     // Link them one at a time: each click re-renders, so the collection has to
     // be re-read rather than captured once.
     for (let guard = 0; guard < 20; guard++) {
-      const next = screen.queryAllByRole('button', { name: /^link to issue$/i })[0]
-      if (!next) break
-      fireEvent.click(next)
+      if (!linkVia(/^link to issue$/i)) break
     }
     expect(body()).toContain('All matched issues linked')
     // Informational only — the design gives this state no action.
@@ -460,7 +473,7 @@ describe('Same Existing Issues — the edge states', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), {
       target: { value: '-26' },
     })
-    fireEvent.click(screen.getAllByRole('button', { name: /^link to issue$/i })[0])
+    linkVia(/^link to issue$/i)
     // The header badge counts links made from either surface.
     expect(body()).toContain('1 linked')
   })
@@ -532,7 +545,7 @@ describe('Clear form asks only when there is something to lose', () => {
   it('asks when the only content is a LINKED issue', () => {
     renderCreate()
     fillCompleteForm()
-    fireEvent.click(screen.getAllByRole('button', { name: /^link to issue$/i })[0])
+    linkVia(/^link to issue$/i)
     fireEvent.click(btn(/^clear$/i))
     // `linkedExisting` is its own term in the design — a form whose only content
     // is a link still confirms.
@@ -665,7 +678,7 @@ describe('an issue group renders as one card with its children folded in', () =>
 
   it('links and unlinks every member at once', () => {
     openEngineCohort()
-    fireEvent.click(screen.getAllByRole('button', { name: /link to issue group/i })[0])
+    linkVia(/link to issue group/i)
     // The header count is the group's size, not 1.
     expect(body()).toMatch(/[2-9] linked/)
     fireEvent.click(screen.getAllByRole('button', { name: /unlink from issue group/i })[0])
@@ -722,8 +735,7 @@ describe('an issue linked from search survives closing the search panel', () => 
     fillCompleteForm()
     fireEvent.click(btn(/search & link another issue/i))
     fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: query } })
-    const link = screen.queryAllByRole('button', { name: /^link to issue$/i })[0]
-    if (link) fireEvent.click(link)
+    linkVia(/^link to issue$/i)
     fireEvent.click(screen.getByRole('button', { name: /close search/i }))
   }
 
@@ -756,5 +768,84 @@ describe('an issue linked from search survives closing the search panel', () => 
     // second cap. An appended entry never displaces a ranked one.
     expect(body()).toContain('Manually linked')
     expect(body()).toMatch(/suggested because/i)
+  })
+})
+
+/**
+ * The link-confirmation control.
+ *
+ * A governance gate, so the tests are about what it REFUSES as much as what it
+ * accepts. The design's rule: no link commits without >=20 characters of
+ * justification, counted after trimming.
+ */
+describe('linking requires a justification', () => {
+  const openBlock = () => { renderCreate(); fillCompleteForm() }
+  const askToLink = () => {
+    openBlock()
+    fireEvent.click(screen.getAllByRole('button', { name: /^link to issue$/i })[0])
+  }
+  const typeJustification = (v: string) =>
+    fireEvent.change(screen.getByRole('textbox', { name: /justification/i }), { target: { value: v } })
+  const confirmBtn = () => screen.getAllByRole('button', { name: /^link issues?$/i }).pop() as HTMLButtonElement
+
+  it('does not link on the button press alone — it asks first', () => {
+    askToLink()
+    expect(body()).not.toMatch(/1 linked/)
+    expect(screen.getByRole('textbox', { name: /justification/i })).toBeTruthy()
+  })
+
+  it('keeps confirm disabled until the justification is long enough', () => {
+    askToLink()
+    expect(confirmBtn().disabled).toBe(true)
+    typeJustification('too short')
+    expect(confirmBtn().disabled).toBe(true)
+    typeJustification('Same root cause suspected across both records.')
+    expect(confirmBtn().disabled).toBe(false)
+  })
+
+  it('COUNTS TRIMMED CHARACTERS, so whitespace cannot buy the threshold', () => {
+    askToLink()
+    // 19 real characters padded to well over 20 with spaces.
+    typeJustification('   ' + 'x'.repeat(19) + '                    ')
+    expect(confirmBtn().disabled).toBe(true)
+  })
+
+  it('links once a real justification is given', () => {
+    askToLink()
+    typeJustification('Same charge-port lock failure on the same model year.')
+    fireEvent.click(confirmBtn())
+    expect(body()).toMatch(/1 linked/)
+  })
+
+  it('abandons the link if the dialog is cancelled', () => {
+    askToLink()
+    typeJustification('Same charge-port lock failure on the same model year.')
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+    expect(body()).not.toMatch(/\d+ linked/)
+  })
+
+  it('caps the justification at 500 characters', () => {
+    askToLink()
+    typeJustification('y'.repeat(900))
+    const box = screen.getByRole('textbox', { name: /justification/i }) as HTMLTextAreaElement
+    expect(box.value.length).toBe(500)
+  })
+
+  it('does NOT gate unlink — removing a link is cheaper than making one', () => {
+    openBlock()
+    linkVia(/^link to issue$/i)
+    fireEvent.click(screen.getAllByRole('button', { name: /^unlink from issue$/i })[0])
+    // The design routes unlink to a separate confirm that asks for no
+    // justification; it must not re-open this modal.
+    expect(body()).not.toMatch(/\d+ linked/)
+  })
+
+  it('carries the justification into the issue history on registration', () => {
+    openBlock()
+    linkVia(/^link to issue$/i, 'Same charge-port lock failure on the same model year.')
+    fireEvent.click(btn(/register issue|submit/i))
+    // Registered successfully — the justification rides along as an audit entry
+    // rather than being discarded with the draft.
+    expect(body()).toMatch(/registered|submitted|EE-\d+/i)
   })
 })
