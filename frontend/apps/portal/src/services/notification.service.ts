@@ -1,6 +1,8 @@
 import { get, post } from '@/shared/http'
 import type { NotificationListResult, NotificationQuery } from '@/api/notifications'
 import type { AppNotification, NotificationCategory, NotificationRecordType } from '@/data/types'
+import { parseResponse } from './issue.schemas'
+import { backendNotificationPageSchema } from './notification.schemas'
 
 /**
  * REAL-API NOTIFICATION SERVICE.
@@ -62,10 +64,12 @@ export function toNotification(dto: BackendNotificationDto): AppNotification {
 
 /** `GET /notifications`. */
 export async function listNotifications(query: NotificationQuery = {}): Promise<NotificationListResult> {
-  const page = await get<{ content: BackendNotificationDto[]; unreadCount?: number }>(
-    '/notifications',
-    { params: { receiver: query.recipient, size: query.limit } },
-  )
+  const raw = await get<unknown>('/notifications', {
+    params: { receiver: query.recipient, size: query.limit },
+  })
+  // Validate, THEN map — see the same note in `issue.service.ts`. Mapping an
+  // unchecked shape loses the evidence the schema exists to name.
+  const page = parseResponse(backendNotificationPageSchema, raw, 'GET /notifications')
   const rows = page.content.map(toNotification)
   return {
     // Prefer the server's own count: it knows the whole set, while this page may

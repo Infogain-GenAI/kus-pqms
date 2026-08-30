@@ -1,4 +1,4 @@
-import { useFixtures } from '@/config/data-source'
+import { isFixtureMode } from '@/config/data-source'
 import * as issueFixtures from '@/api/issues'
 import * as notificationFixtures from '@/api/notifications'
 import * as issueApi from './issue.service'
@@ -17,7 +17,7 @@ import type { Issue } from '@/data/types'
  *
  * ─── THE BRANCH IS READ PER CALL, NOT AT IMPORT ──────────────────────────────
  *
- * `useFixtures()` is called INSIDE each function, never hoisted to a
+ * `isFixtureMode()` is called INSIDE each function, never hoisted to a
  * module-level constant. A constant would freeze the value at import time, which
  * silently ignores `vi.stubEnv` and makes a live-branch test pass while actually
  * exercising fixtures — the failure the Vue `data-source.ts` header warns about,
@@ -25,7 +25,7 @@ import type { Issue } from '@/data/types'
  *
  * ─── HOW THIS DIFFERS FROM VUE, DELIBERATELY ─────────────────────────────────
  *
- * Vue branches at each CALL SITE (`useFixtures() ? fetchIssueById(id) :
+ * Vue branches at each CALL SITE (`isFixtureMode() ? fetchIssueById(id) :
  * issueService.getById(id)`), so which components have migrated stays visible
  * and each cutover is individually revertible. That was the right shape for an
  * app migrating screen by screen against a partially-built backend.
@@ -48,35 +48,35 @@ import type { Issue } from '@/data/types'
 /** Issue reads. Both implementations satisfy this exactly. */
 export const issues = {
   list(query: IssueListQuery = {}): Promise<IssueListResult> {
-    return useFixtures() ? issueFixtures.fetchIssues(query) : issueApi.listIssues(query)
+    return isFixtureMode() ? issueFixtures.fetchIssues(query) : issueApi.listIssues(query)
   },
 
   /** Resolves `null` for a record that does not exist — see both implementations. */
   getById(id: string): Promise<Issue | null> {
-    return useFixtures() ? issueFixtures.fetchIssueById(id) : issueApi.getIssueById(id)
+    return isFixtureMode() ? issueFixtures.fetchIssueById(id) : issueApi.getIssueById(id)
   },
 
   scopeCounts(user: string): Promise<{ own: number; all: number }> {
-    return useFixtures() ? issueFixtures.fetchIssueScopeCounts(user) : issueApi.getIssueScopeCounts(user)
+    return isFixtureMode() ? issueFixtures.fetchIssueScopeCounts(user) : issueApi.getIssueScopeCounts(user)
   },
 
   kpiCounts(): Promise<{ total: number; byStatus: Record<string, number> }> {
-    return useFixtures() ? issueFixtures.fetchIssueKpiCounts() : issueApi.getIssueKpiCounts()
+    return isFixtureMode() ? issueFixtures.fetchIssueKpiCounts() : issueApi.getIssueKpiCounts()
   },
 }
 
 /** Notification reads and the two read-state writes. */
 export const notifications = {
   list(query: NotificationQuery = {}): Promise<NotificationListResult> {
-    return useFixtures() ? notificationFixtures.fetchNotifications(query) : notificationApi.listNotifications(query)
+    return isFixtureMode() ? notificationFixtures.fetchNotifications(query) : notificationApi.listNotifications(query)
   },
 
   markRead(id: string): Promise<void> {
-    return useFixtures() ? notificationFixtures.markNotificationRead(id) : notificationApi.markRead(id)
+    return isFixtureMode() ? notificationFixtures.markNotificationRead(id) : notificationApi.markRead(id)
   },
 
   markAllRead(recipient?: string): Promise<void> {
-    return useFixtures()
+    return isFixtureMode()
       ? notificationFixtures.markAllNotificationsRead(recipient)
       : notificationApi.markAllRead(recipient)
   },

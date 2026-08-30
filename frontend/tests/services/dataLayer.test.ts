@@ -27,7 +27,7 @@ import {
 import { toNotification } from '@/services/notification.service'
 import { apiClient } from '@/shared/http'
 import { services } from '@/services'
-import { dataSourceMode, useFixtures } from '@/config/data-source'
+import { dataSourceMode, isFixtureMode } from '@/config/data-source'
 import { ISSUES, NOTIFICATIONS } from '@/data/seed'
 
 afterEach(() => {
@@ -298,7 +298,7 @@ describe('notification mapping', () => {
 
 describe('VITE_USE_FIXTURES actually switches the implementation', () => {
   it('defaults to fixtures', () => {
-    expect(useFixtures()).toBe(true)
+    expect(isFixtureMode()).toBe(true)
     expect(dataSourceMode()).toBe('fixtures')
   })
 
@@ -307,10 +307,10 @@ describe('VITE_USE_FIXTURES actually switches the implementation', () => {
     // comes from an untracked .env that differs per machine.
     for (const v of ['', 'no', 'FALSE', '0', 'true']) {
       vi.stubEnv('VITE_USE_FIXTURES', v)
-      expect(useFixtures(), `"${v}" should keep fixtures`).toBe(true)
+      expect(isFixtureMode(), `"${v}" should keep fixtures`).toBe(true)
     }
     vi.stubEnv('VITE_USE_FIXTURES', 'false')
-    expect(useFixtures()).toBe(false)
+    expect(isFixtureMode()).toBe(false)
     expect(dataSourceMode()).toBe('api')
   })
 

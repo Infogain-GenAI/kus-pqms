@@ -8,6 +8,13 @@ import {
   type BackendIssueSummaryDto,
   type BackendPageResponse,
 } from './issue.mappers'
+import {
+  backendIssuePageSchema,
+  backendIssueSummarySchema,
+  kpiCountsSchema,
+  parseResponse,
+  scopeCountsSchema,
+} from './issue.schemas'
 
 /**
  * REAL-API ISSUE SERVICE.
@@ -28,9 +35,14 @@ import {
 
 /** `GET /issues` — server-filtered, sorted and paged. */
 export function listIssues(query: IssueListQuery = {}): Promise<IssueListResult> {
-  return get<BackendPageResponse<BackendIssueSummaryDto>>('/issues', {
-    params: serializeListParams(query),
-  }).then(fromBackendPage)
+  return get<unknown>('/issues', { params: serializeListParams(query) }).then((raw) =>
+    // VALIDATE, THEN MAP — in that order, and never the reverse. Mapping first
+    // would produce a domain object from an unchecked shape, so a missing field
+    // reaches a component as `undefined` and the schema then validates something
+    // that has already lost the evidence. 05 puts the schema at the boundary
+    // precisely so the failure names the field.
+    fromBackendPage(parseResponse(backendIssuePageSchema, raw, 'GET /issues') as BackendPageResponse<BackendIssueSummaryDto>),
+  )
 }
 
 /**
@@ -43,7 +55,8 @@ export function listIssues(query: IssueListQuery = {}): Promise<IssueListResult>
  */
 export async function getIssueById(id: string): Promise<Issue | null> {
   try {
-    return toIssue(await get<BackendIssueSummaryDto>(`/issues/${encodeURIComponent(id)}`))
+    const raw = await get<unknown>(`/issues/${encodeURIComponent(id)}`)
+    return toIssue(parseResponse(backendIssueSummarySchema, raw, `GET /issues/${id}`))
   } catch (err) {
     if (typeof err === 'object' && err !== null && (err as { status?: number }).status === 404) return null
     throw err
@@ -52,10 +65,14 @@ export async function getIssueById(id: string): Promise<Issue | null> {
 
 /** `GET /issues/scope-counts`. */
 export function getIssueScopeCounts(user: string): Promise<{ own: number; all: number }> {
-  return get<{ own: number; all: number }>('/issues/scope-counts', { params: { ownerUserId: user } })
+  return get<unknown>('/issues/scope-counts', { params: { ownerUserId: user } }).then((raw) =>
+    parseResponse(scopeCountsSchema, raw, 'GET /issues/scope-counts'),
+  )
 }
 
 /** `GET /issues/kpi-summary`. */
 export function getIssueKpiCounts(): Promise<{ total: number; byStatus: Record<string, number> }> {
-  return get<{ total: number; byStatus: Record<string, number> }>('/issues/kpi-summary')
+  return get<unknown>('/issues/kpi-summary').then((raw) =>
+    parseResponse(kpiCountsSchema, raw, 'GET /issues/kpi-summary'),
+  )
 }
