@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { RoutedOutlet } from '@/app/RoutedOutlet'
 
 /**
  * `BlankLayout` — no chrome. Per 07-routing-and-layouts.md: "No header, no
@@ -19,7 +19,7 @@ import { Outlet } from 'react-router-dom'
 export function BlankLayout() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)' }}>
-      <Outlet />
+      <RoutedOutlet />
     </div>
   )
 }

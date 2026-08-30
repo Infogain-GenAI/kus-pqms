@@ -1,5 +1,5 @@
 import { redirect, type RouteObject } from 'react-router-dom'
-import { ChunkLoadErrorBoundary } from '@/app/ChunkLoadErrorBoundary'
+import { RouteErrorBoundary } from '@/app/RouteErrorBoundary'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { BlankLayout } from '@/layouts/BlankLayout'
 import { DefaultLayout } from '@/layouts/DefaultLayout'
@@ -67,8 +67,18 @@ import { FixedHeightLayout } from '@/layouts/FixedHeightLayout'
  * here, so it would be dead code.
  */
 
-/** Every lazily-loaded route carries this, and only lazily-loaded routes do. */
-const EB = ChunkLoadErrorBoundary
+/**
+ * Every lazily-loaded route carries this, and only lazily-loaded routes do.
+ *
+ * ⚠️ CHANGED 2026-08-30, FROM `ChunkLoadErrorBoundary` — WHICH RENDERED NOTHING.
+ * That was a React class boundary, but React Router renders the `ErrorBoundary`
+ * route property IN PLACE OF the element rather than around it: no children, no
+ * error prop, and `useRouteError()` is how the error is read. The class
+ * therefore rendered `props.children` — `undefined` — so every route error
+ * produced a blank content area, and the chunk-reload in its `componentDidCatch`
+ * never ran at all. See `RouteErrorBoundary` for the measurement.
+ */
+const EB = RouteErrorBoundary
 
 export const routes: RouteObject[] = [
   {
@@ -100,7 +110,7 @@ export const routes: RouteObject[] = [
 
       {
         // No ErrorBoundary on any layout route: they are STATICALLY imported, so
-        // there is no chunk that can fail, and `ChunkLoadErrorBoundary` on one
+        // there is no chunk that can fail, and `RouteErrorBoundary` on one
         // would be dead code wearing an authoritative name. 07 corrected its own
         // earlier revision on exactly this point. It would also be actively
         // worse when it fired — a route's boundary replaces that route's own

@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { RoutedOutlet } from '@/app/RoutedOutlet'
 import { AppHeader } from '@/app/AppHeader'
 
 /**
@@ -37,7 +37,7 @@ export function DefaultLayout() {
         this pass — no layout renders one yet. Flagged, not silently adopted.
       */}
       <main id="main-content" style={{ flex: 1 }}>
-        <Outlet />
+        <RoutedOutlet />
       </main>
     </div>
   )
