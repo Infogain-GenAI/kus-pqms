@@ -38,9 +38,14 @@ import { FixedHeightLayout } from '@/layouts/FixedHeightLayout'
  * Each of these is an explicit exclusion, not an oversight:
  *   · The auth middleware chain — see the version note above, and most of 08 is
  *     unimplemented, so there is nothing real to gate on yet.
- *   · A `/qir` or `/tsb` route — out of scope per frontend/README.md's
- *     guardrails. The nav renders them disabled, which is fidelity to the design.
- *     07 is explicit that scope wins over route shape where the two meet.
+ *   · ~~A `/qir` or `/tsb` route~~ — WITHDRAWN 2026-08-30. This entry said the
+ *     nav "renders them disabled, which is fidelity to the design". It does not:
+ *     `AppHeader` renders both as live links, so both primary tabs fell to the
+ *     catch-all and showed Not Found. The exclusion was written when the nav
+ *     really did disable them and was never revisited when that changed — which
+ *     is how a stale guardrail hides a live defect. Both are routed below, to
+ *     the stub screens that already existed unrouted in `features/qir` and
+ *     `features/tsb`, matching the Vue predecessor's own stub pages.
  *   · Legacy deep-link redirects for the old Workspace tab keys (qir, disposition,
  *     actions, chronology, scoring). The remap table is proven in the Vue
  *     predecessor, but no external system holds a Workspace deep link in this app
@@ -114,6 +119,27 @@ export const routes: RouteObject[] = [
           { path: '/issues', lazy: () => import('@/features/issues/IssueListScreen').then((m) => ({ Component: m.IssueListScreen })), ErrorBoundary: EB },
 
           { path: '/notifications', lazy: () => import('@/features/notifications/NotificationsScreen').then((m) => ({ Component: m.NotificationsScreen })), ErrorBoundary: EB },
+
+          /*
+           * ─── QIR AND TSB — PREVIOUSLY UNROUTED, AND THE NAV LINKED TO THEM ────
+           *
+           * The header renders "QIR Management" and "TSB Management" as real
+           * links to `/qir` and `/tsb`. Neither path existed, so both fell to the
+           * catch-all and rendered Not Found — two of the four primary tabs were
+           * dead.
+           *
+           * This file's own header said the nav "renders them disabled, which is
+           * fidelity to the design". That was true once and is not true now; the
+           * note is corrected below. Routing them is the smaller change and the
+           * honest one — the screens exist, the design has the tabs, and a
+           * primary tab that 404s is worse than either a disabled tab or a stub.
+           *
+           * Both screens are stubs, exactly as in the Vue predecessor
+           * (`pages/QirManagement.vue`, `pages/TsbManagement.vue`). They say the
+           * module is not built rather than pretending otherwise.
+           */
+          { path: '/qir', lazy: () => import('@/features/qir/QirManagementScreen').then((m) => ({ Component: m.QirManagementScreen })), ErrorBoundary: EB },
+          { path: '/tsb', lazy: () => import('@/features/tsb/TsbManagementScreen').then((m) => ({ Component: m.TsbManagementScreen })), ErrorBoundary: EB },
         ],
       },
 
@@ -236,6 +262,7 @@ export const routes: RouteObject[] = [
               { path: 'resolution', lazy: () => import('@/features/issues/workspace/ResolutionSection').then((m) => ({ Component: m.ResolutionSection })), ErrorBoundary: EB },
               { path: 'communication', lazy: () => import('@/features/issues/workspace/CommunicationSection').then((m) => ({ Component: m.CommunicationSection })), ErrorBoundary: EB },
               { path: 'history', lazy: () => import('@/features/issues/workspace/HistorySection').then((m) => ({ Component: m.HistorySection })), ErrorBoundary: EB },
+              { path: 'sharing', lazy: () => import('@/features/issues/workspace/SharingSection').then((m) => ({ Component: m.SharingSection })), ErrorBoundary: EB },
             ],
           },
 
@@ -248,6 +275,47 @@ export const routes: RouteObject[] = [
         children: [
           { path: '/admin', lazy: () => import('@/features/admin/AdminScreen').then((m) => ({ Component: m.AdminScreen })), ErrorBoundary: EB },
         ],
+      },
+
+      /*
+       * ─── VUE PATH PARITY ─────────────────────────────────────────────────────
+       *
+       * The Vue predecessor routes the same four primary tabs at `/overview`,
+       * `/issue-management`, `/qir` and `/tsb`. Two of those already match; the
+       * other two are named `/dashboard` and `/issues` here.
+       *
+       * THAT NAMING DIFFERENCE IS A RECORDED DECISION, not an oversight — see
+       * this file's header and 07's Divergence table, which judge the rename not
+       * worth it in a port whose acceptance test is pixel fidelity. So the
+       * canonical paths are left alone and the Vue spellings REDIRECT onto them.
+       *
+       * What that buys: a link written against the Vue app, or typed from muscle
+       * memory, resolves here instead of 404ing. What it avoids: two live URLs
+       * for one screen, which is what an alias (rather than a redirect) would
+       * create, and which makes "what is the address of the issue list?"
+       * unanswerable.
+       *
+       * `/` had no route at all and fell to the catch-all — the bare origin
+       * rendered Not Found. It now lands on the first primary tab, as Vue's
+       * `{ path: "/", redirect: { name: "overview" } }` does.
+       */
+      /*
+       * `loader: () => redirect(...)`, not an `<element>` rendering `<Navigate>`.
+       * A loader redirect resolves BEFORE anything mounts, so the browser never
+       * paints the old URL's layout for a frame and no component instance is
+       * created only to unmount itself. It is also the idiom this file already
+       * uses (`redirect` was imported for it).
+       */
+      { path: '/', loader: () => redirect('/dashboard') },
+      { path: '/overview', loader: () => redirect('/dashboard') },
+      { path: '/issue-management', loader: () => redirect('/issues') },
+      {
+        // The splat carries the rest of the path, so
+        // `/issue-management/HV-260101/investigation` keeps its id AND section
+        // rather than dropping the user on the list. `/issue-management/new`
+        // rides the same rule and needs no separate entry.
+        path: '/issue-management/*',
+        loader: ({ params }) => redirect(`/issues/${params['*'] ?? ''}`),
       },
 
       {

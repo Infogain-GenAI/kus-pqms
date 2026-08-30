@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Paperclip, X } from 'lucide-react'
 import { Icon } from '@pqms/ui-library'
 import { newId } from '@/data/util'
+import { formatFileSize } from '@/shared/format/fileSize'
 import type { SourceFieldAttachment } from '@/data/sourceChannels'
 import styles from './SourceFieldAttachments.module.css'
 
@@ -119,15 +120,3 @@ export function SourceFieldAttachments({
   )
 }
 
-/**
- * Vue reads this from a `shared/format/file-size` module, which this app has no
- * equivalent of yet. Kept local rather than promoted: 21's formatting module is
- * the right home, and inventing that module for one caller would put a
- * half-specified version of it in the way of the real one.
- */
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  const kb = bytes / 1024
-  if (kb < 1024) return `${Math.round(kb)} KB`
-  return `${(kb / 1024).toFixed(1)} MB`
-}

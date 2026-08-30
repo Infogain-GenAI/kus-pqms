@@ -17,6 +17,7 @@ import type {
   PartRequest,
   PartStatus,
   PartUrgency,
+  RoleKey,
 } from './types'
 import { reportDataSource } from '@/config/data-source'
 import { ACTIVITIES, AUDIT, CLASSIFICATION, COMMENTS, ISSUES, NOTIFICATIONS, PARTS, PRIORITIES } from './seed'
@@ -138,6 +139,32 @@ interface StoreValue {
   approveProposal: (id: string, remark: string, actor: Actor) => void
   rejectProposal: (id: string, remark: string, actor: Actor) => void
   bulkStatus: (ids: string[], status: StatusKey, reason: string, actor: Actor) => void
+  /**
+   * Reassign the owning ROLE on several issues at once — the list's bulk
+   * "Assign Role" action.
+   *
+   * It writes `assigneeRole`, NOT `ownerRole`: ownership records who raised the
+   * issue and is part of its history, while assignment is who is working it now.
+   * Bulk reassignment moves the second and must never rewrite the first.
+   */
+  bulkAssignRole: (ids: string[], role: RoleKey, actor: Actor) => void
+  /**
+   * Request a new classification node — the forms' "Request New System" flow.
+   *
+   * The node is added immediately with pendingApproval: true rather than being
+   * held in a separate queue. That is deliberate: the requester must be able to
+   * SELECT the value they just asked for and carry on with the issue, which is
+   * the entire reason the affordance sits inside the form rather than in Admin.
+   * The flag is what keeps it distinguishable from an approved node, and it is
+   * why every consumer reads pendingApproval rather than assuming a node is
+   * governed.
+   *
+   * Returns the new node so the caller can select it without re-querying.
+   */
+  requestClassification: (
+    input: { level: ClassLevel; parentId?: string; label: string; justification: string; issueId?: string },
+    actor: Actor,
+  ) => ClassificationNode
   addComment: (issueId: string, type: CommEntryType, body: string, actor: Actor) => void
   /**
    * `extra` carries the type-conditional fields the Add-activity form captures
@@ -191,7 +218,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [changeRequests, setChangeRequests] = useState<ActivityChangeRequest[]>([])
   const [audit, setAudit] = useState<AuditEntry[]>(AUDIT)
   const [notifications, setNotifications] = useState<AppNotification[]>(NOTIFICATIONS)
-  const [classification] = useState<ClassificationNode[]>(CLASSIFICATION)
+  const [classification, setClassification] = useState<ClassificationNode[]>(CLASSIFICATION)
   const [priorities, setPriorities] = useState<Record<string, IssuePriority>>(PRIORITIES)
 
   const now = () => new Date().toISOString()
@@ -361,6 +388,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ids.forEach((id) => appendAudit(id, actor, 'Bulk status change', `→ ${status}: ${reason}`))
   }, [appendAudit])
 
+  const bulkAssignRole = useCallback<StoreValue['bulkAssignRole']>((ids, role, actor) => {
+    setIssues((list) => list.map((i) => (ids.includes(i.id) ? { ...i, assigneeRole: role, updatedAt: now() } : i)))
+    ids.forEach((id) => appendAudit(id, actor, 'Bulk role assignment', `assigned to ${role}`))
+  }, [appendAudit])
+
+  const requestClassification = useCallback<StoreValue['requestClassification']>((input, actor) => {
+    const node: ClassificationNode = {
+      id: newId('cls'),
+      level: input.level,
+      // Derived, not asked for: a requester should not have to invent a code
+      // scheme, and a real one is assigned on approval.
+      code: input.label.trim().slice(0, 3).toUpperCase(),
+      label: input.label.trim(),
+      parentId: input.parentId,
+      issueCount: 0,
+      pendingApproval: true,
+    }
+    setClassification((list) => [...list, node])
+    // Audited against the issue that prompted it when there is one — a request
+    // raised from an issue is part of that issue's story.
+    if (input.issueId) {
+      appendAudit(input.issueId, actor, 'Classification requested', input.level + ': ' + node.label + ' — ' + input.justification.trim())
+    }
+    return node
+  }, [appendAudit])
+
   const addComment = useCallback<StoreValue['addComment']>((issueId, type, body, actor) => {
     setComments((c) => [...c, { id: newId('c'), issueId, type, author: actor.name, authorRole: actor.role, body, createdAt: now() }])
     const mention = body.match(/@([\w\s-]+)/)
@@ -510,7 +563,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, groupMembers, relKind, correlations,
     priorityFor, priorityResult, savePriority,
     createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
-    addComment, addActivity, addPart, setPartStatus,
+    bulkAssignRole, requestClassification, addComment, addActivity, addPart, setPartStatus,
     requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

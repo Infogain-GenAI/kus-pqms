@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Bell, Check, CircleDot, HelpCircle, Info, OctagonAlert, TriangleAlert } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Bell, Check, HelpCircle } from 'lucide-react'
 import { Avatar, IconButton, Logo } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
+import { NotificationPanel } from '@/features/notifications/NotificationPanel'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
-import { fmtMDY } from '@/data/util'
-import type { NotificationCategory, RoleKey } from '@/data/types'
+import type { RoleKey } from '@/data/types'
 
 // App chrome per the UX prototype: a white 60px sticky top bar —
 // logo · divider · horizontal primary nav · spacer · help · bell(+unread) · user.
@@ -31,20 +30,16 @@ const ROLES: { key: RoleKey; label: string }[] = [
   { key: 'ADMIN', label: 'Administrator' },
 ]
 
-// The prototype's notification category meta (notifVals() catMeta), token-bound where the hex
-// matches a token exactly; the Information tint #E2F4F2 has no token equivalent.
-const NOTIF_CAT: Record<NotificationCategory, { color: string; tint: string; icon: LucideIcon }> = {
-  Critical: { color: 'var(--danger-500)', tint: 'var(--danger-50)', icon: OctagonAlert },
-  Warning: { color: 'var(--warning-500)', tint: 'var(--warning-50)', icon: TriangleAlert },
-  'Action Required': { color: 'var(--info-500)', tint: 'var(--info-50)', icon: CircleDot },
-  Information: { color: 'var(--status-disposed)', tint: '#E2F4F2', icon: Info },
-}
+// The notification category meta moved to `@/data/notificationCategory` when the
+// dropdown became `features/notifications/NotificationPanel`: the Notifications
+// page needs the same map, and it could not reach a constant private to this
+// file — so it had grown a second, parallel mapping. See that module.
 
 export function AppHeader() {
   const loc = useLocation()
   const nav = useNavigate()
   const { role, user, setRole, can } = useRole()
-  const { notifications, unreadCount, markAllRead, markRead } = useStore()
+  const { unreadCount } = useStore()
   const [roleMenu, setRoleMenu] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -129,55 +124,7 @@ export function AppHeader() {
               {unreadCount}
             </span>
           )}
-          {notifOpen && (
-            <>
-              <div onClick={() => setNotifOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
-              {/* Notification panel — layout/type per the prototype's header dropdown (380w, 5 rows, View-all footer). */}
-              <div style={{ position: 'absolute', top: 46, right: 0, zIndex: 100, width: 380, background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #F0F2F5' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <span style={{ font: 'var(--fw-bold) 14px/1 var(--font-body)', color: 'var(--text-primary)' }}>Notifications</span>
-                    {unreadCount > 0 && (
-                      <span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', color: 'var(--neutral-0)', background: 'var(--status-escalated)', borderRadius: 20, padding: '2px 7px' }}>{unreadCount} new</span>
-                    )}
-                  </div>
-                  <button onClick={markAllRead} style={{ border: 'none', background: 'none', color: 'var(--accent-700)', font: 'var(--fw-semibold) 12px/1 var(--font-body)', cursor: 'pointer' }}>Mark all read</button>
-                </div>
-                <div style={{ maxHeight: 380, overflowY: 'auto' }}>
-                  {notifications.slice(0, 5).map((n) => {
-                    const m = NOTIF_CAT[n.category]
-                    return (
-                      <button
-                        key={n.id}
-                        onClick={() => { markRead(n.id); setNotifOpen(false); if (n.recordId) nav(`/issues/${n.recordId}`) }}
-                        style={{ display: 'flex', alignItems: 'flex-start', gap: 11, width: '100%', textAlign: 'left', border: 'none', borderLeft: `var(--border-width-emphasis) solid ${n.read ? 'transparent' : m.color}`, background: n.read ? 'var(--surface-card)' : 'var(--neutral-25)', padding: '12px 14px', cursor: 'pointer' }}
-                      >
-                        <span style={{ width: 34, height: 34, borderRadius: 9, background: m.tint, color: m.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-                          <Icon icon={m.icon} size={17} />
-                        </span>
-                        <span style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ display: 'block', font: 'var(--fw-bold) 9px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: m.color }}>{n.category}</span>
-                          <span style={{ display: 'block', font: 'var(--fw-semibold) 12.5px/1.35 var(--font-body)', color: 'var(--text-primary)', marginTop: 2 }}>{n.title}</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 4 }}>
-                            {n.recordId && <span style={{ font: 'var(--fw-semibold) 10.5px/1 var(--font-mono)', color: 'var(--accent-700)' }}>{n.recordId}</span>}
-                            <span style={{ font: 'var(--fw-regular) 10.5px/1 var(--font-body)', color: 'var(--text-disabled)' }}>{fmtMDY(n.createdAt)}</span>
-                          </span>
-                        </span>
-                        {!n.read && <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: m.color, flex: 'none', marginTop: 5 }} />}
-                      </button>
-                    )
-                  })}
-                </div>
-                <button
-                  onClick={() => { setNotifOpen(false); nav('/notifications') }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', padding: 13, border: 'none', borderTop: '1px solid #F0F2F5', background: 'var(--bg-app)', color: 'var(--text-primary)', font: 'var(--fw-semibold) 13px/1 var(--font-body)', cursor: 'pointer' }}
-                >
-                  View all notifications
-                  <Icon icon={ArrowRight} size={15} />
-                </button>
-              </div>
-            </>
-          )}
+          {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
         </span>
         <div ref={menuRef} style={{ position: 'relative' }}>
           <button

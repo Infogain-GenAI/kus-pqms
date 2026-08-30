@@ -20,6 +20,16 @@ interface ImportMetaEnv {
    * sends no CORS headers), a real HTTPS origin in production.
    */
   readonly VITE_API_BASE_URL?: string
+
+  /**
+   * Where runtime errors are reported. UNSET BY DEFAULT, AND THAT IS THE SAFE
+   * STATE: with no DSN, `shared/monitoring.ts` installs nothing, makes no
+   * network call, and the logger keeps writing to the console exactly as before.
+   *
+   * Setting it turns the sink on — so this must not be set casually in a shared
+   * `.env`; every handled error in the session then leaves the browser.
+   */
+  readonly VITE_MONITORING_DSN?: string
 }
 
 interface ImportMeta {

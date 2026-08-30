@@ -1,7 +1,10 @@
-import { useId, useMemo, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 import { ChevronRight, Info } from 'lucide-react'
 import { Combobox, Icon, type ComboboxOption } from '@pqms/ui-library'
 import { useStore } from '@/data/store'
+import { useRole } from '@/data/roles'
+import type { ClassLevel } from '@/data/types'
+import { RequestNewSystemModal } from './classification/RequestNewSystemModal'
 import styles from './SystemClassificationPicker.module.css'
 
 /**
@@ -42,19 +45,21 @@ export function SystemClassificationPicker({
   disabled = false,
   /** System is governance-locked in Edit mode: changing it is a request, not an edit. */
   systemReadOnly = false,
-  onRequestSystem,
+  issueId,
   errors,
   symptomDisabled = false,
   symptomFooter,
   requestPrompt = 'Can’t find the required System?',
   requestLabel = 'Request New System',
+  onRequestSystem,
 }: {
   value: ClassificationValue
   onChange: (next: ClassificationValue) => void
   modelCodes: string[]
   disabled?: boolean
   systemReadOnly?: boolean
-  onRequestSystem?: () => void
+  /** Audits the request against this issue when raised from a workspace form. */
+  issueId?: string
   /** Per-field messages, shown only once the caller decides to show them. */
   errors?: Partial<Record<'system' | 'subSystem' | 'component' | 'symptom', string | undefined>>
   /** Issue Entry disables Symptom while a new one is pending approval. */
@@ -62,18 +67,34 @@ export function SystemClassificationPicker({
   /** Rendered under Symptom — Issue Entry puts the "Pending Approval" badge here. */
   symptomFooter?: ReactNode
   /**
-   * The request affordance's copy differs by screen and BOTH defaults below are
-   * currently wrong against the design — flagged rather than silently changed,
-   * because Edit is not this change's scope:
+   * The request affordance's copy differs by screen:
    *   Issue Entry  `Can't find the required classification?` → `Request New`
    *   Edit Issue   `Need to change the System?`              → `Raise a Request`
-   * The defaults preserve what `IssueEditForm` renders today.
+   * Defaults preserve what `IssueEditForm` renders.
    */
   requestPrompt?: string
   requestLabel?: string
+  /**
+   * MERGE NOTE — an escape hatch, not a second design.
+   *
+   * This component owns a request modal (`RequestNewSystemModal` +
+   * `store.requestClassification`), which is the right home for it. Issue Entry
+   * additionally runs a SYMPTOM-level request with its own pending-approval
+   * badge, which the system-level modal does not express. When this is supplied
+   * the row defers to the caller; otherwise the internal modal opens.
+   */
+  onRequestSystem?: () => void
 }) {
   const store = useStore()
+  const { user } = useRole()
   const ids = useId()
+  /**
+   * Which level the request modal is asking about. The affordance reads
+   * "Request New System" but the same flow serves every level — a user stuck at
+   * Symptom needs it just as much, and Create Issue already proved that by
+   * building a separate symptom-only version of it.
+   */
+  const [requesting, setRequesting] = useState<ClassLevel | null>(null)
 
   // The cascade resolves by label at each level, because that is what the issue
   // stores. `find` on label is safe here: the taxonomy's labels are unique
@@ -120,12 +141,35 @@ export function SystemClassificationPicker({
         </div>
       )}
 
+      {/* This button was DISABLED — rendered with no handler behind it, because
+          nothing implemented the flow. It now opens the request modal. */}
       <div className={styles.requestRow}>
         <span>{requestPrompt}</span>
-        <button type="button" className={styles.requestLink} onClick={onRequestSystem} disabled={!onRequestSystem}>
+        <button type="button" className={styles.requestLink} onClick={() => (onRequestSystem ? onRequestSystem() : setRequesting('system'))}>
           {requestLabel}
         </button>
       </div>
+
+      {/* SYSTEM ONLY, matching the source. A user stuck at Symptom has no escape
+          hatch here either — that gap is inherited, not introduced, and closing
+          it is a product decision rather than a porting one. The modal itself is
+          level-capable, so Create Issue's symptom request reuses it unchanged. */}
+      <RequestNewSystemModal
+        open={requesting !== null}
+        level="system"
+        onClose={() => setRequesting(null)}
+        onSubmit={({ label, justification }) => {
+          const node = store.requestClassification(
+            { level: 'system', label, justification, issueId },
+            { name: user.name, role: user.role },
+          )
+          // Selected straight away. Making the user hunt for the value they just
+          // asked for would defeat the point of asking from inside the form —
+          // and the cascade below resets, because the old sub-system belongs to
+          // a different system.
+          onChange({ system: node.label })
+        }}
+      />
 
       <div className={styles.grid}>
         <Field
@@ -186,9 +230,9 @@ function Field({
   selected,
   disabled,
   placeholder,
-  emptyText,
   onSelect,
   note,
+  emptyText,
   error,
   footer,
 }: {
@@ -198,10 +242,10 @@ function Field({
   selected?: string
   disabled: boolean
   placeholder: string
-  /** The design gives each level its own no-match line ("No matching system."). */
-  emptyText: string
   onSelect: (value: string) => void
   note?: string
+  /** The design gives each level its own no-match line ("No matching system."). */
+  emptyText: string
   error?: string
   footer?: ReactNode
 }) {
@@ -216,17 +260,11 @@ function Field({
         placeholder={placeholder}
         emptyText={emptyText}
         invalid={!!error}
-        // The accessible name is the field name WITHOUT the asterisk. Labelling
-        // via `aria-labelledby` on the visible span made the name "System *",
-        // which a screen reader reads out as "System star" — the required state
-        // belongs in `aria-required`, not in the name. This also restores the
-        // name the native <select> had before the combobox swap.
+        // The accessible name is the field name WITHOUT the asterisk — labelling
+        // via the visible span made it "System *", which reads as "System star".
         aria-label={label.replace(/\s*\*$/, '')}
       />
       {footer}
-      {/* `note` is advisory (governance lock); `error` is a validation failure.
-          Both use the same style but they are not the same thing, so they are
-          separate props rather than one overloaded slot. */}
       {error && <p className={styles.error}>{error}</p>}
       {note && <p className={styles.error}>{note}</p>}
     </div>

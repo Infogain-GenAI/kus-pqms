@@ -17,6 +17,17 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
+import { initMonitoring } from '@/shared/monitoring'
+
+/*
+ * Error monitoring, BEFORE anything else runs — an error thrown while the tree
+ * mounts is exactly the kind worth catching, and a sink installed after render
+ * would miss it.
+ *
+ * This is a no-op unless `VITE_MONITORING_DSN` is set. It installs no handler,
+ * makes no request and changes no behaviour without one; see the module.
+ */
+initMonitoring()
 
 const el = document.getElementById('root')
 if (!el) throw new Error('#root not found in index.html')

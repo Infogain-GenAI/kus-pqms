@@ -53,11 +53,22 @@ export interface ActivityDraft {
 export function AddActivityForm({
   issueId,
   disabled,
+  lockNote,
   onSave,
   onRequestNewType,
 }: {
   issueId: string
   disabled: boolean
+  /**
+   * Why the form is disabled, when the caller knows. Rendered verbatim beneath
+   * the Save button; nothing is shown when it is absent.
+   *
+   * ⚠️ THIS USED TO BE `{disabled && <p>This issue is closed …</p>}` — the note
+   * was hardcoded and fired on `disabled`, which is also true for a viewer with
+   * no propose capability. Those users were told the issue was closed when it
+   * was open. The note now comes from whoever actually knows the reason.
+   */
+  lockNote?: string
   onSave: (draft: ActivityDraft) => void
   onRequestNewType?: () => void
 }) {
@@ -251,9 +262,7 @@ export function AddActivityForm({
 
       <Button fullWidth disabled={disabled} onClick={save}>Save activity</Button>
 
-      {disabled && (
-        <p className={styles.closedNote}>This issue is closed — recording new activities is disabled.</p>
-      )}
+      {lockNote && <p className={styles.closedNote}>{lockNote}</p>}
     </>
   )
 }

@@ -189,3 +189,74 @@ describe('pagination interaction — PINNED DEFECT, see APPLICATION-DEFECTS.md',
     expect(pagingLine()).not.toMatch(/^Showing\s+1\s/i)
   })
 })
+
+describe('Export actually exports', () => {
+  // BOTH export buttons — the header's and the bulk bar's — used to render with
+  // no onClick at all. They looked like working controls and silently did
+  // nothing, which is worse than not offering the capability: a user who clicks
+  // Export and sees no download concludes their browser blocked it.
+  //
+  // jsdom implements neither createObjectURL nor navigation, so this stubs the
+  // two and asserts the download was actually initiated with a real filename.
+  function captureDownload() {
+    const created: string[] = []
+    const urlAny = URL as unknown as Record<string, unknown>
+    urlAny.createObjectURL = () => 'blob:stub'
+    urlAny.revokeObjectURL = () => {}
+    const realClick = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function stubbed(this: HTMLAnchorElement) {
+      created.push(this.download)
+    }
+    return { created, restore: () => { HTMLAnchorElement.prototype.click = realClick } }
+  }
+
+  it('the header Export downloads a dated file', () => {
+    const { created, restore } = captureDownload()
+    try {
+      renderList()
+      fireEvent.click(screen.getByRole('button', { name: /^Export$/i }))
+      expect(created).toHaveLength(1)
+      expect(created[0]).toMatch(/^issues-\d{4}-\d{2}-\d{2}\.csv$/)
+    } finally {
+      restore()
+    }
+  })
+})
+
+describe('the bulk bar acts on the selection', () => {
+  /** Selects every row via the table's header checkbox. */
+  function selectAll() {
+    const boxes = screen.getAllByRole('checkbox')
+    if (boxes[0]) fireEvent.click(boxes[0])
+  }
+
+  it('appears only once something is selected', () => {
+    renderList()
+    expect(screen.queryByRole('button', { name: /Assign Role/i })).toBeNull()
+    selectAll()
+    expect(screen.getByRole('button', { name: /Assign Role/i })).toBeTruthy()
+  })
+
+  it('Assign Role names the count and offers the three roles', () => {
+    renderList()
+    selectAll()
+    fireEvent.click(screen.getByRole('button', { name: /Assign Role/i }))
+
+    expect(document.body.textContent).toContain('Reassign')
+    // The original owner is explicitly NOT touched — the copy says so, because
+    // the store writes assigneeRole and leaves ownerRole alone.
+    expect(document.body.textContent).toContain('the original owner is unchanged')
+    for (const role of ['SE', 'ASM', 'PQM']) {
+      expect(screen.getByRole('button', { name: new RegExp(`^${role}$`) })).toBeTruthy()
+    }
+  })
+
+  it('assigning clears the selection, so the bar does not linger over stale rows', () => {
+    renderList()
+    selectAll()
+    fireEvent.click(screen.getByRole('button', { name: /Assign Role/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^ASM$/ }))
+
+    expect(screen.queryByRole('button', { name: /Assign Role/i })).toBeNull()
+  })
+})

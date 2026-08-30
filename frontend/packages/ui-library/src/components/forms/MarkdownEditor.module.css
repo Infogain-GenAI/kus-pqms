@@ -1,0 +1,243 @@
+/*
+ * Rich-text editor chrome and the rendered document's own typography.
+ *
+ * TWO KINDS OF RULE LIVE HERE and they are not interchangeable:
+ *
+ *   1. Chrome — the toolbar, its buttons, the frame. Ours to design.
+ *   2. `.content :global(...)` — how ProseMirror's OWN output renders. TipTap
+ *      emits real `<strong>`, `<em>`, `<ul>`, `<ol>` nodes into a div it owns,
+ *      so those elements are not in our JSX and cannot be styled by a module
+ *      class. Without `:global` they receive the page's bare defaults and the
+ *      "formatted" text looks identical to unformatted text — which is exactly
+ *      the complaint this component exists to answer.
+ */
+
+.root {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-card);
+}
+
+.rootFocused {
+  border-color: var(--interactive);
+}
+
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--neutral-25);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: var(--control-sm);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--neutral-100);
+  color: var(--text-primary);
+}
+
+/*
+ * The ACTIVE state is the whole point of a formatting toolbar: it reports what
+ * the caret is already inside, not only what a click will do. Without it a user
+ * cannot tell bold-on from bold-off without typing a character to find out.
+ */
+.btnActive {
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+}
+
+.btnActive:hover:not(:disabled) {
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--border-subtle);
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ── The document ─────────────────────────────────────────────────────────── */
+
+.content {
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+/* ProseMirror puts the caret on a nested div; the outline belongs to the frame. */
+.content :global(.ProseMirror) {
+  outline: none;
+  min-height: 96px;
+}
+
+.content :global(.ProseMirror p) {
+  margin: 0 0 var(--space-2);
+}
+
+.content :global(.ProseMirror p:last-child) {
+  margin-bottom: 0;
+}
+
+.content :global(.ProseMirror strong) {
+  font-weight: var(--fw-bold);
+}
+
+.content :global(.ProseMirror em) {
+  font-style: italic;
+}
+
+/*
+ * `list-style-position: outside` with explicit padding, not the browser default.
+ * Inside a narrow composer the default `inside` wraps the second line under the
+ * marker, which reads as a broken indent rather than a list.
+ */
+.content :global(.ProseMirror ul),
+.content :global(.ProseMirror ol) {
+  margin: 0 0 var(--space-2);
+  padding-left: var(--space-5);
+  list-style-position: outside;
+}
+
+.content :global(.ProseMirror ul) {
+  list-style-type: disc;
+}
+
+.content :global(.ProseMirror ol) {
+  list-style-type: decimal;
+}
+
+.content :global(.ProseMirror li) {
+  margin: 2px 0;
+}
+
+.content :global(.ProseMirror li p) {
+  margin: 0;
+}
+
+.content :global(.ProseMirror blockquote) {
+  margin: 0 0 var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.content :global(.ProseMirror code) {
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--neutral-100);
+  font-family: var(--font-mono);
+  font-size: var(--fs-body-sm);
+}
+
+.content :global(.ProseMirror a) {
+  color: var(--accent-700);
+  text-decoration: underline;
+}
+
+/* TipTap's placeholder decoration — an empty editor is otherwise a blank box
+   with no hint of what it wants. */
+.content :global(.ProseMirror p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--text-disabled);
+}
+
+.content :global(.ProseMirror[contenteditable='false']) {
+  color: var(--text-disabled);
+}
+
+/* ── Link ─────────────────────────────────────────────────────────────────── */
+
+/* The anchor for the URL prompt. `position: relative` is load-bearing: without
+   it the absolutely-positioned prompt escapes to the initial containing block
+   and extends the document's scroll height — the same class of bug that put a
+   second scrollbar on the Investigation tab. */
+.linkGroup {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/*
+ * Opens BELOW the toolbar, over the document. Deliberately not an inline field
+ * pushed into the toolbar row: growing the toolbar would reflow the editor and
+ * move the text the user is about to link, which is the one thing they are
+ * looking at.
+ */
+.linkPrompt {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-dropdown);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.linkInput {
+  width: 220px;
+  height: 30px;
+  padding: 0 9px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: 7px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  outline: none;
+}
+
+.linkInput:focus {
+  border-color: var(--interactive);
+}
+
+.linkApply {
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}

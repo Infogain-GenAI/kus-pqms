@@ -6,10 +6,12 @@ import { Icon } from '@pqms/ui-library'
 import { MetaChip, PageContainer, PageCrumb, SectionCard, TagChip } from '@/app/chrome'
 import { PriorityTab } from './PriorityTab'
 import { ApprovalBanner } from './workspace/ApprovalBanner'
+import { ClosedBanner } from './workspace/ClosedBanner'
 import { WorkspaceTabStrip } from './workspace/WorkspaceTabStrip'
 import { ChangeStatusModal, CreateQirModal, ManageLinksModal } from './workspace/modals'
 import type { WorkspaceContext, WorkspaceModal } from './workspace/context'
 import { PRIORITY_BANDS } from '@/data/priorityMatrix'
+import { useIssueLock } from '@/data/issueLock'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
 import { fmtMDY, modelCodeLabel } from '@/data/util'
@@ -108,6 +110,17 @@ export function IssueWorkspaceScreen() {
   }, [loc.pathname])
 
   /**
+   * The Closed-issue lock, computed ONCE for the whole workspace and handed to
+   * every section through the Outlet context.
+   *
+   * ⚠️ CALLED HERE, ABOVE THE NOT-FOUND RETURN, BECAUSE IT IS A HOOK. Moving it
+   * down beside the other `issue`-derived values below would put it after an
+   * early return and break the rules of hooks on the not-found path. It takes an
+   * optional issue precisely so it can live up here.
+   */
+  const lock = useIssueLock(issue)
+
+  /**
    * ─── SCROLL RESET ON SECTION CHANGE ─────────────────────────────────────────
    * Yogesh's requirement: "Navigating to a Workspace section resets scroll to the
    * top of the scrolling region. Only the workspace body scrolls; the page itself
@@ -161,6 +174,7 @@ export function IssueWorkspaceScreen() {
     canEditIssue,
     canPropose: can('propose'),
     canQir,
+    lock,
     comments,
     openModal: setModal,
     editing,
@@ -279,7 +293,13 @@ export function IssueWorkspaceScreen() {
                   So the button navigates to Detail first — editing from any other
                   section would otherwise set a flag nothing on screen reads. */}
               <Button variant="secondary" size="sm" disabled={!canEditIssue || editing} iconLeft={<Icon icon={PenSquare} size={14} />} onClick={() => { nav(`/issues/${id}/detail`); setEditing(true) }}>Edit issue</Button>
-              <Button variant="secondary" size="sm" disabled={!!issue.proposedStatus} iconLeft={<Icon icon={ArrowLeftRight} size={14} />} onClick={() => setModal('status')}>Change status</Button>
+              {/* Closed is terminal, so there is no status to change TO — the
+                  lock disables the trigger and the banner below says why. Vue
+                  removes this button outright on a Closed issue; see the
+                  divergence note in `@/data/issueLock`. `outofscope` is NOT
+                  covered here: it stays reachable and the modal keeps its own
+                  terminal message for it, exactly as before. */}
+              <Button variant="secondary" size="sm" disabled={!!issue.proposedStatus || lock.isClosed} iconLeft={<Icon icon={ArrowLeftRight} size={14} />} onClick={() => setModal('status')}>Change status</Button>
               <Button variant="secondary" size="sm" disabled={!canQir} iconLeft={<Icon icon={ClipboardPlus} size={14} />} onClick={() => setModal('qir')}>Create QIR</Button>
             </div>
           </div>
@@ -295,6 +315,12 @@ export function IssueWorkspaceScreen() {
           onOpenPriority={() => setPriorityOpen(true)}
         />
       </SectionCard>
+
+      {/* Closed-issue lock banner (all sections). Sits ABOVE the approval banner
+          because it is the stronger statement: if the record is closed, nothing
+          below it can be acted on. Both can show at once — an issue can be
+          Closed with a proposal still pending — so this is not an else branch. */}
+      {lock.isClosed && <ClosedBanner />}
 
       {/* Pending-approval banner (all sections) */}
       {issue.proposedStatus && (
@@ -363,7 +389,24 @@ export function IssueWorkspaceScreen() {
         it is not a sixth route, so there is no URL for it to occupy, but it
         scrolls exactly like the five that are.
       */}
-      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      {/*
+        `position: relative` is a GUARD, not layout — nothing here is positioned
+        against it.
+
+        An `overflow: auto` box does not become a containing block for
+        absolutely-positioned descendants. So any `position: absolute` element
+        inside a section — a visually-hidden file input, a dropdown panel, a
+        focus sentinel — that lacks a positioned ancestor of its own resolves
+        against the INITIAL containing block, and adds its offset to the
+        DOCUMENT's scroll height rather than this region's. The page then grows a
+        second scrollbar that scrolls nothing visible, which is exactly what the
+        Investigation tab's attachment input did (measured: 849px against a 768px
+        viewport).
+
+        That component was fixed at its source. This line means the next one
+        cannot reintroduce the symptom app-wide while its own bug is found.
+      */}
+      <div ref={scrollRef} style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {/*
           The rail, applied a second time. `PageContainer` keeps its own
           `max-width: 1800` so wide viewports still centre, and its BOTTOM padding
@@ -373,7 +416,7 @@ export function IssueWorkspaceScreen() {
           margin.
         */}
         <PageContainer wide>
-          {priorityOpen ? <PriorityTab issueId={id} /> : <Outlet context={context} />}
+          {priorityOpen ? <PriorityTab issueId={id} canEdit={lock.isEditable} /> : <Outlet context={context} />}
         </PageContainer>
       </div>
 
