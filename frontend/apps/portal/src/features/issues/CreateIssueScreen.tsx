@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronDown, ChevronUp, CornerDownRight, CopyCheck, Crown, GitBranch, History, Link, Link2, RotateCcw, Search, SearchX, Send, Sparkles, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, CornerDownRight, CopyCheck, Crown, Eye, GitBranch, History, Link, Link2, RotateCcw, Search, SearchX, Send, Sparkles, X } from 'lucide-react'
 // `SOURCE`, `SOURCE_KEYS` and `SourceKey` went with the source selector, and
 // `SourceBadge` has now followed them: the suggestion card rendered one for the
 // issues it suggests, but the design's card has no source badge at all.
@@ -18,6 +18,7 @@ import { fmtDate, fmtDateTime } from '@/data/util'
 import type { Issue } from '@/data/types'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { SystemClassificationPicker, type ClassificationValue } from './SystemClassificationPicker'
+import { ExistingIssueModal } from './ExistingIssueModal'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { relatedRank } from './issue-entry/relatedRank'
@@ -53,14 +54,32 @@ export function CreateIssueScreen() {
   const [sameSearchQ, setSameSearchQ] = useState('')
   const [historyFor, setHistoryFor] = useState<string | null>(null)
   /**
+   * The issue open in the existing-issue popup, by id.
+   *
+   * The design opens this from a SEARCH RESULT (`onView → openExistingModal`) —
+   * a way to inspect an issue before deciding to link it. Suggestion cards have
+   * no such affordance; they carry View History instead.
+   */
+  const [inspecting, setInspecting] = useState<string | null>(null)
+  /**
    * Link confirmation — a governance control, not a courtesy prompt.
    *
    * The design gates EVERY link action behind a justification of at least 20
    * characters: `openLinkConfirm('standalone', id)` from a card, and
    * `openLinkConfirm('group', parentId)` from a group card, which expands to all
-   * its members. UNLINK IS NOT GATED by this modal — it routes to a separate
-   * confirm that asks for no justification, so removing a link is cheaper than
-   * making one. That asymmetry is deliberate and is preserved here.
+   * its members.
+   *
+   * ⚠️ UNLINK IS UNGATED **ON THIS SCREEN ONLY** — corrected. An earlier version
+   * of this note said unlink is never gated and read that as a deliberate design
+   * principle ("removing a link is cheaper than making one"). That generalised
+   * from one screen: Issue Entry routes unlink to a plain confirm, but the
+   * WORKSPACE gates it behind its own justification flow (`unlinkJustify.*` on
+   * `wsExistingModal`).
+   *
+   * The real rule is narrower and has an obvious reason: on Issue Entry the
+   * issue does not exist yet, so an unlink discards a draft decision and there
+   * is nothing to audit. In the workspace it undoes a recorded relationship
+   * between two live issues, which is why that one asks.
    */
   const [linkConfirm, setLinkConfirm] = useState<{ ids: string[]; label: string } | null>(null)
   const [justify, setJustify] = useState('')
@@ -678,6 +697,7 @@ export function CreateIssueScreen() {
                             onLink={() => askToLink([e.issue!.id], e.issue!.id)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.issue!.id))}
                             onViewHistory={() => setHistoryFor(e.issue!.id)}
+                            onInspect={() => setInspecting(e.issue!.id)}
                           />
                         ),
                       )}
@@ -879,6 +899,15 @@ export function CreateIssueScreen() {
         </div>
       </Modal>
 
+      <ExistingIssueModal
+        issue={inspecting ? (store.issues.find((i) => i.id === inspecting) ?? null) : null}
+        linked={!!inspecting && linkedIds.includes(inspecting)}
+        onClose={() => setInspecting(null)}
+        onLink={() => { if (inspecting) { setInspecting(null); askToLink([inspecting], inspecting) } }}
+        onUnlink={() => { if (inspecting) setLinkedIds((l) => l.filter((x) => x !== inspecting)) }}
+        onOpenIssue={(id) => nav(`/issues/${id}`)}
+      />
+
       <ClearFormConfirmModal open={clearOpen} onClose={() => setClearOpen(false)} onConfirm={clearAll} />
 
       {created && (
@@ -926,6 +955,7 @@ function SuggestionCard({
   onLink,
   onUnlink,
   onViewHistory,
+  onInspect,
 }: {
   issue: Issue
   linked: boolean
@@ -935,6 +965,12 @@ function SuggestionCard({
   onLink: () => void
   onUnlink: () => void
   onViewHistory: () => void
+  /**
+   * Search results only. The design gives a search hit a way to inspect the
+   * issue before linking (`onView → openExistingModal`); suggestion cards have
+   * no equivalent, so this is absent there rather than rendered disabled.
+   */
+  onInspect?: () => void
 }) {
   // `Model: … · Classification: … · Issue Date: …` — the design's `_rowMeta`.
   // Note the TWO spaces either side of the outer separators, and that every
@@ -976,6 +1012,12 @@ function SuggestionCard({
           )}
         </div>
         <div className={entryStyles.cardActions}>
+          {onInspect && (
+            <button type="button" className={entryStyles.cardHistoryBtn} onClick={onInspect}>
+              <Icon icon={Eye} size={14} />
+              View
+            </button>
+          )}
           <button type="button" className={entryStyles.cardHistoryBtn} onClick={onViewHistory}>
             <Icon icon={History} size={14} />
             View History
@@ -1071,7 +1113,10 @@ function GroupCard({
         <div className={entryStyles.cardActions}>
           <button type="button" className={entryStyles.cardHistoryBtn} onClick={onViewHistory}>
             <Icon icon={History} size={14} />
-            View Group History
+            {/* The label differs by variant in the design — "View Group History"
+                on a suggestion, "View Linked Issue History" in search results.
+                Same asymmetry family as the Standalone badge; not unified. */}
+            {variant === 'search' ? 'View Linked Issue History' : 'View Group History'}
           </button>
           <button
             type="button"

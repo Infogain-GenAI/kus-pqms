@@ -831,12 +831,14 @@ describe('linking requires a justification', () => {
     expect(box.value.length).toBe(500)
   })
 
-  it('does NOT gate unlink — removing a link is cheaper than making one', () => {
+  it('does NOT gate unlink ON THIS SCREEN — the workspace does gate it', () => {
     openBlock()
     linkVia(/^link to issue$/i)
     fireEvent.click(screen.getAllByRole('button', { name: /^unlink from issue$/i })[0])
-    // The design routes unlink to a separate confirm that asks for no
-    // justification; it must not re-open this modal.
+    // Issue Entry routes unlink to a plain confirm; it must not re-open this
+    // modal. NOT a general rule — the workspace gates unlink behind its own
+    // justification, because there it undoes a recorded relationship between two
+    // live issues rather than a decision on a draft that does not exist yet.
     expect(body()).not.toMatch(/\d+ linked/)
   })
 
@@ -847,5 +849,88 @@ describe('linking requires a justification', () => {
     // Registered successfully — the justification rides along as an audit entry
     // rather than being discarded with the draft.
     expect(body()).toMatch(/registered|submitted|EE-\d+/i)
+  })
+})
+
+/**
+ * The existing-issue popup.
+ *
+ * Opened from a SEARCH RESULT only — the way to inspect an issue before deciding
+ * to link it. Suggestion cards have no equivalent; they carry View History.
+ */
+describe('inspecting an issue before linking it', () => {
+  const openSearchAndInspect = (query = '-26') => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: query } })
+    const view = screen.queryAllByRole('button', { name: /^view$/i })[0]
+    if (view) fireEvent.click(view)
+  }
+
+  it('offers the inspect affordance on search results and NOT on suggestions', () => {
+    renderCreate()
+    fillCompleteForm()
+    // Suggestions carry View History; the bare "View" belongs to search results.
+    expect(screen.queryAllByRole('button', { name: /^view$/i })).toHaveLength(0)
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: '-26' } })
+    expect(screen.queryAllByRole('button', { name: /^view$/i }).length).toBeGreaterThan(0)
+  })
+
+  it('shows the sections the design has, including an inline Related history', () => {
+    openSearchAndInspect()
+    expect(body()).toContain('Classification')
+    expect(body()).toContain('Issue description')
+    expect(body()).toContain('Investigation summary')
+    expect(body()).toContain('Actions taken')
+    // ⚠️ INLINE AND ALWAYS — not behind a toggle. There must be no expander.
+    expect(body()).toContain('Related history')
+    expect(screen.queryByRole('button', { name: /show .*history/i })).toBeNull()
+  })
+
+  it('offers View Issue, which leaves for that issue\'s own page', () => {
+    openSearchAndInspect()
+    expect(screen.getByRole('button', { name: /view issue/i })).toBeTruthy()
+  })
+
+  it('links from inside the popup, and that link is still gated', () => {
+    openSearchAndInspect()
+    fireEvent.click(screen.getByRole('button', { name: /^link issue$/i }))
+    // Inspecting is not a way around the justification.
+    expect(screen.getByRole('textbox', { name: /justification/i })).toBeTruthy()
+  })
+
+  it('offers Unlink inside the popup for an issue already linked', () => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), { target: { value: '-26' } })
+    linkVia(/^link to issue$/i)
+    fireEvent.click(screen.queryAllByRole('button', { name: /^view$/i })[0])
+    // The popup reflects link state: a linked issue offers Unlink, not Link.
+    expect(screen.queryByRole('button', { name: /^link issue$/i })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /^unlink issue$/i }))
+    expect(body()).not.toMatch(/\d+ linked/)
+  })
+
+  it('navigates away on View Issue rather than linking', () => {
+    openSearchAndInspect()
+    fireEvent.click(screen.getByRole('button', { name: /view issue/i }))
+    // Leaving to the record's own page must not have linked it on the way out.
+    expect(body()).not.toMatch(/\d+ linked/)
+  })
+
+  it('closes without touching the link state', () => {
+    openSearchAndInspect()
+    fireEvent.click(screen.getByRole('button', { name: /^close$/i }))
+    expect(body()).not.toMatch(/\d+ linked/)
+    expect(body()).not.toContain('Investigation summary')
+  })
+
+  it('closes on Escape', () => {
+    openSearchAndInspect()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(body()).not.toContain('Investigation summary')
   })
 })
