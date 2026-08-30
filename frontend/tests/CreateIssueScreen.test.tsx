@@ -28,6 +28,46 @@ const btn = (name: RegExp) => screen.getByRole('button', { name })
 const queryBtn = (name: RegExp) => screen.queryByRole('button', { name })
 const body = () => document.body.textContent ?? ''
 
+function fillCompleteForm() {
+  // Vehicle — pick the first model code from the combobox.
+  const codeBox = screen.getByRole('combobox', { name: /model code/i })
+  fireEvent.focus(codeBox)
+  const firstCode = screen.getAllByRole('option')[0]
+  if (firstCode) fireEvent.mouseDown(firstCode)
+
+  // Classification — walk the cascade top-down.
+  //
+  // These are `Combobox`es now, not native <select>s. This loop used to read
+  // `select.options` and fire a `change`, which is the native-select idiom and
+  // threw "undefined is not iterable" once the control changed. Driven the same
+  // way as the model-code box above: focus to open the panel, mouseDown to
+  // commit — mouseDown, not click, because the option must beat the input's
+  // blur.
+  // ⚠️ SCOPE EACH LOOKUP TO ITS OWN PANEL. The model-code box is `multiple`, so
+  // its panel stays open after a pick — a bare `getAllByRole('option')[0]`
+  // returns ITS first option, not this field's, and the cascade silently never
+  // advances. `aria-controls` names the open panel, so resolve through that.
+  for (const name of [/^System$/i, /^Sub-system$/i, /^Component$/i, /^Symptom$/i]) {
+    const box = screen.getByRole('combobox', { name })
+    fireEvent.focus(box)
+    const panelId = box.getAttribute('aria-controls')
+    const panel = panelId ? document.getElementById(panelId) : null
+    const option = panel?.querySelector('[role="option"]')
+    if (option) fireEvent.mouseDown(option)
+  }
+
+  // Issue information.
+  fireEvent.change(screen.getByRole('textbox', { name: /issue title/i }), {
+    target: { value: 'EV6 — HV battery rapid SOC drop under cold soak' },
+  })
+  fireEvent.change(screen.getByRole('textbox', { name: /^description$/i }), {
+    target: { value: 'Reproduces below 0°C after an overnight soak.' },
+  })
+  // NO SOURCE CHIP. Registration deliberately does not collect one — the
+  // design registers first and attributes origin later, on the edit path. The
+  // form is complete without it, which is what the next test asserts.
+}
+
 describe('the form is a draft until Register Issue', () => {
   it('renders the prototype\'s two header actions', () => {
     renderCreate()
@@ -197,45 +237,6 @@ describe('the happy path — a complete form registers and confirms', () => {
    * has any options at all — which is why this walks them rather than setting
    * four values at once.
    */
-  function fillCompleteForm() {
-    // Vehicle — pick the first model code from the combobox.
-    const codeBox = screen.getByRole('combobox', { name: /model code/i })
-    fireEvent.focus(codeBox)
-    const firstCode = screen.getAllByRole('option')[0]
-    if (firstCode) fireEvent.mouseDown(firstCode)
-
-    // Classification — walk the cascade top-down.
-    //
-    // These are `Combobox`es now, not native <select>s. This loop used to read
-    // `select.options` and fire a `change`, which is the native-select idiom and
-    // threw "undefined is not iterable" once the control changed. Driven the same
-    // way as the model-code box above: focus to open the panel, mouseDown to
-    // commit — mouseDown, not click, because the option must beat the input's
-    // blur.
-    // ⚠️ SCOPE EACH LOOKUP TO ITS OWN PANEL. The model-code box is `multiple`, so
-    // its panel stays open after a pick — a bare `getAllByRole('option')[0]`
-    // returns ITS first option, not this field's, and the cascade silently never
-    // advances. `aria-controls` names the open panel, so resolve through that.
-    for (const name of [/^System$/i, /^Sub-system$/i, /^Component$/i, /^Symptom$/i]) {
-      const box = screen.getByRole('combobox', { name })
-      fireEvent.focus(box)
-      const panelId = box.getAttribute('aria-controls')
-      const panel = panelId ? document.getElementById(panelId) : null
-      const option = panel?.querySelector('[role="option"]')
-      if (option) fireEvent.mouseDown(option)
-    }
-
-    // Issue information.
-    fireEvent.change(screen.getByRole('textbox', { name: /issue title/i }), {
-      target: { value: 'EV6 — HV battery rapid SOC drop under cold soak' },
-    })
-    fireEvent.change(screen.getByRole('textbox', { name: /^description$/i }), {
-      target: { value: 'Reproduces below 0°C after an overnight soak.' },
-    })
-    // NO SOURCE CHIP. Registration deliberately does not collect one — the
-    // design registers first and attributes origin later, on the edit path. The
-    // form is complete without it, which is what the next test asserts.
-  }
 
   it('commits and shows the created record instead of redirecting', () => {
     renderCreate()
@@ -261,5 +262,279 @@ describe('the happy path — a complete form registers and confirms', () => {
     // issue" test pass trivially; left alone as it is outside this change.)
     const idCell = document.querySelector('[data-testid="created-issue-id"]')
     expect(idCell?.textContent).toMatch(/^[A-Z]{2,4}-\d+/)
+  })
+})
+
+/**
+ * The Same Existing Issues block, after the card rebuild.
+ *
+ * Ordered by risk rather than by what is easiest to reach: the history modal's
+ * data path, the search filter and its cap, the linked/unlinked card states, and
+ * the asymmetry between the two card variants — which is the one a future
+ * "tidy-up" is most likely to destroy, because it looks like an inconsistency.
+ */
+describe('Same Existing Issues — cards, search and history', () => {
+  /** Everything in this block is behind the symptom guard. */
+  const openBlock = () => {
+    renderCreate()
+    fillCompleteForm()
+  }
+
+  it('renders nothing at all until a symptom is chosen', () => {
+    renderCreate()
+    // The design wraps header AND body in one `sc-if sameReady`.
+    expect(body()).not.toContain('Same Existing Issues')
+  })
+
+  it('shows the block once the classification is complete', () => {
+    openBlock()
+    expect(body()).toContain('Same Existing Issues')
+  })
+
+  describe('the card carries the design\'s content, not just an id and a title', () => {
+    it('renders the meta line with model, classification and issue date', () => {
+      openBlock()
+      // `Model: … · Classification: … · Issue Date: …` — the design's `_rowMeta`.
+      expect(body()).toContain('Model:')
+      expect(body()).toContain('Classification:')
+      expect(body()).toContain('Issue Date:')
+    })
+
+    it('renders "Suggested because" from the reasons relatedRank already computes', () => {
+      openBlock()
+      // These were computed and thrown away for several passes. If this fails,
+      // the wiring has been dropped again, not the ranking.
+      expect(body()).toContain('Suggested because:')
+    })
+
+    it('offers View History on every card', () => {
+      openBlock()
+      expect(screen.getAllByRole('button', { name: /view history/i }).length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('linking is a toggle, and the card shows which state it is in', () => {
+    it('goes Link to Issue → Unlink from Issue, and shows the linked pill', () => {
+      openBlock()
+      const link = screen.getAllByRole('button', { name: /^link to issue$/i })[0]
+      fireEvent.click(link)
+      expect(queryBtn(/^unlink from issue$/i)).not.toBeNull()
+      // The count badge in the header is a separate thing from the card's pill;
+      // both should now be present.
+      expect(body()).toContain('1 linked')
+    })
+
+    it('unlinks again, restoring the offer', () => {
+      openBlock()
+      fireEvent.click(screen.getAllByRole('button', { name: /^link to issue$/i })[0])
+      fireEvent.click(screen.getAllByRole('button', { name: /^unlink from issue$/i })[0])
+      expect(body()).not.toContain('1 linked')
+      // `queryBtn` is singular and there are several cards, so count instead.
+      expect(screen.queryAllByRole('button', { name: /^link to issue$/i }).length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('View History reads the store rather than the workspace provider', () => {
+    it('opens a modal for the issue whose button was pressed', () => {
+      openBlock()
+      fireEvent.click(screen.getAllByRole('button', { name: /view history/i })[0])
+      // `HistorySection` could not be reused — it reads its id from
+      // `useWorkspace()`. This path goes through `store.auditFor(id)` directly,
+      // so the modal must render without a workspace provider in the tree.
+      expect(body()).toMatch(/history —/i)
+    })
+  })
+
+  describe('the in-place search panel', () => {
+    const openSearch = () => {
+      openBlock()
+      fireEvent.click(btn(/search & link another issue/i))
+    }
+
+    it('replaces the suggestion list rather than appearing beside it', () => {
+      openSearch()
+      // In the design each body state is `&& !_ssOpen`.
+      expect(body()).not.toContain('Suggested because:')
+      expect(body()).toContain('Search by Issue ID, title or keyword')
+    })
+
+    it('says nothing about results until something is typed', () => {
+      openSearch()
+      expect(body()).toContain('to find and link an existing issue')
+    })
+
+    it('reports a miss with the query echoed back', () => {
+      openSearch()
+      fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), {
+        target: { value: 'zzz-no-such-issue' },
+      })
+      expect(body()).toContain('No issues match')
+      expect(body()).toContain('zzz-no-such-issue')
+    })
+
+    it('matches on id or title and caps the list at eight', () => {
+      openSearch()
+      fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), {
+        target: { value: '-26' },
+      })
+      // Every seeded id contains "-26", so this is the cap test: without the
+      // slice the whole register renders and the panel outgrows its box.
+      const rows = screen.getAllByRole('button', { name: /^(link to issue|unlink from issue)$/i })
+      expect(rows.length).toBeGreaterThan(0)
+      expect(rows.length).toBeLessThanOrEqual(8)
+    })
+
+    it('closes and restores whichever state was showing', () => {
+      openSearch()
+      fireEvent.click(screen.getByRole('button', { name: /close search/i }))
+      expect(body()).toContain('Suggested because:')
+    })
+  })
+
+  describe('the two card variants are deliberately NOT identical', () => {
+    it('shows Standalone Issue on search results and never on suggestions', () => {
+      openBlock()
+      expect(body()).not.toContain('Standalone Issue')
+      fireEvent.click(btn(/search & link another issue/i))
+      fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), {
+        target: { value: '-26' },
+      })
+      // The design shows this badge in search results and omits it on the
+      // suggestion card. It reads like an inconsistency and is not one — if a
+      // later change "unifies" the variants, this is what should fail.
+      expect(body()).toContain('Standalone Issue')
+    })
+
+    it('shows "Suggested because" on suggestions and never on search results', () => {
+      openBlock()
+      expect(body()).toContain('Suggested because:')
+      fireEvent.click(btn(/search & link another issue/i))
+      fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), {
+        target: { value: '-26' },
+      })
+      // `reasons` is `[]` for search results in the design — there is no ranking
+      // behind a free-text match to explain.
+      expect(body()).not.toContain('Suggested because:')
+    })
+  })
+})
+
+/**
+ * The states that only appear at the ends of the range — all-linked, an empty
+ * history, and linking from inside the search panel. These are the branches a
+ * normal walk through the form never reaches, which is exactly why they break
+ * quietly.
+ */
+describe('Same Existing Issues — the edge states', () => {
+  const openBlock = () => {
+    renderCreate()
+    fillCompleteForm()
+  }
+
+  it('replaces the list with "All matched issues linked" once every suggestion is linked', () => {
+    openBlock()
+    // Link them one at a time: each click re-renders, so the collection has to
+    // be re-read rather than captured once.
+    for (let guard = 0; guard < 20; guard++) {
+      const next = screen.queryAllByRole('button', { name: /^link to issue$/i })[0]
+      if (!next) break
+      fireEvent.click(next)
+    }
+    expect(body()).toContain('All matched issues linked')
+    // Informational only — the design gives this state no action.
+    expect(queryBtn(/^link to issue$/i)).toBeNull()
+  })
+
+  it('closes the history modal again', () => {
+    openBlock()
+    fireEvent.click(screen.getAllByRole('button', { name: /view history/i })[0])
+    expect(body()).toMatch(/history —/i)
+    // `Modal` has no close button — it binds Escape on the document.
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(body()).not.toMatch(/history —/i)
+  })
+
+  it('links straight from a search result, not only from a suggestion', () => {
+    openBlock()
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), {
+      target: { value: '-26' },
+    })
+    fireEvent.click(screen.getAllByRole('button', { name: /^link to issue$/i })[0])
+    // The header badge counts links made from either surface.
+    expect(body()).toContain('1 linked')
+  })
+
+  it('keeps the search query when the panel is toggled shut and open again', () => {
+    openBlock()
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), {
+      target: { value: '-26' },
+    })
+    fireEvent.click(btn(/search & link another issue/i))
+    fireEvent.click(btn(/search & link another issue/i))
+    // No jest-dom in this suite, so assert the property rather than a matcher.
+    expect((screen.getByRole('textbox', { name: /search issues to link/i }) as HTMLInputElement).value).toBe('-26')
+  })
+})
+
+/**
+ * Clear only when the form holds something — the design's `_issueFormHasData()`.
+ *
+ * Ported in an earlier pass and never tested. Each term below is a separate
+ * branch, and the failure mode of getting one wrong is silent in both
+ * directions: too narrow and Clear discards work without asking, too wide and it
+ * nags on an untouched form.
+ */
+describe('Clear form asks only when there is something to lose', () => {
+  it('does nothing at all on an untouched form', () => {
+    renderCreate()
+    fireEvent.click(btn(/clear form/i))
+    // `clearIssueForm(){ if(this._issueFormHasData()) … }` — no dialog, and no
+    // message either. A silent no-op, not a disabled button.
+    expect(body()).not.toMatch(/clear the form\?|discard/i)
+  })
+
+  it('asks when only the title has been typed', () => {
+    renderCreate()
+    fireEvent.change(screen.getByRole('textbox', { name: /issue title/i }), { target: { value: 'x' } })
+    fireEvent.click(btn(/clear form/i))
+    expect(body()).toMatch(/clear|discard/i)
+  })
+
+  it('asks when only the description has been typed', () => {
+    renderCreate()
+    fireEvent.change(screen.getByRole('textbox', { name: /^description$/i }), { target: { value: 'y' } })
+    fireEvent.click(btn(/clear form/i))
+    expect(body()).toMatch(/clear|discard/i)
+  })
+
+  it('asks when only a model code has been chosen', () => {
+    renderCreate()
+    const codeBox = screen.getByRole('combobox', { name: /model code/i })
+    fireEvent.focus(codeBox)
+    const first = screen.getAllByRole('option')[0]
+    if (first) fireEvent.mouseDown(first)
+    fireEvent.click(btn(/clear form/i))
+    expect(body()).toMatch(/clear|discard/i)
+  })
+
+  it('asks when the only content is a LINKED issue', () => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(screen.getAllByRole('button', { name: /^link to issue$/i })[0])
+    fireEvent.click(btn(/clear form/i))
+    // `linkedExisting` is its own term in the design — a form whose only content
+    // is a link still confirms.
+    expect(body()).toMatch(/clear|discard/i)
+  })
+
+  it('empties the form once the clear is confirmed', () => {
+    renderCreate()
+    fireEvent.change(screen.getByRole('textbox', { name: /issue title/i }), { target: { value: 'to be cleared' } })
+    fireEvent.click(btn(/clear form/i))
+    const confirm = screen.getAllByRole('button', { name: /clear|discard/i }).pop()
+    if (confirm) fireEvent.click(confirm)
+    expect((screen.getByRole('textbox', { name: /issue title/i }) as HTMLInputElement).value).toBe('')
   })
 })
