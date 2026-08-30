@@ -18,7 +18,7 @@ import { IssueExistingPreviewModal } from './IssueExistingPreviewModal'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { RequestNewSystemModal } from './classification/RequestNewSystemModal'
-import { relatedRank } from './issue-entry/relatedRank'
+import { relatedRank } from '@/data/relatedRank'
 import { DtcChipInput } from './issue-entry/DtcChipInput'
 import entryStyles from './issue-entry/issue-entry.module.css'
 import { useRole } from '@/data/roles'
@@ -64,7 +64,7 @@ export function CreateIssueScreen() {
   const componentLabel = compId ? label(comps, compId) : undefined
 
   /**
-   * Candidates for "Same Existing Issues", ranked — see `issue-entry/relatedRank.ts`.
+   * Candidates for "Same Existing Issues", ranked — see `@/data/relatedRank`.
    *
    * READINESS IS STILL GATED ON SYMPTOM, and that matches the prototype
    * (`sameReady = !!(f0.symptom && …)`); it was never the defect. What changed is

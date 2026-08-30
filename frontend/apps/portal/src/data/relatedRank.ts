@@ -31,13 +31,25 @@ import type { Issue } from '@/data/types'
  * is our `dtcCodes`. Its description keywords come from `p.summary`; the
  * equivalent field on our `Issue` is `description`.
  *
- * ─── SCOPE: ISSUE ENTRY ONLY ────────────────────────────────────────────────
+ * ─── SCOPE — THE SECOND SITE IS NOW FIXED TOO (2026-08-31) ──────────────────
  *
- * `store.correlations()` (data/store.tsx:206-210) carries the SAME exact-symptom
- * defect and feeds the workspace's Manage-Links candidate list. It is left alone
- * here on purpose — changing it would alter a different screen's behaviour in a
- * pass scoped to Issue Entry. Recorded rather than silently absorbed; it is a
- * real second instance of this bug, not a duplicate of this one.
+ * This note used to say the ranker was for Issue Entry only, and that
+ * `store.correlations()` carried the SAME exact-symptom defect but was being
+ * left alone as out of scope for that pass. That follow-up has happened:
+ * `correlations()` now calls this function, so Issue Entry and the workspace's
+ * Manage-Links modal share ONE definition of "related".
+ *
+ * The measurement, since it is what justified the change: under exact-symptom
+ * equality **20 of the 35 seeded issues returned no candidates at all**, so the
+ * modal reported none for well over half the register.
+ *
+ * ─── AND THAT IS WHY THIS FILE LIVES IN `data/` ─────────────────────────────
+ *
+ * It was `features/issues/issue-entry/relatedRank.ts` while Issue Entry was its
+ * only consumer. `data/` is a leaf layer that has never imported from
+ * `features/`, so leaving it there and having the store reach upward would have
+ * been the first such inversion. Nothing about the logic changed in the move —
+ * it imports only `Issue` from `data/types`.
  */
 
 /** One ranked candidate. `reasons` drives the "Suggested because: …" line. */

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import type { StatusKey } from '@pqms/ui-library'
+import { relatedRank } from './relatedRank'
 import type {
   ActivityType,
   AppNotification,
@@ -195,6 +196,12 @@ interface StoreValue {
   markRead: (id: string) => void
 }
 
+/**
+ * How many link candidates `correlations` returns. Matches Issue Entry's own
+ * cap, so the same issue suggests the same shortlist in both places.
+ */
+const MAX_LINK_CANDIDATES = 8
+
 const StoreContext = createContext<StoreValue | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -230,11 +237,70 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (level: ClassLevel, parentId?: string) => classification.filter((c) => c.level === level && (parentId ? c.parentId === parentId : true)),
     [classification],
   )
+  /**
+   * Link candidates for the Manage-Related-Issues modal, ranked.
+   *
+   * ─── IT WAS EXACT-SYMPTOM EQUALITY, AND THAT ALMOST NEVER MATCHED ───────────
+   *
+   * The previous body was `i.symptom === me.symptom` — a single string
+   * comparison on one field. Measured against the seed: **20 of 35 issues
+   * returned ZERO candidates**, so the modal rendered "No classification-matched
+   * candidates" for well over half the register, and the feature read as broken
+   * rather than empty.
+   *
+   * ⚠️ NOTE THE FAILURE MODE, because it is why this survived so long: an empty
+   * candidate list compiles cleanly, renders a legitimate-looking empty state,
+   * and captures pixel-identically. Neither a typecheck nor a fidelity snapshot
+   * can see it. Only reading the predicate, or exercising the screen against real
+   * data, finds this class of defect.
+   *
+   * `issue-entry/relatedRank.ts` recorded this exact instance as a KNOWN SECOND
+   * SITE of the bug it was written to fix on Issue Entry, and deliberately left
+   * it alone as out of scope for that pass. This is that follow-up.
+   *
+   * ─── WHY THE SAME RANKER RATHER THAN A LOOSER PREDICATE ─────────────────────
+   *
+   * Because "what counts as related?" must have one answer. Issue Entry and this
+   * modal are the same question asked at two moments — before an issue exists and
+   * after — and two different similarity rules would mean a candidate suggested
+   * at entry that cannot be found again at link time.
+   *
+   * `relatedRank` moved from `features/issues/issue-entry/` to `data/` for this:
+   * `data/` is a leaf layer that has never imported from `features/`, and the
+   * store reaching upward would have been the first inversion.
+   */
   const correlations = useCallback(
     (issueId: string) => {
       const me = issues.find((i) => i.id === issueId)
-      if (!me?.symptom) return []
-      return issues.filter((i) => i.id !== issueId && i.symptom === me.symptom && i.status !== 'closed')
+      if (!me) return []
+
+      /*
+       * Closed issues are excluded from the POOL, exactly as before — linking to
+       * a settled record is not a useful suggestion. Kept as a pre-filter rather
+       * than folded into the ranker, which is deliberately about similarity only
+       * and knows nothing about lifecycle.
+       */
+      const pool = issues.filter((i) => i.status !== 'closed')
+
+      return relatedRank(
+        {
+          system: me.system,
+          subSystem: me.subSystem,
+          component: me.component,
+          symptom: me.symptom,
+          title: me.title,
+          description: me.description,
+          dtcCodes: me.dtcCodes,
+          modelCode: me.modelCode,
+        },
+        pool,
+        issueId,
+      )
+        // Same bound as Issue Entry. Without it a broad system match can return
+        // eleven rows into a modal that has room for a handful, and a list that
+        // long stops being a suggestion.
+        .slice(0, MAX_LINK_CANDIDATES)
+        .map((r) => r.issue)
     },
     [issues],
   )
