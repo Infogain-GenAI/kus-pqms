@@ -4,6 +4,7 @@ import { Button, SearchField, StatusBadge } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
 import { CardHead, SectionCard } from '@/app/chrome'
 import { useStore } from '@/data/store'
+import { IssueExistingPreviewModal } from './IssueExistingPreviewModal'
 
 /**
  * Search & link issue — the V4-V5 Issue Entry linking section, also reused by Issue
@@ -28,6 +29,8 @@ export function LinkIssuesSection({
 }) {
   const { issues, getIssue } = useStore()
   const [query, setQuery] = useState('')
+  /** The issue open in the preview modal, by id. Null when closed. */
+  const [previewId, setPreviewId] = useState<string | null>(null)
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -94,6 +97,13 @@ export function LinkIssuesSection({
                   {i.title}
                 </span>
                 <StatusBadge status={i.status} size="sm" />
+                {/* Preview before committing. This section is rendered inside
+                    Issue Entry AND inside the workspace's edit form, both of
+                    which hold unsaved state — so the preview is a modal here for
+                    the same reason it is one there. */}
+                <Button variant="link" size="sm" data-testid={`link-preview-${i.id}`} onClick={() => setPreviewId(i.id)}>
+                  Preview
+                </Button>
                 <Button variant="secondary" size="sm" iconLeft={<Icon icon={Link2} size={13} />} onClick={() => { onLink(i.id); setQuery('') }}>
                   Link
                 </Button>
@@ -126,6 +136,13 @@ export function LinkIssuesSection({
                   {issue ? issue.title : <em style={{ color: 'var(--text-muted)' }}>Issue not found</em>}
                 </span>
                 {issue && <StatusBadge status={issue.status} size="sm" />}
+                {/* Only when the issue still resolves — there is nothing to
+                    preview for an id whose record has gone. */}
+                {issue && (
+                  <Button variant="link" size="sm" data-testid={`link-preview-${id}`} onClick={() => setPreviewId(id)}>
+                    Preview
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" iconLeft={<Icon icon={Link2Off} size={13} />} onClick={() => onUnlink(id)}>
                   Unlink
                 </Button>
@@ -140,6 +157,19 @@ export function LinkIssuesSection({
           No issues linked yet.
         </p>
       )}
+
+      {/*
+        Link and Unlink from inside the modal call the SAME `onLink`/`onUnlink`
+        this section was given, so the modal and the row buttons cannot end up
+        disagreeing about what is linked.
+      */}
+      <IssueExistingPreviewModal
+        issue={previewId ? (getIssue(previewId) ?? null) : null}
+        linked={!!previewId && linkedIds.includes(previewId)}
+        onClose={() => setPreviewId(null)}
+        onLink={(id) => { onLink(id); setQuery('') }}
+        onUnlink={onUnlink}
+      />
     </SectionCard>
   )
 }

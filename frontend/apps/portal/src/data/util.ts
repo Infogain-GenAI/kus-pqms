@@ -39,3 +39,17 @@ export function newId(prefix: string): string {
   const rand = (globalThis.crypto?.randomUUID?.() ?? String(Math.round(performance.now() * 1000))).slice(0, 8)
   return `${prefix}-${rand}`
 }
+
+/**
+ * "Jun 17" — a short month/day, for the fixed-width date column in the
+ * existing-issue preview's Related-history list.
+ *
+ * ⚠️ LOCAL TIME, MATCHING `fmtMDY` AND `fmtHM` ABOVE, NOT UTC. The Vue original
+ * formats the same column in UTC, which would put this app's dates one day out
+ * from every other date on screen for any viewer west of Greenwich — the audit
+ * row would read "Jun 16" beside a timestamp the History tab renders as Jun 17.
+ * Consistency inside this app beats matching the other app's helper.
+ */
+export function fmtMD(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })
+}
