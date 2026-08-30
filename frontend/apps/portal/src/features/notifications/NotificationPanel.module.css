@@ -96,7 +96,10 @@
   border: none;
   /* The left rail is the category's colour, and only on unread rows — reading a
      row removes the urgency cue along with the dot. */
-  border-left: 2px solid transparent;
+  /* `--border-width-emphasis` (2px). This was a token in `AppHeader` before the
+     notification panel was extracted into this component; the extraction landed
+     it back as a literal. Carried across rather than re-minted. */
+  border-left: var(--border-width-emphasis) solid transparent;
   background: var(--surface-card);
   text-align: left;
   cursor: pointer;
