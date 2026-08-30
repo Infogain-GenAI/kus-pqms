@@ -14,6 +14,8 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { StoreProvider, useStore } from '@/data/store'
+import { classificationErrors } from '@/data/assertSeed'
+import type { ClassificationNode, Issue } from '@/data/types'
 import type { Actor } from '@/data/types'
 
 const ACTOR: Actor = { name: 'Test Actor', role: 'SE' } as Actor
@@ -230,5 +232,55 @@ describe('savePriority — the manual-override path', () => {
     act(() => result.current.savePriority(id, { any: 30 }, {}, 'A', ACTOR))
 
     expect(result.current.priorityResult(id).isOverride).toBe(false)
+  })
+})
+
+/**
+ * The classification invariant's own failure paths.
+ *
+ * These never execute against the real seed — that is the point of the seed
+ * being valid — so they are exercised here with crafted rows. Without this the
+ * guard is four branches nobody has ever seen run.
+ */
+describe('classificationErrors catches each way a filing can be wrong', () => {
+  const TAXONOMY: ClassificationNode[] = [
+    { id: 's1', level: 'system', code: 'S1', label: 'Engine', issueCount: 0 },
+    { id: 'b1', level: 'subSystem', code: 'S1-01', label: 'Fuel System', parentId: 's1', issueCount: 0 },
+    { id: 'c1', level: 'component', code: 'S1-01-01', label: 'Fuel Injector', parentId: 'b1', issueCount: 0 },
+    { id: 'm1', level: 'symptom', code: 'S1-01-01-01', label: 'Engine vibration', parentId: 'c1', issueCount: 0 },
+  ]
+  const row = (over: Partial<Issue>) =>
+    ({ id: 'X-1', system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', ...over }) as Issue
+
+  it('accepts a fully valid path', () => {
+    expect(classificationErrors([row({})], TAXONOMY)).toEqual([])
+  })
+
+  it('skips an issue with no classification at all', () => {
+    // Registration can precede triage, so "unclassified" is not "mis-classified".
+    const blank = { id: 'X-2' } as Issue
+    expect(classificationErrors([blank], TAXONOMY)).toEqual([])
+  })
+
+  it('rejects an unknown system', () => {
+    expect(classificationErrors([row({ system: 'Teleportation' })], TAXONOMY)[0]).toMatch(/system .* not in the taxonomy/)
+  })
+
+  it('rejects a sub-system that exists but not under that system', () => {
+    expect(classificationErrors([row({ subSystem: 'Rack' })], TAXONOMY)[0]).toMatch(/sub-system .* not under/)
+  })
+
+  it('rejects a component that is not under its sub-system', () => {
+    // The exact defect the seed carried: the sub-system name repeated as the component.
+    expect(classificationErrors([row({ component: 'Fuel System' })], TAXONOMY)[0]).toMatch(/component .* not under/)
+  })
+
+  it('rejects a symptom that is not under its component', () => {
+    expect(classificationErrors([row({ symptom: 'Harsh upshift' })], TAXONOMY)[0]).toMatch(/symptom .* not under/)
+  })
+
+  it('reports one error per bad issue rather than stopping at the first', () => {
+    const errs = classificationErrors([row({ system: 'Nope' }), row({ id: 'X-3', symptom: 'Nope' })], TAXONOMY)
+    expect(errs).toHaveLength(2)
   })
 })

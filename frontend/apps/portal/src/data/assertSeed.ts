@@ -1,5 +1,5 @@
-import { NOW } from './types'
-import { ISSUES, NOTIFICATIONS } from './seed'
+import { NOW, type ClassLevel, type ClassificationNode, type Issue } from './types'
+import { CLASSIFICATION, ISSUES, NOTIFICATIONS } from './seed'
 
 // Regression gate for the dataset's fixed "today" — the export's own _todayBase() is a
 // hardcoded new Date(2026,6,9) (Jul 9 2026), and every relative label in the UX resolves
@@ -20,6 +20,47 @@ function failGroup(msg: string): never {
  * hand-tagging breaks. All four failures are silent in the UI — a wrong parent
  * or a dropped member still renders a perfectly plausible card.
  */
+/**
+ * Every issue is filed against a path that exists in the taxonomy.
+ *
+ * Half the seed failed this before the design's full tree was ported — issues
+ * were classified against labels no picker could offer, so classification-driven
+ * features silently could not reach them. A count in a report rots; this does not.
+ *
+ * Exported as a PURE function over its inputs so its failure paths can be tested
+ * with crafted rows. Wired to the real seed by `assertSeedAnchors`; the failures
+ * are the whole point of it and would otherwise never execute.
+ */
+export function classificationErrors(
+  issues: Pick<Issue, 'id' | 'system' | 'subSystem' | 'component' | 'symptom'>[],
+  taxonomy: ClassificationNode[],
+): string[] {
+  const at = (level: ClassLevel, label: string, parentId?: string) =>
+    taxonomy.find((c) => c.level === level && c.label === label && (parentId === undefined || c.parentId === parentId))
+
+  const errors: string[] = []
+  for (const issue of issues) {
+    // An unclassified issue is legitimate — registration can precede triage.
+    if (![issue.system, issue.subSystem, issue.component, issue.symptom].some(Boolean)) continue
+
+    const sys = at('system', issue.system ?? '')
+    if (!sys) { errors.push(`${issue.id}: system "${issue.system}" is not in the taxonomy`); continue }
+    const sub = at('subSystem', issue.subSystem ?? '', sys.id)
+    if (!sub) { errors.push(`${issue.id}: sub-system "${issue.subSystem}" is not under "${issue.system}"`); continue }
+    const cmp = at('component', issue.component ?? '', sub.id)
+    if (!cmp) { errors.push(`${issue.id}: component "${issue.component}" is not under "${issue.subSystem}"`); continue }
+    if (!at('symptom', issue.symptom ?? '', cmp.id)) {
+      errors.push(`${issue.id}: symptom "${issue.symptom}" is not under "${issue.component}"`)
+    }
+  }
+  return errors
+}
+
+function assertIssueClassification(): void {
+  const errors = classificationErrors(ISSUES, CLASSIFICATION)
+  if (errors.length) failGroup(errors.join('; '))
+}
+
 function assertIssueGroups(): void {
   const byGroup = new Map<string, typeof ISSUES>()
   const ids = new Set(ISSUES.map((i) => i.id))
@@ -58,6 +99,7 @@ function assertIssueGroups(): void {
 
 export function assertSeedAnchors(): void {
   assertIssueGroups()
+  assertIssueClassification()
   if (NOW !== '2026-07-09T09:00:00Z') fail(`NOW is ${NOW}, expected 2026-07-09T09:00:00Z`)
 
   // The rows the prototype dates relative to the anchor ('Today' / 'Yesterday' / '2h ago').
