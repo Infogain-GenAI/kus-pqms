@@ -18,6 +18,12 @@ import App from './App'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
 import { initMonitoring } from '@/shared/monitoring'
+/*
+ * i18n, imported for its SIDE EFFECT — it initialises the i18next instance every
+ * `*.i18n.ts` registers its namespace against. Imported here rather than lazily
+ * so the instance exists before any component's own `.i18n.ts` side effect runs.
+ */
+import '@/i18n'
 
 /*
  * Error monitoring, BEFORE anything else runs — an error thrown while the tree

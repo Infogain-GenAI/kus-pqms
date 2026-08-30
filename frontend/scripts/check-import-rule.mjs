@@ -21,6 +21,7 @@
 import { ESLint } from 'eslint'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { JSX_COPY_MESSAGE } from './ds-messages.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -77,11 +78,58 @@ if (falsePositives.length === 0) {
   failures++
 }
 
+/* -------------------------------------------------------------------------- */
+/* The JSX-copy selector                                                      */
+/* -------------------------------------------------------------------------- */
+//
+// ⚠️ ADDED BECAUSE THIS EXACT FAILURE HAPPENED, on the day the family landed.
+// The `copy` selector was defined but never inserted into the rules array. It
+// reported ZERO — and ds-gate RATCHETED THAT IN as a clean codebase. That is
+// precisely the silent-hole failure this file exists to prevent for imports,
+// reproduced one family over.
+//
+// A BURN-DOWN FAMILY IS MORE EXPOSED TO THIS THAN A REGRESSION GUARD, not less.
+// `imports` sits at 0, where a reported 0 is at least unsurprising and a broken
+// rule hides in plain sight. `copy` falls a little every pass — so a sudden drop
+// to 0 reads like a good day's work rather than a dead rule. The count is never
+// the instrument that catches this.
+
+const copyProbes = [
+  { label: 'JSX text between tags', code: 'export const A = () => <div>Hello world</div>\n' },
+  { label: 'JSX text beside an element', code: 'export const B = () => <p><b>x</b> Save changes</p>\n' },
+]
+
+for (const probe of copyProbes) {
+  const res = await eslint.lintText(probe.code, { filePath: join(root, 'apps/portal/src/__probe.tsx') })
+  const hits = res.flatMap((r) => r.messages).filter((m) => m.message === JSX_COPY_MESSAGE)
+  if (hits.length > 0) {
+    console.log(`v copy-rule: ${probe.label} — reported`)
+  } else {
+    console.error(`x copy-rule: ${probe.label} — NOT REPORTED.`)
+    console.error('     The selector is silent, and ds-gate would ratchet that in as success.')
+    failures++
+  }
+}
+
+// Punctuation-only text is MARKUP, not language — the separator dots and arrows
+// between elements. Flagging it would fill the burn-down with items nobody can
+// act on, and a rule whose output is mostly noise gets disabled rather than fixed.
+const punctuation = await eslint.lintText('export const C = () => <span>·</span>\n', {
+  filePath: join(root, 'apps/portal/src/__probe.tsx'),
+})
+if (punctuation.flatMap((r) => r.messages).filter((m) => m.message === JSX_COPY_MESSAGE).length === 0) {
+  console.log('v copy-rule: punctuation-only text — correctly ignored')
+} else {
+  console.error('x copy-rule: punctuation-only text is being FLAGGED. The selector is too broad.')
+  failures++
+}
+
 if (failures > 0) {
   console.error('')
-  console.error(`x import-rule: ${failures} check(s) failed — the import gate is not enforcing what it claims.`)
-  console.error('   Fix the pattern twins in eslint.adherence.config.mjs. Do not edit _adherence.oxlintrc.json.')
+  console.error(`x adherence self-test: ${failures} check(s) failed — a gate is not enforcing what it claims.`)
+  console.error('   Fix the selectors in eslint.adherence.config.mjs. Do not edit _adherence.oxlintrc.json.')
   process.exit(1)
 }
-console.log('v import-rule: gate is alive (3 violating shapes reported, barrel allowed).')
+console.log('v adherence self-test: import gate alive (3 shapes reported, barrel allowed);')
+console.log('  copy gate alive (2 shapes reported, punctuation ignored).')
 process.exit(0)

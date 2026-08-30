@@ -38,6 +38,8 @@ import { useStore } from '@/data/store'
 import { daysOpen, fmtMDY, modelCodeLabel } from '@/data/util'
 import { PRIORITY_BANDS } from '@/data/priorityMatrix'
 import { LinkedIssuesModal } from './LinkedIssuesModal'
+import { Trans, useTranslation } from 'react-i18next'
+import { NS } from './issue-list/IssueListScreen.i18n'
 import { downloadIssuesCsv, exportFilename } from './issue-list/issue-export'
 import type { Issue } from '@/data/types'
 
@@ -302,6 +304,7 @@ function DrawerSection({ icon, label, open, onToggle, children }: { icon: Lucide
 }
 
 export function IssueListScreen() {
+  const { t } = useTranslation(NS)
   const nav = useNavigate()
   const { user, scope } = useRole()
   const { issues, bulkStatus, bulkAssignRole, priorityResult } = useStore()
@@ -617,8 +620,8 @@ export function IssueListScreen() {
       {/* Title row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
         <div>
-          <h1 style={{ margin: 0, font: 'var(--fw-bold) 30px/1.15 var(--font-display)', letterSpacing: 'var(--ls-h1)', color: 'var(--text-primary)' }}>Issue list</h1>
-          <p style={{ margin: 'var(--space-2) 0 0', font: 'var(--fw-regular) var(--fs-body-md)/1 var(--font-body)', color: 'var(--text-secondary)' }}>Monitor, prioritize and manage product quality issues.</p>
+          <h1 style={{ margin: 0, font: 'var(--fw-bold) 30px/1.15 var(--font-display)', letterSpacing: 'var(--ls-h1)', color: 'var(--text-primary)' }}>{t('title')}</h1>
+          <p style={{ margin: 'var(--space-2) 0 0', font: 'var(--fw-regular) var(--fs-body-md)/1 var(--font-body)', color: 'var(--text-secondary)' }}>{t('subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           {/* Exports the CURRENT VIEW — every row the active tab, search and
@@ -631,9 +634,9 @@ export function IssueListScreen() {
             disabled={filtered.length === 0}
             onClick={() => downloadIssuesCsv(filtered, exportFilename())}
           >
-            Export
+            {t('export')}
           </Button>
-          <Button iconLeft={<Icon icon={Plus} size={16} />} onClick={() => nav('/issues/new')}>New issue</Button>
+          <Button iconLeft={<Icon icon={Plus} size={16} />} onClick={() => nav('/issues/new')}>{t('newIssue')}</Button>
         </div>
       </div>
 
@@ -672,8 +675,8 @@ export function IssueListScreen() {
         <div style={{ width: 300 }}>
           <SearchField value={q} onChange={(e) => setQ(e.target.value)} onClear={() => setQ('')} placeholder="Search by keyword..." />
         </div>
-        <Button variant="secondary" iconLeft={<Icon icon={SlidersHorizontal} size={15} />} onClick={() => { setDraft(flt); setDrawer('filter') }}>Filter</Button>
-        <Button variant="secondary" iconLeft={<Icon icon={Columns3} size={15} />} onClick={() => { setColsDraft(cols); setDrawer('cols') }}>Columns</Button>
+        <Button variant="secondary" iconLeft={<Icon icon={SlidersHorizontal} size={15} />} onClick={() => { setDraft(flt); setDrawer('filter') }}>{t('filter')}</Button>
+        <Button variant="secondary" iconLeft={<Icon icon={Columns3} size={15} />} onClick={() => { setColsDraft(cols); setDrawer('cols') }}>{t('columns')}</Button>
       </div>
 
       {/* Bulk-action bar */}
@@ -708,7 +711,7 @@ export function IssueListScreen() {
             style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', border: 'none', background: 'transparent', padding: 0, color: 'var(--neutral-0)', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', whiteSpace: 'nowrap', cursor: 'pointer' }}
           >
             <Icon icon={RefreshCw} size={16} />
-            Change Status
+            {t('bulkChangeStatus')}
           </button>
           <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
           {/* The bulk export is the SELECTION, not the view — that is the whole
@@ -721,7 +724,7 @@ export function IssueListScreen() {
             style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', border: 'none', background: 'transparent', padding: 0, color: 'var(--neutral-0)', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', whiteSpace: 'nowrap', cursor: 'pointer' }}
           >
             <Icon icon={FileOutput} size={16} />
-            Export
+            {t('bulkExport')}
           </button>
           <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
           <button
@@ -729,7 +732,7 @@ export function IssueListScreen() {
             style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', border: 'none', background: 'transparent', padding: 0, color: 'var(--neutral-0)', font: 'var(--fw-semibold) var(--fs-body-md)/1 var(--font-body)', whiteSpace: 'nowrap', cursor: 'pointer' }}
           >
             <Icon icon={UserCog} size={16} />
-            Assign Role
+            {t('bulkAssignRole')}
           </button>
           <span aria-hidden style={{ width: 'var(--border-width)', height: 'var(--space-5)', background: 'rgba(255,255,255,0.2)', flex: 'none' }} />
           <button
@@ -751,14 +754,12 @@ export function IssueListScreen() {
         title="Assign role"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setAssignOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setAssignOpen(false)}>{t('assignRoleCancel')}</Button>
           </>
         }
       >
         <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>
-          Reassign <b style={{ color: 'var(--text-primary)' }}>{selected.length}</b> selected issue
-          {selected.length === 1 ? '' : 's'} to a role. This changes who the issue is assigned to —
-          the original owner is unchanged.
+          <Trans t={t} i18nKey="assignRoleBody" count={selected.length} components={{ b: <b style={{ color: 'var(--text-primary)' }} /> }} />
         </p>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           {(['SE', 'ASM', 'PQM'] as const).map((r) => (
@@ -787,9 +788,9 @@ export function IssueListScreen() {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
                 <IconChip icon={RefreshCw} tint="var(--accent-50)" color="var(--accent-600)" size={40} iconSize={18} />
                 <div>
-                  <div style={{ font: 'var(--fw-bold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)' }}>Change status</div>
+                  <div style={{ font: 'var(--fw-bold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)' }}>{t('bulkStatusTitle')}</div>
                   <div style={{ marginTop: 4, font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
-                    This will update {selected.length} selected issue{selected.length === 1 ? '' : 's'}. A valid reason is required for every status change.
+                    {t('bulkStatusBody', { count: selected.length })}
                   </div>
                 </div>
               </div>
@@ -804,20 +805,20 @@ export function IssueListScreen() {
           }
           footer={
             <>
-              <Button variant="ghost" onClick={() => setBulkModalOpen(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setBulkModalOpen(false)}>{t('bulkStatusCancel')}</Button>
               <Button iconLeft={<Icon icon={Check} size={15} />} onClick={applyBulk} disabled={!bulkTarget || !bulkReason.trim()}>
-                Update status for {selected.length} selected issue{selected.length === 1 ? '' : 's'}
+                {t('bulkStatusSubmit', { count: selected.length })}
               </Button>
             </>
           }
         >
           <div style={{ borderTop: 'var(--border-width) solid var(--border-subtle)', margin: '0 0 var(--space-4)' }} />
           <div style={{ marginBottom: 'var(--space-4)' }}>
-            <ULabel>New status <span style={{ color: 'var(--danger-500)' }}>*</span></ULabel>
+            <ULabel>{t('bulkStatusNewStatus')} <span style={{ color: 'var(--danger-500)' }}>*</span></ULabel>
             <StatusDropdown value={bulkTarget} onChange={setBulkTarget} />
           </div>
           <div>
-            <ULabel>Reason / comment <span style={{ color: 'var(--danger-500)' }}>*</span></ULabel>
+            <ULabel>{t('bulkStatusReason')} <span style={{ color: 'var(--danger-500)' }}>*</span></ULabel>
             <Textarea aria-label="Reason / comment" value={bulkReason} onChange={(e) => setBulkReason(e.target.value)} rows={3} placeholder="e.g. Bulk triage — moving reviewed issues to the next stage" />
           </div>
         </Modal>
@@ -827,13 +828,13 @@ export function IssueListScreen() {
       <SectionCard pad={false}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-3) var(--space-4)', borderBottom: 'var(--border-width) solid var(--border-subtle)' }}>
           <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
-            Showing <b style={{ color: 'var(--text-primary)' }}>{filtered.length}</b> of {tab === 'my' ? myIssues.length : issues.length} issues
+            <Trans t={t} i18nKey="resultsCount" values={{ shown: filtered.length, total: tab === 'my' ? myIssues.length : issues.length }} components={{ b: <b style={{ color: 'var(--text-primary)' }} /> }} />
           </span>
-          <span style={{ font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>Select rows to change status or export</span>
+          <span style={{ font: 'var(--fw-regular) var(--fs-caption)/1 var(--font-body)', color: 'var(--text-muted)' }}>{t('bulkHint')}</span>
         </div>
         {pageRows.length === 0 ? (
           <div style={{ padding: 'var(--space-6)' }}>
-            <EmptyState title="No issues match these filters" message="Clear filters to see all issues in the queue." action={<Button variant="secondary" size="sm" onClick={clearFilters}>Clear filters</Button>} />
+            <EmptyState title={t('emptyTitle')} message={t('emptyBody')} action={<Button variant="secondary" size="sm" onClick={clearFilters}>{t('clearFilters')}</Button>} />
           </div>
         ) : (
           <>
@@ -853,10 +854,15 @@ export function IssueListScreen() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: 'var(--border-width) solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
                 <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
-                  Showing <b style={{ color: 'var(--text-primary)' }}>{(pageClamped - 1) * pageSize + 1} - {Math.min(pageClamped * pageSize, filtered.length)}</b> of <b style={{ color: 'var(--text-primary)' }}>{filtered.length}</b> issues
+                  <Trans
+                    t={t}
+                    i18nKey="resultsRange"
+                    values={{ from: (pageClamped - 1) * pageSize + 1, to: Math.min(pageClamped * pageSize, filtered.length), total: filtered.length }}
+                    components={{ b: <b style={{ color: 'var(--text-primary)' }} /> }}
+                  />
                 </span>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
-                  Rows:
+                  {t('resultsRows')}
                   <select
                     value={pageSize}
                     onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
@@ -881,8 +887,8 @@ export function IssueListScreen() {
           onClose={() => setDrawer('')}
           footer={
             <>
-              <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={16} />} onClick={() => setDraft(EMPTY_FILTERS)}>Reset</Button>
-              <Button style={{ flex: 1 }} onClick={() => { setFlt(draft); setPage(1); setDrawer('') }}>Apply</Button>
+              <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={16} />} onClick={() => setDraft(EMPTY_FILTERS)}>{t('filterReset')}</Button>
+              <Button style={{ flex: 1 }} onClick={() => { setFlt(draft); setPage(1); setDrawer('') }}>{t('filterApply')}</Button>
             </>
           }
         >
@@ -902,23 +908,23 @@ export function IssueListScreen() {
             {draftSelect('owner', 'Owner', opts.owners)}
             {draftSelect('grouping', 'Issue Grouping', [{ value: 'grouped', label: 'Grouped issues' }, { value: 'ungrouped', label: 'Ungrouped issues' }])}
             <div style={fieldRow}>
-              <label style={drawerLabel}>Issue Date</label>
+              <label style={drawerLabel}>{t('filterIssueDate')}</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                 <input type="date" aria-label="Start date" value={draft.dateFrom} onChange={(e) => setDraft((d) => ({ ...d, dateFrom: e.target.value }))} style={{ flex: 1, minWidth: 0, height: 42, boxSizing: 'border-box', padding: '0 11px', border: 'var(--border-width) solid var(--border-default)', borderRadius: 10, font: 'var(--fw-medium) 13.5px/1 var(--font-body)', color: draft.dateFrom ? 'var(--text-primary)' : 'var(--text-disabled)', background: 'var(--surface-card)' }} />
-                <span style={{ font: 'var(--fw-regular) 12px/1 var(--font-body)', color: 'var(--text-disabled)', flex: 'none' }}>to</span>
+                <span style={{ font: 'var(--fw-regular) 12px/1 var(--font-body)', color: 'var(--text-disabled)', flex: 'none' }}>{t('filterDateSeparator')}</span>
                 <input type="date" aria-label="End date" value={draft.dateTo} onChange={(e) => setDraft((d) => ({ ...d, dateTo: e.target.value }))} style={{ flex: 1, minWidth: 0, height: 42, boxSizing: 'border-box', padding: '0 11px', border: 'var(--border-width) solid var(--border-default)', borderRadius: 10, font: 'var(--fw-medium) 13.5px/1 var(--font-body)', color: draft.dateTo ? 'var(--text-primary)' : 'var(--text-disabled)', background: 'var(--surface-card)' }} />
               </div>
             </div>
             <div style={fieldRow}>
-              <label style={drawerLabel}>Days open</label>
+              <label style={drawerLabel}>{t('filterDaysOpen')}</label>
               <SegRow options={[{ v: '', l: 'All' }, { v: '0-7', l: '≤7d' }, { v: '8-21', l: '8–21d' }, { v: '22', l: '>21d' }]} value={draft.days} onChange={(v) => setDraft((d) => ({ ...d, days: v }))} />
             </div>
             <div style={fieldRow}>
-              <label style={drawerLabel}>Linked issues</label>
+              <label style={drawerLabel}>{t('filterLinkedIssues')}</label>
               <SegRow options={[{ v: '', l: 'All' }, { v: 'yes', l: 'Yes' }, { v: 'no', l: 'No' }]} value={draft.linked} onChange={(v) => setDraft((d) => ({ ...d, linked: v }))} />
             </div>
             <div style={fieldRow}>
-              <label style={drawerLabel}>EWS flag</label>
+              <label style={drawerLabel}>{t('filterEwsFlag')}</label>
               <SegRow options={[{ v: '', l: 'All' }, { v: 'yes', l: 'Yes' }, { v: 'no', l: 'No' }]} value={draft.ews} onChange={(v) => setDraft((d) => ({ ...d, ews: v }))} />
             </div>
           </DrawerSection>
@@ -934,12 +940,12 @@ export function IssueListScreen() {
           onClose={() => setDrawer('')}
           footer={
             <>
-              <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={16} />} onClick={() => setColsDraft(DEFAULT_VISIBLE)}>Restore default</Button>
-              <Button style={{ flex: 1 }} onClick={() => { setCols(colsDraft); setDrawer('') }}>Apply</Button>
+              <Button variant="secondary" iconLeft={<Icon icon={RotateCcw} size={16} />} onClick={() => setColsDraft(DEFAULT_VISIBLE)}>{t('columnsRestoreDefault')}</Button>
+              <Button style={{ flex: 1 }} onClick={() => { setCols(colsDraft); setDrawer('') }}>{t('columnsApply')}</Button>
             </>
           }
         >
-          <div style={{ ...drawerLabel, padding: '16px 0 10px' }}>Default columns</div>
+          <div style={{ ...drawerLabel, padding: '16px 0 10px' }}>{t('columnsDefault')}</div>
           {[{ key: '_id', label: 'Issue ID', required: true }, { key: '_title', label: 'Issue Title', required: true }, ...DEFAULT_COLS.map((c) => ({ ...c, required: false }))].map((c) => (
             <div key={c.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-2) 0' }}>
               <Checkbox
@@ -949,15 +955,15 @@ export function IssueListScreen() {
                 label={c.label}
                 style={c.required ? { color: 'var(--text-primary)' } : undefined}
               />
-              {c.required && <span style={{ font: 'var(--fw-bold) 9.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-disabled)', background: 'var(--neutral-50)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '3px 7px' }}>Required</span>}
+              {c.required && <span style={{ font: 'var(--fw-bold) 9.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-disabled)', background: 'var(--neutral-50)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '3px 7px' }}>{t('columnsRequired')}</span>}
             </div>
           ))}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 10px' }}>
-            <span style={drawerLabel}>Optional columns</span>
+            <span style={drawerLabel}>{t('columnsOptional')}</span>
             <Checkbox
               checked={OPTIONAL_COLS.every((c) => colsDraft.includes(c.key))}
               onChange={(e) => setColsDraft((s) => (e.target.checked ? Array.from(new Set([...s, ...OPTIONAL_COLS.map((c) => c.key as string)])) : s.filter((x) => !OPTIONAL_COLS.some((c) => c.key === x))))}
-              label={<span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Select all</span>}
+              label={<span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{t('columnsSelectAll')}</span>}
             />
           </div>
           {OPTIONAL_COLS.map((c) => (

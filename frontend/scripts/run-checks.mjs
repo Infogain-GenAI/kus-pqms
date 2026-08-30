@@ -52,11 +52,13 @@ const CHECKS = [
   { name: 'lint:ds:values', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'values'] },
   { name: 'lint:ds:numeric', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'numeric'] },
   { name: 'lint:ds:imports', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'imports'] },
+  { name: 'lint:ds:copy', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'copy'] },
   { name: 'lint:ds:selftest', cmd: process.execPath, args: ['scripts/check-import-rule.mjs'] },
   { name: 'css-vars', cmd: process.execPath, args: ['scripts/check-css-vars.mjs'] },
   // Hard zero, not a ratchet — see the script's header for why it is not a
   // ds-gate family. It self-tests, so a pattern that stops matching fails loudly
   // rather than reporting a clean codebase.
+  { name: 'i18n-namespaces', cmd: process.execPath, args: ['scripts/check-i18n-namespaces.mjs'] },
   { name: 'role-gate', cmd: process.execPath, args: ['scripts/check-role-gate.mjs'] },
   { name: 'tokens:drift', cmd: process.execPath, args: ['scripts/check-tokens-drift.mjs'] },
   // The suite writes the coverage summary the ratchet reads, so these two are the

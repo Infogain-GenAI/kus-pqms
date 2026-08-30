@@ -6,6 +6,8 @@ import { useStore } from '@/data/store'
 import type { SourceChannel } from '@/data/sourceChannels'
 import type { Issue } from '@/data/types'
 import { LinkIssuesSection } from '../../../LinkIssuesSection'
+import { useTranslation } from 'react-i18next'
+import { NS } from '../../IssueDetail.i18n'
 import { ModelCodeYearPicker, type ModelCodeSelection } from '../../../ModelCodeYearPicker'
 import { SystemClassificationPicker, type ClassificationValue } from '../../../SystemClassificationPicker'
 import { EditSourcesForm, type EditSourcesHandle } from '../issue-detail/EditSourcesForm'
@@ -62,6 +64,7 @@ export function IssueEditForm({
     channels: SourceChannel[]
   }) => void
 }) {
+  const { t } = useTranslation(NS)
   const store = useStore()
   const sourcesRef = useRef<EditSourcesHandle>(null)
 
@@ -135,24 +138,24 @@ export function IssueEditForm({
   return (
     <section className={styles.form} data-testid="issue-edit-form">
       <header className={styles.header}>
-        <h2 className={styles.title}>Edit Issue</h2>
+        <h2 className={styles.title}>{t('editFormTitle')}</h2>
         <div className={styles.actions}>
           <Button variant="secondary" iconLeft={<Icon icon={CircleX} size={16} />} onClick={onCancel} data-testid="edit-form-cancel">
-            Cancel
+            {t('editFormCancel')}
           </Button>
           <Button disabled={!canSave} iconLeft={<Icon icon={Check} size={16} />} onClick={submit} data-testid="edit-form-save">
-            Save changes
+            {t('editFormSave')}
           </Button>
         </div>
       </header>
 
       {/* 1 — Vehicle information */}
       <div className={styles.section} data-section="vehicle-information">
-        <h3 className={styles.sectionTitle}>Vehicle Information</h3>
+        <h3 className={styles.sectionTitle}>{t('editFormVehicle')}</h3>
         <ModelCodeYearPicker value={vehicle} onChange={setVehicle} disabled={disabled} />
         {codesWithNoYear.length > 0 && (
           <p className={styles.error} role="alert">
-            Select at least one model year for {codesWithNoYear.join(', ')}.
+            {t('editFormYearRequired', { count: codesWithNoYear.length, codes: codesWithNoYear.join(', ') })}
           </p>
         )}
       </div>
@@ -162,7 +165,7 @@ export function IssueEditForm({
           request, not an edit, and that request flow does not exist here yet —
           so the link is rendered disabled rather than wired to nothing. */}
       <div className={styles.section} data-section="system-classification">
-        <h3 className={styles.sectionTitle}>System Classification</h3>
+        <h3 className={styles.sectionTitle}>{t('editFormClassification')}</h3>
         <SystemClassificationPicker
           value={classification}
           onChange={setClassification}
@@ -175,7 +178,7 @@ export function IssueEditForm({
 
       {/* 3 — Same existing issues */}
       <div className={styles.section} data-section="same-existing-issues">
-        <h3 className={styles.sectionTitle}>Same existing issues</h3>
+        <h3 className={styles.sectionTitle}>{t('editFormSameExisting')}</h3>
         <LinkIssuesSection
           linkedIds={linked}
           excludeId={issue.id}
@@ -186,9 +189,9 @@ export function IssueEditForm({
 
       {/* 4 — Issue information */}
       <div className={styles.section} data-section="issue-information">
-        <h3 className={styles.sectionTitle}>Issue Information</h3>
+        <h3 className={styles.sectionTitle}>{t('editFormIssueInformation')}</h3>
         <div>
-          <ULabel>Issue title *</ULabel>
+          <ULabel>{t('editFormIssueTitle')}</ULabel>
           <Input
             value={title}
             disabled={disabled}
@@ -198,7 +201,7 @@ export function IssueEditForm({
           />
         </div>
         <div>
-          <ULabel>Description *</ULabel>
+          <ULabel>{t('editFormDescription')}</ULabel>
           <Textarea
             rows={4}
             value={description}
@@ -208,7 +211,7 @@ export function IssueEditForm({
           />
         </div>
         <div>
-          <ULabel>DTC / trouble codes</ULabel>
+          <ULabel>{t('editFormDtc')}</ULabel>
           <Input
             value={dtc}
             disabled={disabled}
@@ -216,14 +219,14 @@ export function IssueEditForm({
             onChange={(e) => setDtc(e.target.value)}
           />
           <p className={styles.hint}>
-            Comma-separated. P·Powertrain B·Body C·Chassis U·Network.
+            {t('editFormDtcHint')}
           </p>
         </div>
       </div>
 
       {/* 5 — Issue source: the same component the section-scoped flow uses. */}
       <div className={styles.section} data-section="issue-source">
-        <h3 className={styles.sectionTitle}>Issue Source</h3>
+        <h3 className={styles.sectionTitle}>{t('editFormIssueSource')}</h3>
         <EditSourcesForm ref={sourcesRef} channels={channels} disabled={disabled} />
       </div>
     </section>

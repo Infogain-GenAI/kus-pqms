@@ -20,11 +20,14 @@ import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { RequestNewSystemModal } from './classification/RequestNewSystemModal'
 import { relatedRank } from '@/data/relatedRank'
 import { DtcChipInput } from './issue-entry/DtcChipInput'
+import { useTranslation } from 'react-i18next'
+import { NS } from './issue-entry/IssueEntry.i18n'
 import entryStyles from './issue-entry/issue-entry.module.css'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
 
 export function CreateIssueScreen() {
+  const { t } = useTranslation(NS)
   const nav = useNavigate()
   const { user } = useRole()
   const store = useStore()
@@ -231,7 +234,7 @@ export function CreateIssueScreen() {
         <PageCrumb backTo="/issues" trail={[{ label: 'Issue Management', to: '/issues' }, { label: 'Issue Entry' }]} />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
-          <h1 style={{ margin: 0, font: 'var(--fw-bold) 27px/1.15 var(--font-display)', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>New issue</h1>
+          <h1 style={{ margin: 0, font: 'var(--fw-bold) 27px/1.15 var(--font-display)', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>{t('title')}</h1>
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             {/* Clear now asks first — it resets three sections and every linked
                 issue, with no undo, and sits beside Register.
@@ -254,14 +257,14 @@ export function CreateIssueScreen() {
               onClick={() => setClearOpen(true)}
               style={{ height: 40, padding: '0 16px', borderRadius: 9, font: 'var(--fw-semibold) 13.5px/1 var(--font-body)' }}
             >
-              Clear
+              {t('clear')}
             </Button>
             <Button
               iconLeft={<Icon icon={Send} size={15} />}
               onClick={register}
               style={{ height: 40, padding: '0 18px', borderRadius: 9 }}
             >
-              Register Issue
+              {t('register')}
             </Button>
           </div>
         </div>
@@ -299,14 +302,14 @@ export function CreateIssueScreen() {
         <div className={entryStyles.formCard}>
         {/* Vehicle Information */}
         <div className={entryStyles.section}>
-          <h2 className={entryStyles.sectionHead}>Vehicle Information</h2>
+          <h2 className={entryStyles.sectionHead}>{t('sectionVehicle')}</h2>
           <ModelCodeYearPicker value={vehicle} onChange={setVehicle} />
           {err('modelCode') && <p className={entryStyles.fieldError}>{err('modelCode')}</p>}
         </div>
 
         {/* System Classification */}
         <div className={entryStyles.section}>
-          <h2 className={entryStyles.sectionHead}>System Classification</h2>
+          <h2 className={entryStyles.sectionHead}>{t('sectionClassification')}</h2>
           {/* PATH bar */}
           {/* Styles in `issue-entry.module.css` under "PATH bar" — every value is
               the design's own. The separators are siblings of the segments, not
@@ -314,7 +317,7 @@ export function CreateIssueScreen() {
               sequence evenly rather than clumping each chevron against its
               preceding chip. */}
           <div className={entryStyles.pathBar} style={{ marginBottom: 'var(--space-3)' }}>
-            <span className={entryStyles.pathLabel}>PATH</span>
+            <span className={entryStyles.pathLabel}>{t('classificationPath')}</span>
             {pathSteps.map((s, i) => (
               <Fragment key={i}>
                 {i > 0 && <Icon icon={ChevronRight} size={13} style={{ color: 'var(--neutral-300)', flex: 'none' }} />}
@@ -324,36 +327,36 @@ export function CreateIssueScreen() {
           </div>
           {!anchorCode && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 'var(--space-3)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-muted)' }}>
-              <Icon icon={Info} size={14} /> Select a Model Code in Vehicle information to enable classification.
+              <Icon icon={Info} size={14} /> {t('classificationModelCodeFirst')}
             </div>
           )}
           <div style={{ marginBottom: 'var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>
-            Can't find the required classification?{' '}
-            <button onClick={() => setRequestOpen(true)} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-link)' }}>Request New</button>
+            {t('classificationCannotFind')}{' '}
+            <button onClick={() => setRequestOpen(true)} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-link)' }}>{t('classificationRequestNew')}</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
             <div>
-              <ULabel>System *</ULabel>
+              <ULabel>{t('classificationSystem')}</ULabel>
               <Select aria-label="System" value={sysId} placeholder={anchorCode ? 'Search system… (e.g. “Bat”, “Electrical”)' : 'Select model code first'} disabled={!anchorCode} options={systems.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => { setSysId(e.target.value); setSubId(''); setCompId(''); setSymId(''); setPendingSymptom('') }} />
               {err('system') && <p className={entryStyles.fieldError}>{err('system')}</p>}
             </div>
             <div>
-              <ULabel>Sub-system *</ULabel>
+              <ULabel>{t('classificationSubSystem')}</ULabel>
               <Select aria-label="Sub-system" value={subId} placeholder={sysId ? 'Search sub-system…' : 'Select a system first'} disabled={!sysId} options={subs.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => { setSubId(e.target.value); setCompId(''); setSymId(''); setPendingSymptom('') }} />
               {err('subsystem') && <p className={entryStyles.fieldError}>{err('subsystem')}</p>}
             </div>
             <div>
-              <ULabel>Component *</ULabel>
+              <ULabel>{t('classificationComponent')}</ULabel>
               <Select aria-label="Component" value={compId} placeholder={subId ? 'Search component…' : 'Select a sub-system first'} disabled={!subId} options={comps.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => { setCompId(e.target.value); setSymId(''); setPendingSymptom('') }} />
               {err('component') && <p className={entryStyles.fieldError}>{err('component')}</p>}
             </div>
             <div>
-              <ULabel>Symptom *</ULabel>
+              <ULabel>{t('classificationSymptom')}</ULabel>
               <Select aria-label="Symptom" value={symId} placeholder={compId ? 'Search symptom…' : 'Select a component first'} disabled={!compId || !!pendingSymptom} options={symptoms.map((s) => ({ value: s.id, label: s.label }))} onChange={(e) => setSymId(e.target.value)} />
               {pendingSymptom && (
                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                   <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }}>{pendingSymptom}</span>
-                  <Badge tone="warning" size="sm">Pending Approval</Badge>
+                  <Badge tone="warning" size="sm">{t('classificationPendingApproval')}</Badge>
                 </div>
               )}
               {err('symptom') && <p className={entryStyles.fieldError}>{err('symptom')}</p>}
@@ -401,20 +404,20 @@ export function CreateIssueScreen() {
               <Icon icon={CopyCheck} size={15} />
             </span>
             <div style={{ flex: 1 }}>
-              <div className={entryStyles.sameHeadTitle}>Same Existing Issues</div>
+              <div className={entryStyles.sameHeadTitle}>{t('sameExistingTitle')}</div>
               <div className={entryStyles.sameHeadSub}>
-                We found existing issues with similar system classification. Review the issue or issue group before linking.
+                {t('sameExistingSubtitle')}
               </div>
             </div>
             {linkedIds.length > 0 && (
-              <span className={entryStyles.sameLinked}>{linkedIds.length} linked</span>
+              <span className={entryStyles.sameLinked}>{linkedIds.length} {t('sameExistingLinked')}</span>
             )}
           </div>
 
           {symptomLabel && (
             <div>
               {correlated.length === 0 ? (
-                <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)' }}>No similar issues were found based on the current issue information.</p>
+                <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)' }}>{t('sameExistingEmpty')}</p>
               ) : (
                 <div className={entryStyles.sameList}>
                   {correlated.map(({ issue: i }) => (
@@ -430,7 +433,7 @@ export function CreateIssueScreen() {
                         match was really the same defect lost everything they had
                         typed. On the entry form, of all screens.
                       */}
-                      <Button variant="link" size="sm" data-testid={`preview-${i.id}`} onClick={() => setPreviewId(i.id)}>Preview</Button>
+                      <Button variant="link" size="sm" data-testid={`preview-${i.id}`} onClick={() => setPreviewId(i.id)}>{t('sameExistingPreview')}</Button>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -450,18 +453,18 @@ export function CreateIssueScreen() {
 
         {/* Issue Information */}
         <div className={entryStyles.section}>
-          <h2 className={entryStyles.sectionHead}>Issue Information</h2>
+          <h2 className={entryStyles.sectionHead}>{t('sectionIssue')}</h2>
           <div className={entryStyles.sectionStack}>
             <div>
-              <ULabel>Issue title *</ULabel>
+              <ULabel>{t('fieldTitle')}</ULabel>
               <Input aria-label="Issue title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. EV6 — HV battery rapid SOC drop under cold soak" error={err('title')} />
             </div>
             <div>
-              <ULabel>Description *</ULabel>
+              <ULabel>{t('fieldDescription')}</ULabel>
               <Textarea aria-label="Description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Symptoms, reproduction steps, environmental conditions, frequency, and any safety implications…" error={err('description')} />
             </div>
             <div>
-              <ULabel>DTC / trouble code <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>· optional</span></ULabel>
+              <ULabel>{t('fieldDtc')} <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{t('fieldDtcOptional')}</span></ULabel>
               {/* "comma-separated" is gone from the label because the control is
                   no longer a comma-separated string — a comma still commits a
                   chip, but it is one of several keys rather than the format. */}

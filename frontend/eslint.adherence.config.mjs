@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs'
 import react from 'eslint-plugin-react'
 import tsParser from '@typescript-eslint/parser'
-import { NUMERIC_DIM_MESSAGE } from './scripts/ds-messages.mjs'
+import { JSX_COPY_MESSAGE, NUMERIC_DIM_MESSAGE } from './scripts/ds-messages.mjs'
 
 const rc = JSON.parse(readFileSync(new URL('./_adherence.oxlintrc.json', import.meta.url), 'utf8'))
 
@@ -126,6 +126,30 @@ const numericDimension = {
   message: NUMERIC_DIM_MESSAGE,
 }
 
+/*
+ * ─── HARDCODED USER-FACING COPY ─────────────────────────────────────────────
+ *
+ * Tier 0 bans hardcoded copy; nothing measured it. Vue co-locates every
+ * component's strings in a sibling `*.i18n.ts` and this port's equivalent is
+ * `*.copy.ts`, so this selector is the burn-down that gets us there.
+ *
+ * ⚠️ IT MATCHES `JSXText` ONLY — TEXT BETWEEN TAGS. Not string props, not
+ * `aria-label`, not `placeholder`. Those are copy too and eventually belong in
+ * the same modules, but a selector that swept them in would also flag every
+ * `className`, `data-testid`, `role` and token reference in the codebase —
+ * thousands of matches, none of them copy. A rule whose output is mostly noise
+ * does not get fixed; it gets disabled. Text nodes are the unambiguous subset,
+ * and widening is a later, separate pass.
+ *
+ * The regex requires TWO consecutive letters somewhere in the node. That skips
+ * punctuation-only text — the separator dots, arrows and slashes that sit
+ * between elements — which is markup, not language.
+ */
+const jsxCopy = {
+  selector: 'JSXText[value=/[A-Za-z]{2}/]',
+  message: JSX_COPY_MESSAGE,
+}
+
 export default [
   {
     // ⚠️ THREE src ROOTS NOW, NOT ONE. Before the workspace split this was a single
@@ -149,7 +173,7 @@ export default [
     rules: {
       ...rc.rules,
       'no-restricted-imports': restrictedImports,
-      'no-restricted-syntax': [...restrictedSyntax, numericDimension],
+      'no-restricted-syntax': [...restrictedSyntax, numericDimension, jsxCopy],
     },
   },
   // The ruleset's own override: the barrel may import component internals.
