@@ -482,31 +482,41 @@ describe('Same Existing Issues — the edge states', () => {
  * Clear only when the form holds something — the design's `_issueFormHasData()`.
  *
  * Ported in an earlier pass and never tested. Each term below is a separate
- * branch, and the failure mode of getting one wrong is silent in both
- * directions: too narrow and Clear discards work without asking, too wide and it
- * nags on an untouched form.
+ * branch, and getting one wrong fails silently in both directions: too narrow
+ * and Clear discards work without asking, too wide and it nags on an untouched
+ * form.
+ *
+ * ⚠️ THE THREE NAMES HERE ARE EASY TO CONFUSE, and an earlier draft of these
+ * tests got it wrong in a way that would have passed for the wrong reason:
+ *   · the TRIGGER button is "Clear"
+ *   · the modal's TITLE is "Clear all entered information?"
+ *   · the CONFIRM button inside it is "Clear form"
+ * Asserting on /clear/ alone always matches, because the trigger's own label is
+ * in the document either way. The title is what distinguishes the states.
  */
+const CLEAR_PROMPT = /clear all entered information\?/i
+
 describe('Clear form asks only when there is something to lose', () => {
   it('does nothing at all on an untouched form', () => {
     renderCreate()
-    fireEvent.click(btn(/clear form/i))
+    fireEvent.click(btn(/^clear$/i))
     // `clearIssueForm(){ if(this._issueFormHasData()) … }` — no dialog, and no
     // message either. A silent no-op, not a disabled button.
-    expect(body()).not.toMatch(/clear the form\?|discard/i)
+    expect(body()).not.toMatch(CLEAR_PROMPT)
   })
 
   it('asks when only the title has been typed', () => {
     renderCreate()
     fireEvent.change(screen.getByRole('textbox', { name: /issue title/i }), { target: { value: 'x' } })
-    fireEvent.click(btn(/clear form/i))
-    expect(body()).toMatch(/clear|discard/i)
+    fireEvent.click(btn(/^clear$/i))
+    expect(body()).toMatch(CLEAR_PROMPT)
   })
 
   it('asks when only the description has been typed', () => {
     renderCreate()
     fireEvent.change(screen.getByRole('textbox', { name: /^description$/i }), { target: { value: 'y' } })
-    fireEvent.click(btn(/clear form/i))
-    expect(body()).toMatch(/clear|discard/i)
+    fireEvent.click(btn(/^clear$/i))
+    expect(body()).toMatch(CLEAR_PROMPT)
   })
 
   it('asks when only a model code has been chosen', () => {
@@ -515,26 +525,92 @@ describe('Clear form asks only when there is something to lose', () => {
     fireEvent.focus(codeBox)
     const first = screen.getAllByRole('option')[0]
     if (first) fireEvent.mouseDown(first)
-    fireEvent.click(btn(/clear form/i))
-    expect(body()).toMatch(/clear|discard/i)
+    fireEvent.click(btn(/^clear$/i))
+    expect(body()).toMatch(CLEAR_PROMPT)
   })
 
   it('asks when the only content is a LINKED issue', () => {
     renderCreate()
     fillCompleteForm()
     fireEvent.click(screen.getAllByRole('button', { name: /^link to issue$/i })[0])
-    fireEvent.click(btn(/clear form/i))
+    fireEvent.click(btn(/^clear$/i))
     // `linkedExisting` is its own term in the design — a form whose only content
     // is a link still confirms.
-    expect(body()).toMatch(/clear|discard/i)
+    expect(body()).toMatch(CLEAR_PROMPT)
   })
 
   it('empties the form once the clear is confirmed', () => {
     renderCreate()
     fireEvent.change(screen.getByRole('textbox', { name: /issue title/i }), { target: { value: 'to be cleared' } })
-    fireEvent.click(btn(/clear form/i))
-    const confirm = screen.getAllByRole('button', { name: /clear|discard/i }).pop()
-    if (confirm) fireEvent.click(confirm)
+    fireEvent.click(btn(/^clear$/i))
+    fireEvent.click(btn(/^clear form$/i))
     expect((screen.getByRole('textbox', { name: /issue title/i }) as HTMLInputElement).value).toBe('')
+    expect(body()).not.toMatch(CLEAR_PROMPT)
+  })
+})
+
+/**
+ * Validation, and the request-new-symptom path.
+ *
+ * Register stays ENABLED while the form is invalid — deliberately, because a
+ * disabled button cannot say why it is disabled. Pressing it is what produces
+ * the list, so that press is the only way these branches are ever reached.
+ */
+describe('Register on an incomplete form explains what is missing', () => {
+  it('shows nothing before the first attempt', () => {
+    renderCreate()
+    // Errors are derived from the draft but suppressed until `attempted`, so an
+    // untouched form is not scolded for being untouched.
+    expect(body()).not.toContain('Select a model code.')
+  })
+
+  it('lists every outstanding requirement on the first press', () => {
+    renderCreate()
+    fireEvent.click(btn(/register issue|submit/i))
+    expect(body()).toContain('Select a model code.')
+    expect(body()).toContain('Select a system.')
+    expect(body()).toContain('Select a sub-system.')
+    expect(body()).toContain('Select a component.')
+    expect(body()).toContain('Select a symptom.')
+  })
+
+  it('clears each message as its field is satisfied, rather than freezing the list', () => {
+    renderCreate()
+    fireEvent.click(btn(/register issue|submit/i))
+    expect(body()).toContain('Select a model code.')
+    const codeBox = screen.getByRole('combobox', { name: /model code/i })
+    fireEvent.focus(codeBox)
+    const first = screen.getAllByRole('option')[0]
+    if (first) fireEvent.mouseDown(first)
+    // The errors are recomputed from the draft, not captured at the moment of
+    // the attempt — so fixing one removes one.
+    expect(body()).not.toContain('Select a model code.')
+    expect(body()).toContain('Select a system.')
+  })
+})
+
+describe('Requesting a classification that does not exist yet', () => {
+  it('refuses to open the request until a component is chosen', () => {
+    renderCreate()
+    fireEvent.click(btn(/request new/i))
+    const submit = screen.queryByRole('button', { name: /submit request/i })
+    // The modal opens, but its submit is inert without a component to hang the
+    // new symptom from.
+    if (submit) expect((submit as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('records the requested symptom as pending and locks the Symptom field', () => {
+    renderCreate()
+    fillCompleteForm()
+    fireEvent.click(btn(/request new/i))
+    fireEvent.change(screen.getByRole('textbox', { name: /new symptom/i }), {
+      target: { value: 'Latch fails to release' },
+    })
+    fireEvent.click(btn(/submit request/i))
+    expect(body()).toContain('Latch fails to release')
+    expect(body()).toContain('Pending Approval')
+    // A pending symptom stands in for a chosen one, so offering the list too
+    // would let both be set at once.
+    expect((screen.getByRole('combobox', { name: /^symptom$/i }) as HTMLInputElement).disabled).toBe(true)
   })
 })

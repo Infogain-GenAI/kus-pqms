@@ -773,8 +773,11 @@ function SuggestionCard({
   const codes = issue.modelCodes?.length ? issue.modelCodes.join(', ') : (issue.model || '—')
   const classif = [issue.system || '—', issue.subSystem || '—', issue.component || '—', issue.symptom || '—'].join(' · ')
   const metaLine = `Model: ${codes}  ·  Classification: ${classif}  ·  Issue Date: ${fmtDate(issue.createdAt)}`
-  const suggestReasons = (reasons ?? []).filter((r) => r !== 'Manually linked')
-  const manualOnly = (reasons ?? []).length === 1 && reasons?.[0] === 'Manually linked'
+  // NO `Manually linked` BRANCH. The design shows that note on issues appended
+  // to the list because they are linked but did not rank — and we do not append
+  // them yet (open item 11). Carrying the branch here would be dead code that
+  // can never be exercised, so it lands WITH that feature, not before it.
+  const suggestReasons = reasons ?? []
 
   return (
     <div className={entryStyles.card}>
@@ -807,12 +810,6 @@ function SuggestionCard({
       </div>
       <div className={entryStyles.cardTitle}>{issue.title}</div>
       <div className={entryStyles.cardMeta}>{metaLine}</div>
-      {manualOnly && (
-        <div className={entryStyles.cardNote}>
-          <Icon icon={Link2} size={12} />
-          Manually linked
-        </div>
-      )}
       {suggestReasons.length > 0 && (
         <div className={entryStyles.cardNote}>
           <Icon icon={Sparkles} size={12} style={{ color: 'var(--accent-600)', flex: 'none' }} />
