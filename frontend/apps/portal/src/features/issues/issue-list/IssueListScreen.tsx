@@ -68,28 +68,37 @@ export function IssueListScreen() {
   const { user, scope } = useRole()
   const { issues, bulkStatus, priorityResult } = useStore()
 
-  const [tab, setTab] = useState<'my' | 'all'>(scope === 'own' ? 'my' : 'all')
   /*
    * ─── THE PERSISTED VIEW ─────────────────────────────────────────────────────
    *
-   * Search, applied filters, visible columns, sort, page and page size are kept
-   * in sessionStorage for the tab's lifetime — see `@/data/issueListView`. Before
-   * this, they were six `useState` calls, so opening an issue and pressing Back
-   * returned an unfiltered list at page 1 and discarded whatever the user had
-   * narrowed down to.
+   * Search, applied filters, visible columns, sort, page, page size AND the
+   * My/All Issues tab are all owned by `useIssueListView` now — a Zustand
+   * `persist` store as of the issue-filters-store merge, previously a bare
+   * `useState` + sessionStorage effect here. Before that original change,
+   * opening an issue and pressing Back returned an unfiltered list at page 1
+   * and discarded whatever the user had narrowed down to.
    *
    * The destructured names and the setters' signatures are IDENTICAL to the
-   * `useState` pairs they replaced, so every call site below is unchanged and
-   * persistence is invisible at the point of use.
+   * `useState` pairs they replaced (`scope`/`setScope` renamed to `tab`/`setTab`
+   * here only to avoid colliding with `useRole()`'s own `scope`, a different
+   * concept), so every call site below is unchanged and persistence is
+   * invisible at the point of use.
    *
-   * ⚠️ `tab` (My Issues / All Issues) IS NOT PART OF THIS, and must not be added
-   * to it. It is seeded from the viewer's capability on every mount, so a scope
-   * restored from an earlier visit could seat someone in a scope their current
-   * role would not have picked. Vue's store excludes it for the same reason and
-   * says so at length. The two DRAFTS below are also excluded, but only because
-   * they are seeded from the applied state when a drawer opens.
+   * ⚠️ `tab` IS NOT PERSISTED ACROSS MOUNTS despite living in the same store —
+   * `useIssueListView` re-seeds it from `initialScope` (the third argument)
+   * inside the store's own initialiser on every mount, exactly as the old local
+   * `useState` initializer did. A stale tab restored from a previous visit
+   * could seat someone in a scope their current role would not have picked;
+   * Vue's store excludes it from persistence for the same reason and says so at
+   * length. The two DRAFTS below are excluded for an unrelated reason: they are
+   * seeded from the applied state when a drawer opens, so they have nothing of
+   * their own to restore.
    */
-  const { view, setQ, setFlt, setCols, setSort, setPage, setPageSize } = useIssueListView(DEFAULT_VIEW, ALL_COLUMN_KEYS)
+  const { view, scope: tab, setScope: setTab, setQ, setFlt, setCols, setSort, setPage, setPageSize } = useIssueListView(
+    DEFAULT_VIEW,
+    ALL_COLUMN_KEYS,
+    scope === 'own' ? 'my' : 'all',
+  )
   const { q, flt, cols, sort, page, pageSize } = view
 
   /*
