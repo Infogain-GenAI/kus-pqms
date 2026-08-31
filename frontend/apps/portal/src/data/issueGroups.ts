@@ -166,8 +166,22 @@ export function formIssueGroup({
         : sourceGroupIds.length === 1
           ? 'Issue linked to Issue Group'
           : 'Issue Group created',
-    // Only members whose group actually changes. On a plain join, the existing
-    // members already carry this groupId and must not be rewritten (or audited).
+    /*
+     * Only members whose group ACTUALLY changes. On a plain join the existing
+     * members already carry this groupId, and rewriting them would put a row in
+     * their audit trail claiming their group moved when it did not.
+     *
+     * ⚠️ THEY ARE STILL AUDITED, THOUGH — see the fan-out in `createIssue`. The
+     * rule is "rewrite conditionally, audit unconditionally", and an earlier
+     * version of this comment said "(or audited)", which contradicted the code.
+     *
+     * AND THIS IS NOT A DIVERGENCE. The canonical does the same thing:
+     *     existingMembers.forEach(m => { if (m._groupId !== issueGroupId) ov[m.id] = issueGroupId })
+     * followed by an unconditional history write to every member. Calling it a
+     * deliberate choice of ours would invite the next reader to reconsider a
+     * tradeoff that does not exist, and the way back from that is code that is
+     * wrong.
+     */
     rewriteIds: existing.filter((i) => i.groupId !== groupId).map((i) => i.id),
     blockedReason: null,
   }

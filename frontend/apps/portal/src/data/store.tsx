@@ -26,6 +26,7 @@ import { newId } from './util'
 import { ELIGIBLE_PARTS, TEAM_DIRECTORY, type PartOption, type TeamMember } from './investigation'
 import type { AssignableRole } from './assignableRoles'
 import { formIssueGroup } from './issueGroups'
+import { planGroupEdits, type GroupEditRequest } from './groupEdits'
 import { findPriorityItem, priorityLetter, priorityTotal, type PriorityLetter } from './priorityMatrix'
 
 // Fail fast (dev server, preview build and every fidelity capture) if the dataset's
@@ -194,6 +195,25 @@ interface StoreValue {
    * theatre. Recorded rather than presented as a faithful port.
    */
   bulkAssignRole: (ids: string[], role: AssignableRole, actor: Actor) => void
+  /**
+   * Commit a batch of group-membership changes — the workspace's Manage Related
+   * Issues Save.
+   *
+   * ⚠️ NOT EXPRESSIBLE AS REPEATED TWO-PARTY CALLS, which is why it is its own
+   * function rather than a loop over `linkIssue`. One Save can:
+   *   · rewrite several issues' `groupId`;
+   *   · DISSOLVE a group when a removal leaves exactly one member;
+   *   · promote a new parent and log a SYSTEM-GENERATED entry that carries no
+   *     user reason;
+   *   · chain, so the second removal sees the first one's result.
+   * `planGroupEdits` owns all of it and is tested directly; this applies the plan.
+   *
+   * EVERY REMOVAL AND ADDITION CARRIES ITS OWN JUSTIFICATION — one per change,
+   * not one per Save. The design keys its pending map by member id with a
+   * separate reason on each, and `saveSameModal` states that each change gets
+   * its own audit entry.
+   */
+  saveGroupEdits: (request: GroupEditRequest, actor: Actor) => void
   /**
    * Request a new classification node — the forms' "Request New System" flow.
    *
@@ -540,9 +560,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const why = (input.linkJustifications ?? []).map((l) => l.justification).join(' | ')
       const detail = `${[...formation.memberIds, issue.id].join(', ')}. Parent Issue: ${formation.parentId}.${why ? ` Justification: "${why}".` : ''}`
       appendAudit(issue.id, actor, formation.action, detail)
-      // MIRRORED to every existing member: the group changed for them too, and an
-      // audit trail that records it on only the new issue leaves the others with
-      // no explanation for why their parent or membership moved.
+      /*
+       * MIRRORED to every existing member: the group changed for them too, and an
+       * audit trail that records it on only the new issue leaves the others with
+       * no explanation for why their parent or membership moved.
+       *
+       * ⚠️ EVERY MEMBER GETS THE SAME SENTENCE, and that is the design's shape
+       * rather than ours. `relLogMeta` builds one string and writes it to all
+       * members, so a member of the LOSING group in a merge reads exactly what a
+       * member of the surviving group reads — neither is told what changed for
+       * IT specifically.
+       *
+       * PER-MEMBER PHRASING IS A DELIBERATE OPEN IMPROVEMENT, not an oversight.
+       * It is a divergence from the design, and divergences here get recorded as
+       * ours rather than smuggled in as fidelity — so the limitation is ported
+       * and noted instead of quietly fixed. Small follow-up if wanted.
+       */
       for (const id of formation.memberIds) appendAudit(id, actor, formation.action, detail)
     }
 
@@ -615,6 +648,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // combined entry would leave four of five issues with no record of the change.
     ids.forEach((id) => appendAudit(id, actor, 'Bulk role assignment', `assigned to ${role}`))
   }, [appendAudit])
+
+  const saveGroupEdits = useCallback<StoreValue['saveGroupEdits']>((request, actor) => {
+    const plan = planGroupEdits(issues, request)
+    const changed = Object.keys(plan.groupIds)
+    if (!changed.length && !plan.audits.length) return
+
+    setIssues((list) =>
+      list.map((i) =>
+        i.id in plan.groupIds ? { ...i, groupId: plan.groupIds[i.id] ?? undefined, updatedAt: now() } : i,
+      ),
+    )
+    // The plan already decided who hears what, including the system-generated
+    // parent-change entry; this writes it verbatim rather than re-deriving.
+    for (const a of plan.audits) appendAudit(a.issueId, actor, a.action, a.detail)
+  }, [issues, appendAudit])
 
   const bulkStatus = useCallback<StoreValue['bulkStatus']>((ids, status, reason, actor) => {
     setIssues((list) => list.map((i) => (ids.includes(i.id) ? { ...i, status, updatedAt: now() } : i)))
@@ -790,7 +838,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     issues, classification, notifications, unreadCount,
     getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, groupMembers, relKind, correlations, partOptions, teamDirectory,
     priorityFor, priorityResult, savePriority,
-    createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus, bulkAssignRole,
+    createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus, bulkAssignRole, saveGroupEdits,
     requestClassification, addComment, addActivity, addPart, setPartStatus,
     addManualParts, addManualTeamMembers,
     requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,

@@ -1,11 +1,16 @@
-import { Suspense, lazy, useMemo } from 'react'
+import { Suspense, lazy, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Link } from 'lucide-react'
-import { Icon, Spinner, StatusBadge } from '@pqms/ui-library'
+import { Button, Icon, Spinner, StatusBadge } from '@pqms/ui-library'
 import { SectionCard, ULabel } from '@/app/chrome'
 import { useRole } from '@/data/roles'
 import { resolveSourceChannels, type SourceChannel } from '@/data/sourceChannels'
 import { useStore } from '@/data/store'
+import { ExistingIssueModal } from '../ExistingIssueModal'
+import { NS as EXISTING_NS } from '../ExistingIssueModal.i18n'
+import { NS as JUSTIFY_NS } from '../linking/LinkJustify.i18n'
+import { useTranslation } from 'react-i18next'
+import { LinkJustifyBox, applyJustification } from '../linking/LinkJustifyBox'
 import { IssueDetailTab } from './IssueDetails/tabs/IssueDetailTab/IssueDetailTab'
 import { useWorkspace } from './context'
 import styles from './DetailSection.module.css'
@@ -42,6 +47,8 @@ export function DetailSection() {
   const { user } = useRole()
   const actor = { name: user.name, role: user.role }
   const linked = issue.linkedIssueIds ?? []
+  /** The linked issue open in the popup, by id. Null when closed. */
+  const [inspecting, setInspecting] = useState<string | null>(null)
 
   /**
    * Derived, not stored: an issue that has never been through the sources form
@@ -128,7 +135,29 @@ export function DetailSection() {
             {linked.map((lid) => {
               const li = store.getIssue(lid)
               return (
-                <button key={lid} className={styles.railItem} onClick={() => nav(`/issues/${lid}`)}>
+                /*
+                  ⚠️ OPENS THE POPUP; IT USED TO NAVIGATE AWAY.
+                  Leaving the workspace to look at a linked issue loses whatever
+                  the user had open — the same reason Issue Entry's preview is a
+                  modal. `ExistingIssueModal` is the design's `wsExistingModal`,
+                  and "View Issue" inside it still offers the navigation for
+                  anyone who actually wants it.
+                */
+                <button
+                  key={lid}
+                  className={styles.railItem}
+                  /*
+                   * ⚠️ FALLS BACK TO NAVIGATION FOR AN UNRESOLVABLE ID, and that
+                   * is not defensive padding — EVERY `linkedIssueIds` entry in
+                   * the current seed names an issue that is not seeded. The
+                   * popup renders nothing for a null issue, so opening it
+                   * unconditionally turned every row in this rail into a DEAD
+                   * CLICK. Navigating at least reaches the not-found screen,
+                   * which tells the user the record is gone — the behaviour this
+                   * row had before the popup existed.
+                   */
+                  onClick={() => (li ? setInspecting(lid) : nav(`/issues/${lid}`))}
+                >
                   <span className={styles.railId}>{lid}</span>
                   {li && <span className={styles.railTitle}>{li.title}</span>}
                   {li && <StatusBadge status={li.status} size="sm" />}
@@ -138,6 +167,80 @@ export function DetailSection() {
           </div>
         )}
       </SectionCard>
+
+      {/*
+        ⚠️ THIS IS WHAT `unlinkSlot` WAS BUILT FOR, and until now nothing passed
+        it. On Issue Entry unlink is immediate: the issue does not exist yet, so
+        removing a link discards a draft decision with nothing to audit. HERE it
+        undoes a recorded relationship between two live issues, so it is gated
+        behind a mandatory justification — the asymmetry the modal's own header
+        documents.
+      */}
+      <ExistingIssueModal
+        issue={inspecting ? (store.getIssue(inspecting) ?? null) : null}
+        linked={!!inspecting && linked.includes(inspecting)}
+        onClose={() => setInspecting(null)}
+        // Already linked whenever it is reachable from this list, so linking is
+        // not an action this surface offers.
+        onLink={() => {}}
+        onUnlink={() => {}}
+        onOpenIssue={(id) => nav(`/issues/${id}`)}
+        unlinkSlot={
+          inspecting ? (
+            <WorkspaceUnlinkSlot
+              onConfirm={(why) => {
+                store.unlinkIssue(issue.id, inspecting, why, actor)
+                setInspecting(null)
+              }}
+            />
+          ) : undefined
+        }
+      />
+    </div>
+  )
+}
+
+/**
+ * The workspace's gated unlink, rendered in `ExistingIssueModal`'s footer slot.
+ *
+ * Two states rather than a modal-on-a-modal: the button reveals the justification
+ * box in place, which is the design's shape ("shown inline, no secondary modal").
+ * Reuses `LinkJustifyBox` — the same control the draft/commit surfaces use, in
+ * immediate mode, exactly as `LinkIssuesSection` already uses it.
+ */
+function WorkspaceUnlinkSlot({ onConfirm }: { onConfirm: (justification: string) => void }) {
+  // REUSES `ExistingIssueModal`'s own `unlink` key rather than declaring a
+  // second one with identical English — this control sits in that modal's footer
+  // and names the same action.
+  const { t } = useTranslation(EXISTING_NS)
+  const { t: tj } = useTranslation(JUSTIFY_NS)
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [err, setErr] = useState('')
+
+  if (!open) {
+    return (
+      <Button variant="secondary" onClick={() => { setOpen(true); setText(''); setErr('') }}>
+        {t('unlink')}
+      </Button>
+    )
+  }
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <LinkJustifyBox
+        text={text}
+        error={err}
+        onText={(next) => { setText(next); setErr('') }}
+        onApply={() => {
+          const problem = applyJustification(text)
+          if (problem) { setErr(problem); return }
+          onConfirm(text.trim())
+        }}
+        onCancel={() => setOpen(false)}
+        applyLabel={tj('confirmUnlink')}
+        label="Justification for unlinking"
+        inputLabel="Justification for unlinking"
+      />
     </div>
   )
 }
