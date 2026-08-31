@@ -32,10 +32,9 @@ const messages: ComponentI18nMessages = {
     // pre-i18n code rather than silently corrected — this pass moves copy.
     bulkChangeStatus: 'Change Status',
     bulkExport: 'Export',
-    bulkAssignRole: 'Assign Role',
     bulkHint: 'Select rows to change status or export',
 
-    assignRoleCancel: 'Cancel',
+    bulkStatusTitle: 'Change status',
     /*
      * ICU plural variants, replacing a hand-rolled `n === 1 ? '' : 's'`.
      * 00-core-rules.md bans the hand-rolled form by name, and 09 gives the
@@ -43,18 +42,6 @@ const messages: ComponentI18nMessages = {
      * English's binary split, so a hand-rolled pair would need locale-specific
      * branching that variant selection handles for free.
      */
-    /*
-     * `<b>` IS PART OF THE MESSAGE, rendered through react-i18next's own `<Trans>`.
-     * The count was bolded before this migration and still is; putting the tag in
-     * the string is what lets a translator move the emphasis with the words
-     * instead of the sentence being reassembled from three JSX fragments.
-     */
-    assignRoleBody_one:
-      'Reassign <b>{{count}}</b> selected issue to a role. This changes who the issue is assigned to — the original owner is unchanged.',
-    assignRoleBody_other:
-      'Reassign <b>{{count}}</b> selected issues to a role. This changes who the issue is assigned to — the original owner is unchanged.',
-
-    bulkStatusTitle: 'Change status',
     bulkStatusBody_one:
       'This will update {{count}} selected issue. A valid reason is required for every status change.',
     bulkStatusBody_other:

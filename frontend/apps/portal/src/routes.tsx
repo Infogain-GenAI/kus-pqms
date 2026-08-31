@@ -127,7 +127,7 @@ export const routes: RouteObject[] = [
           // both own internal scroll regions and live under FixedHeightLayout
           // below. Route ranking is global, so splitting them across branches
           // changes no match; see the note there.
-          { path: '/issues', lazy: () => import('@/features/issues/IssueListScreen').then((m) => ({ Component: m.IssueListScreen })), ErrorBoundary: EB },
+          { path: '/issues', lazy: () => import('@/features/issues/issue-list/IssueListScreen').then((m) => ({ Component: m.IssueListScreen })), ErrorBoundary: EB },
 
           { path: '/notifications', lazy: () => import('@/features/notifications/NotificationsScreen').then((m) => ({ Component: m.NotificationsScreen })), ErrorBoundary: EB },
 

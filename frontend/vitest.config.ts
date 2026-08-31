@@ -72,6 +72,12 @@ export default defineConfig({
         // gate — it did not here, because these modules land with tests and
         // measure higher than the existing average. Floors re-seeded regardless.
         'apps/portal/src/shared/**',
+        // The Issue List extraction (2026-08-31): its screen, every supporting
+        // module under issue-list/, and the reusable common/ components it and a
+        // future QIR screen share. Same named-exception pattern as the two lines
+        // below — re-seeded in the same change per this file's own instruction.
+        'apps/portal/src/features/issues/issue-list/**',
+        'apps/portal/src/features/common/**',
         /*
          * Widened 2026-08-31 for the Zustand + TanStack Query layer.
          *
@@ -90,7 +96,9 @@ export default defineConfig({
         'apps/portal/src/features/issues/issues.queries.ts',
         'apps/portal/src/features/notifications/notifications.queries.ts',
         'apps/portal/src/features/issues/issueDetail.queries.ts',
-        'apps/portal/src/features/issues/IssueListScreen.tsx',
+        // NOT 'apps/portal/src/features/issues/IssueListScreen.tsx' — the Issue
+        // List extraction above moved that file to issue-list/IssueListScreen.tsx.
+        // The old path no longer exists; issue-list/** already covers the new one.
         'apps/portal/src/features/issues/IssueWorkspaceScreen.tsx',
         'apps/portal/src/features/issues/CreateIssueScreen.tsx',
         'packages/ui-library/src/**',

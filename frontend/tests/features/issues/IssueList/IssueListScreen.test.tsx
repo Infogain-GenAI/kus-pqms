@@ -12,7 +12,7 @@ import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
-import { IssueListScreen } from '@/features/issues/IssueListScreen'
+import { IssueListScreen } from '@/features/issues/issue-list/IssueListScreen'
 
 const Wrapped = ({ children }: { children: ReactNode }) => (
   <MemoryRouter>
@@ -232,31 +232,20 @@ describe('the bulk bar acts on the selection', () => {
 
   it('appears only once something is selected', () => {
     renderList()
-    expect(screen.queryByRole('button', { name: /Assign Role/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Change Status/i })).toBeNull()
     selectAll()
-    expect(screen.getByRole('button', { name: /Assign Role/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Change Status/i })).toBeTruthy()
   })
 
-  it('Assign Role names the count and offers the three roles', () => {
+  it('completing a bulk status change clears the selection, so the bar does not linger over stale rows', () => {
     renderList()
     selectAll()
-    fireEvent.click(screen.getByRole('button', { name: /Assign Role/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Change Status$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Select status/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Open$/ }))
+    fireEvent.change(screen.getByLabelText(/Reason \/ comment/i), { target: { value: 'Bulk triage' } })
+    fireEvent.click(screen.getByRole('button', { name: /^Update status for/i }))
 
-    expect(document.body.textContent).toContain('Reassign')
-    // The original owner is explicitly NOT touched — the copy says so, because
-    // the store writes assigneeRole and leaves ownerRole alone.
-    expect(document.body.textContent).toContain('the original owner is unchanged')
-    for (const role of ['SE', 'ASM', 'PQM']) {
-      expect(screen.getByRole('button', { name: new RegExp(`^${role}$`) })).toBeTruthy()
-    }
-  })
-
-  it('assigning clears the selection, so the bar does not linger over stale rows', () => {
-    renderList()
-    selectAll()
-    fireEvent.click(screen.getByRole('button', { name: /Assign Role/i }))
-    fireEvent.click(screen.getByRole('button', { name: /^ASM$/ }))
-
-    expect(screen.queryByRole('button', { name: /Assign Role/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Change Status/i })).toBeNull()
   })
 })
