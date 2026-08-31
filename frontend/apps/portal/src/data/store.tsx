@@ -24,6 +24,7 @@ import { ACTIVITIES, AUDIT, CLASSIFICATION, COMMENTS, ISSUES, NOTIFICATIONS, PAR
 import { assertSeedAnchors } from './assertSeed'
 import { newId } from './util'
 import { ELIGIBLE_PARTS, TEAM_DIRECTORY, type PartOption, type TeamMember } from './investigation'
+import type { AssignableRole } from './assignableRoles'
 import { findPriorityItem, priorityLetter, priorityTotal, type PriorityLetter } from './priorityMatrix'
 
 // Fail fast (dev server, preview build and every fidelity capture) if the dataset's
@@ -168,6 +169,30 @@ interface StoreValue {
   approveProposal: (id: string, remark: string, actor: Actor) => void
   rejectProposal: (id: string, remark: string, actor: Actor) => void
   bulkStatus: (ids: string[], status: StatusKey, reason: string, actor: Actor) => void
+  /**
+   * Reassign the ASSIGNEE role on several issues at once.
+   *
+   * ⚠️ IT WRITES `assigneeRole`, NEVER `ownerRole`, and that distinction is the
+   * whole point. Ownership records who raised the issue and is part of its
+   * history; assignment is who is working it now. Bulk reassignment moves the
+   * second and must never rewrite the first.
+   *
+   * ⚠️ THIS WAS SILENTLY DELETED BY A MERGE and restored afterwards. Main's Issue
+   * List rewrite won at that file's path and took the function, its control, its
+   * i18n and a dedicated test suite with it. Nothing conflicted and no gate
+   * failed — `scripts/check-merge-loss.mjs` exists because of this.
+   *
+   * ⚠️ THE ROLE IS `AssignableRole`, NOT `RoleKey` — see `assignableRoles.ts`.
+   * Typing it as the session vocabulary is what limited this to three options
+   * when the design offers five.
+   *
+   * NOTE ON FIDELITY: the canonical's `bulkAssign(role)` PERSISTS NOTHING — it
+   * clears the selection and raises a notification, unlike its `bulkStatus`
+   * which does map the issues. Writing `assigneeRole` is therefore ours, not the
+   * design's, and deliberately so: a bulk action that changes no data is
+   * theatre. Recorded rather than presented as a faithful port.
+   */
+  bulkAssignRole: (ids: string[], role: AssignableRole, actor: Actor) => void
   /**
    * Request a new classification node — the forms' "Request New System" flow.
    *
@@ -523,6 +548,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     appendAudit(id, actor, 'Rejected transition', remark)
   }, [appendAudit])
 
+  const bulkAssignRole = useCallback<StoreValue['bulkAssignRole']>((ids, role, actor) => {
+    setIssues((list) => list.map((i) => (ids.includes(i.id) ? { ...i, assigneeRole: role, updatedAt: now() } : i)))
+    // One audit row PER ISSUE: the action happened to each of them, and a single
+    // combined entry would leave four of five issues with no record of the change.
+    ids.forEach((id) => appendAudit(id, actor, 'Bulk role assignment', `assigned to ${role}`))
+  }, [appendAudit])
+
   const bulkStatus = useCallback<StoreValue['bulkStatus']>((ids, status, reason, actor) => {
     setIssues((list) => list.map((i) => (ids.includes(i.id) ? { ...i, status, updatedAt: now() } : i)))
     ids.forEach((id) => appendAudit(id, actor, 'Bulk status change', `→ ${status}: ${reason}`))
@@ -697,7 +729,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     issues, classification, notifications, unreadCount,
     getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, groupMembers, relKind, correlations, partOptions, teamDirectory,
     priorityFor, priorityResult, savePriority,
-    createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
+    createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus, bulkAssignRole,
     requestClassification, addComment, addActivity, addPart, setPartStatus,
     addManualParts, addManualTeamMembers,
     requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,

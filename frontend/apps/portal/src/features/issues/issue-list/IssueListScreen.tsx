@@ -7,7 +7,7 @@ import {
 } from '@/data/issueListView'
 import { useDebouncedValue } from '@/shared/useDebouncedCallback'
 import { useNavigate } from 'react-router-dom'
-import { CircleCheck, Columns3, Download, FileOutput, Flame, FolderOpen, Layers, Plus, RefreshCw, Search, SlidersHorizontal, TriangleAlert } from 'lucide-react'
+import { CircleCheck, Columns3, Download, FileOutput, Flame, FolderOpen, Layers, Plus, RefreshCw, Search, SlidersHorizontal, TriangleAlert, UserRoundCog } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Button,
@@ -31,6 +31,7 @@ import { downloadIssuesCsv, exportFilename } from './issue-export'
 import { ALL_COLUMN_KEYS, buildIssueColumns, DEFAULT_COLS, DEFAULT_SORT, DEFAULT_VISIBLE, OPTIONAL_COLS } from './IssueColumns'
 import { IssueFilterFields } from './IssueFilterFields'
 import { BulkChangeStatusModal } from './BulkChangeStatusModal'
+import { BulkAssignRoleModal } from './BulkAssignRoleModal'
 import { PageHeading } from '@/features/common/PageHeading'
 import { Card } from '@/features/common/Card'
 import { Tabs } from '@/features/common/Tabs'
@@ -66,7 +67,7 @@ export function IssueListScreen() {
   const { t } = useTranslation(NS)
   const nav = useNavigate()
   const { user, scope } = useRole()
-  const { issues, bulkStatus, priorityResult } = useStore()
+  const { issues, bulkStatus, bulkAssignRole, priorityResult } = useStore()
 
   /*
    * ─── THE PERSISTED VIEW ─────────────────────────────────────────────────────
@@ -131,6 +132,7 @@ export function IssueListScreen() {
   const [bulkTarget, setBulkTarget] = useState('')
   const [bulkReason, setBulkReason] = useState('')
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
+  const [assignOpen, setAssignOpen] = useState(false)
 
   const myIssues = useMemo(() => issues.filter((i) => i.assignee === user.name || i.owner === user.name), [issues, user.name])
   const scoped = tab === 'my' ? myIssues : issues
@@ -280,6 +282,7 @@ export function IssueListScreen() {
         label={selected.length === 1 ? 'Issue Selected' : 'Issues Selected'}
         actions={[
           { key: 'status', label: t('bulkChangeStatus'), icon: RefreshCw, onClick: () => setBulkModalOpen(true) },
+          { key: 'assign', label: t('bulkAssignRole'), icon: UserRoundCog, onClick: () => setAssignOpen(true) },
           {
             // The bulk export is the SELECTION, not the view — that is the whole
             // point of having selected rows.
@@ -293,6 +296,17 @@ export function IssueListScreen() {
           },
         ]}
         onClear={() => setSelected([])}
+      />
+
+      <BulkAssignRoleModal
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        count={selected.length}
+        onAssign={(role) => {
+          bulkAssignRole(selected.map(String), role, { name: user.name, role: user.role })
+          setAssignOpen(false)
+          setSelected([])
+        }}
       />
 
       <BulkChangeStatusModal
