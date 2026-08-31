@@ -39,19 +39,28 @@
 //      exercises it — and the coverage ratchet will not notice either, because
 //      the code went too, so the percentage holds.
 //
-//   3. PRESENCE ANYWHERE COUNTS AS ALIVE, including in a comment or a dead
-//      trace. Had `bulkAssignRole` survived in one comment, this would have
-//      missed it. ⚠️ AND NOTE THE INVERSE, which is the reason this works at the
-//      identifier level at all: the audit string 'Bulk role assignment' DOES
-//      still exist in `history.catalogue.ts`, so a STRING-level check would have
-//      reported the feature alive and well. That the identifier level caught it
-//      is partly luck, not a property of the design.
+//   3. DECLARATION-LEVEL HOMONYMS. Survival is judged by whether HEAD DECLARES
+//      the name (see the note further down), which defeats the ordinary
+//      name-collision case. It does NOT defeat a collision where the coincidental
+//      name at HEAD is itself a declaration — a lost `const parseRow` masked by
+//      an unrelated `interface parseRow` member elsewhere. Rarer, still possible,
+//      still silent.
 //
-//   4. NON-IDENTIFIER CONTENT: copy strings, CSS rules, seed rows, i18n keys
-//      whose names are short, taxonomy entries. And names under 6 characters are
-//      skipped outright for noise control.
+//   4. BARE RE-EXPORTS. `export { X } from './y'` matches no declaration keyword,
+//      so `X` is never entered into evidence at the base ref at all — it cannot
+//      be reported lost because it was never seen. Zero uses in this tree today;
+//      adopting that style would create a blind spot without warning.
+//
+//   5. NON-IDENTIFIER CONTENT: copy strings, CSS rules, seed rows, taxonomy
+//      entries, and any name under 6 characters.
+//
+// ⚠️ THE INVERSE CASE, worth keeping because it is why this works at the
+// identifier level at all: the audit string 'Bulk role assignment' STILL EXISTS
+// in `history.catalogue.ts`, so a STRING-level check would have reported the lost
+// feature alive and well. Identifiers caught it; strings would not have.
 //
 // So: use it on every merge, and do not read a clean result as an all-clear.
+// Limits 1 and 2 are the ones that will bite; 3 and 4 are latent in this tree.
 //
 // ─── IT IS A REVIEW LIST, NOT A GATE ─────────────────────────────────────────
 //
@@ -97,7 +106,20 @@ function textAt(ref, paths) {
  *      shape `bulkAssignRole` had, and the reason an exports-only scan fails.
  */
 const DECL = /^\s*(?:export\s+)?(?:declare\s+)?(?:const|let|var|function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/gm
-const MEMBER = /^\s{2,}([a-z][\w$]*)\??\s*:/gm
+/*
+ * Members of interfaces and object types.
+ *
+ * ⚠️ `[A-Za-z_$]`, NOT `[a-z]`. The first version was lowercase-only, so a member
+ * whose name began with a capital was never collected at all — invisible from the
+ * start rather than reported with low confidence. A defect, not a scope choice.
+ */
+const MEMBER = /^\s{2,}([A-Za-z_$][\w$]*)\??\s*:/gm
+/*
+ * Second and later declarators on one line: `const a = 1, b = 2` used to register
+ * only `a`, because DECL captures a single identifier per line-start match. Also
+ * a regex defect rather than a decision.
+ */
+const EXTRA_DECLARATOR = /,\s*([A-Za-z_$][\w$]*)\s*(?==)/g
 
 function declarationsAt(ref, paths) {
   const found = new Map() // name -> first file it was declared in
@@ -108,14 +130,28 @@ function declarationsAt(ref, paths) {
     } catch {
       continue
     }
+    const add = (name) => {
+      /*
+       * A CHOSEN limit, unlike the two regex defects above — worth distinguishing,
+       * because a reader trusts a deliberate scope decision differently from an
+       * accidental gap. Short names collide with everything and produce noise
+       * that would get the whole list ignored.
+       */
+      if (name.length < 6) return
+      if (!found.has(name)) found.set(name, p)
+    }
+
     for (const re of [DECL, MEMBER]) {
       re.lastIndex = 0
-      for (const m of src.matchAll(re)) {
-        const name = m[1]
-        // Short names collide with everything and generate pure noise.
-        if (name.length < 6) continue
-        if (!found.has(name)) found.set(name, p)
-      }
+      for (const m of src.matchAll(re)) add(m[1])
+    }
+
+    // Extra declarators, but only on lines that actually declare something —
+    // otherwise every `{ a: 1, b = … }` in the file would register.
+    for (const line of src.split('\n')) {
+      if (!/^\s*(?:export\s+)?(?:declare\s+)?(?:const|let|var)\s/.test(line)) continue
+      EXTRA_DECLARATOR.lastIndex = 0
+      for (const m of line.matchAll(EXTRA_DECLARATOR)) add(m[1])
     }
   }
   return found
@@ -124,12 +160,28 @@ function declarationsAt(ref, paths) {
 const basePaths = filesAt(base)
 const headPaths = filesAt('HEAD')
 const baseDecls = declarationsAt(base, basePaths)
+const headDecls = declarationsAt('HEAD', headPaths)
 const headText = textAt('HEAD', headPaths)
 
+/*
+ * ─── ⚠️ COMPARED AT THE DECLARATION LEVEL, NOT BY TEXT PRESENCE ──────────────
+ *
+ * The first version asked "does this identifier appear ANYWHERE at HEAD", which
+ * NAME-COLLISION MASKING defeats: delete a declaration at base, have anything
+ * unrelated at HEAD happen to share the identifier — not a rename, a HOMONYM —
+ * and the tool calls it alive with no signal whatsoever. Across 266 files that
+ * needs no bad luck. It is the same shape as the hole that let `bulkAssignRole`
+ * past the original "did my changes survive" check, one layer removed.
+ *
+ * So a name survives only if HEAD DECLARES it. A homonym must now itself be a
+ * declaration to mask a loss, which is much rarer. When a name is gone as a
+ * declaration but still present as TEXT, that is reported as well — it is the
+ * dead-trace / homonym case, and it wants a human's eye for opposite reasons.
+ */
 const gone = []
 for (const [name, file] of baseDecls) {
-  // Word-boundary membership: the identifier appears NOWHERE at HEAD.
-  if (!new RegExp(`\\b${name}\\b`).test(headText)) gone.push({ name, file })
+  if (headDecls.has(name)) continue
+  gone.push({ name, file, lingering: new RegExp(`\\b${name}\\b`).test(headText) })
 }
 
 console.log(`merge-loss: comparing ${base} -> HEAD`)
@@ -140,7 +192,7 @@ if (gone.length === 0) {
   console.log('  nothing declared at the base is missing at HEAD.')
 } else {
   console.log('')
-  console.log(`⚠️  ${gone.length} identifier(s) declared at ${base} appear NOWHERE at HEAD:`)
+  console.log(`⚠️  ${gone.length} identifier(s) declared at ${base} are no longer DECLARED at HEAD:`)
   console.log('   Each is a rename, a deliberate removal, or a silently lost feature.')
   console.log('   Decide which — that is the whole job of this list.')
   console.log('')
@@ -151,7 +203,10 @@ if (gone.length === 0) {
   }
   for (const [file, names] of [...byFile].sort()) {
     console.log(`   ${file}`)
-    for (const n of names.sort()) console.log(`     · ${n}`)
+    for (const n of names.sort()) {
+      const g = gone.find((x) => x.name === n)
+      console.log(`     · ${n}${g?.lingering ? '   (no longer DECLARED, but still mentioned at HEAD)' : ''}`)
+    }
   }
 }
 
