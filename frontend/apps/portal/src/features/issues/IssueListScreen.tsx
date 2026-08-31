@@ -309,7 +309,7 @@ export function IssueListScreen() {
   const { user, scope } = useRole()
   const { issues, bulkStatus, bulkAssignRole, priorityResult } = useStore()
 
-  const [tab, setTab] = useState<'my' | 'all'>(scope === 'own' ? 'my' : 'all')
+
   /*
    * ─── THE PERSISTED VIEW ─────────────────────────────────────────────────────
    *
@@ -323,14 +323,26 @@ export function IssueListScreen() {
    * `useState` pairs they replaced, so every call site below is unchanged and
    * persistence is invisible at the point of use.
    *
-   * ⚠️ `tab` (My Issues / All Issues) IS NOT PART OF THIS, and must not be added
-   * to it. It is seeded from the viewer's capability on every mount, so a scope
+   * ⚠️ `tab` (My Issues / All Issues) NOW LIVES IN THE SAME STORE BUT IS STILL
+   * NEVER PERSISTED, and the distinction matters. 04 requires `scope` as a store
+   * field AND requires `partialize` to keep it out of the stored payload: it is
+   * re-seeded from the viewer's capability on every mount, because a scope
    * restored from an earlier visit could seat someone in a scope their current
    * role would not have picked. Vue's store excludes it for the same reason and
    * says so at length. The two DRAFTS below are also excluded, but only because
    * they are seeded from the applied state when a drawer opens.
    */
-  const { view, setQ, setFlt, setCols, setSort, setPage, setPageSize } = useIssueListView(DEFAULT_VIEW, ALL_COLUMN_KEYS)
+  const {
+    view,
+    scope: tab,
+    setScope: setTab,
+    setQ,
+    setFlt,
+    setCols,
+    setSort,
+    setPage,
+    setPageSize,
+  } = useIssueListView(DEFAULT_VIEW, ALL_COLUMN_KEYS, scope === 'own' ? 'my' : 'all')
   const { q, flt, cols, sort, page, pageSize } = view
 
   /*

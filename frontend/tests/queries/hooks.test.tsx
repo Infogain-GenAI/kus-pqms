@@ -14,7 +14,12 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { withQueryClient, createTestQueryClient } from '../support/queryWrapper'
 import { queryKeys } from '@/shared/query/keys'
 import * as services from '@/services'
-import { useIssueDetail, useIssueList, useIssueScopeCounts } from '@/features/issues/issues.queries'
+import {
+  useIssueDetail,
+  useIssueKpiCounts,
+  useIssueList,
+  useIssueScopeCounts,
+} from '@/features/issues/issues.queries'
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -256,5 +261,24 @@ describe('optimistic mark-read', () => {
     })
 
     act(() => release())
+  })
+})
+
+describe('useIssueKpiCounts', () => {
+  it('resolves the dashboard totals', async () => {
+    vi.spyOn(services.issues, 'kpiCounts').mockResolvedValue({ total: 3, byStatus: { OPEN: 3 } })
+
+    const { result } = renderHook(() => useIssueKpiCounts(), { wrapper: withQueryClient() })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.total).toBe(3)
+  })
+
+  // Unparameterised, so every caller must land on ONE cache entry — otherwise
+  // the dashboard's several KPI tiles each fetch the same totals separately.
+  it('uses one key for every caller', () => {
+    const client = createTestQueryClient()
+    client.setQueryData(queryKeys.issues.kpiCounts(), { total: 1, byStatus: {} })
+    expect(client.getQueryData(queryKeys.issues.kpiCounts())).toEqual({ total: 1, byStatus: {} })
   })
 })

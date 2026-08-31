@@ -1,5 +1,8 @@
 import type { RoleKey, User } from './types'
-import { USERS } from './seed'
+import { useAuthStore, userForRole } from '@/stores/auth.store'
+
+/** The default session role. Matches the store's own initial identity. */
+const DEFAULT_ROLE: RoleKey = 'SE'
 
 /**
  * CAPABILITIES, READABLE FROM OUTSIDE REACT.
@@ -72,36 +75,48 @@ export function capabilityOf(user: Pick<User, 'cap'>): Capability {
   return user.cap
 }
 
-/** The provider's initial role, and the value before any provider mounts. */
-const DEFAULT_ROLE: RoleKey = 'SE'
-
-const roleCapability = (role: RoleKey): Capability =>
-  capabilityOf(USERS.find((u) => u.role === role) ?? USERS[0])
-
-let current: Capability = roleCapability(DEFAULT_ROLE)
-
 /**
  * The session's capability, readable from a loader.
  *
- * DEFAULTS TO THE LEAST PRIVILEGED ROLE'S, not to `admin`. If the snapshot is
- * ever read before a provider has mounted, the safe answer is the one that
- * denies — a guard that fails open is not a guard.
+ * ─── ⚠️ THIS IS NO LONGER A MIRROR. THE MIRROR IS GONE. ──────────────────────
+ *
+ * It used to be a module-level `let` that `RoleProvider` wrote to during render,
+ * with a header on this file explaining at length that a route loader runs
+ * outside the React tree and so cannot call `useRole()`. That workaround existed
+ * only because the session lived in React state.
+ *
+ * It now lives in `stores/auth.store.ts`, which is a module singleton reachable
+ * from anywhere — exactly the property `04-state-management.md` requires of it:
+ * *"safe for `getState().permissions` to read from middleware, outside React."*
+ * So this reads the store directly. There is one source of truth again, and the
+ * old caveat about two `RoleProvider`s racing over a process-wide snapshot no
+ * longer applies, because there is no snapshot to race over.
+ *
+ * DEFAULTS TO THE LEAST PRIVILEGED ROLE'S, not to `admin` — the store's own
+ * initial state is the SE session. A guard that fails open is not a guard.
  */
 export function currentCapability(): Capability {
-  return current
+  return capabilityOf(useAuthStore.getState().currentUser)
 }
 
 /**
- * Called by `RoleProvider` whenever the role changes. Not for anything else.
+ * Sets the session role.
  *
- * Exported rather than kept private because the provider lives in a different
- * module; the leading underscore marks it as internal wiring, not API.
+ * ⚠️ THE NAME IS NOW SLIGHTLY WRONG AND IS KEPT ANYWAY. It no longer *syncs*
+ * anything — it writes the one store. The name survives because a dozen test
+ * files and `tests/support/dataRouter.tsx` call it, and renaming it in the same
+ * change that moved the session into Zustand would have put every one of those
+ * files in this diff. Worth renaming to `setSessionRole` in a follow-up whose
+ * whole content is the rename.
+ *
+ * Routes through `setUser()`, never `switchRole()`: `switchRole()` throws in a
+ * production build by design, and this is also the seam a test uses.
  */
 export function _syncCurrentRole(role: RoleKey): void {
-  current = roleCapability(role)
+  useAuthStore.getState().setUser(userForRole(role))
 }
 
 /** Test-only: restore the default, so one spec's role cannot leak into the next. */
 export function __resetCurrentCapability(): void {
-  current = roleCapability(DEFAULT_ROLE)
+  useAuthStore.getState().setUser(userForRole(DEFAULT_ROLE))
 }

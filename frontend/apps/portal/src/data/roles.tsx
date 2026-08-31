@@ -1,13 +1,41 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
-import type { RoleKey, User } from './types'
-import { USERS } from './seed'
-import { _syncCurrentRole } from './capabilities'
+import { useMemo, type ReactNode } from 'react'
+import type { PermAction, RoleKey, User } from './types'
+import { useAuthStore, hasPermission, selectScope, userForRole } from '@/stores/auth.store'
 
-// Client-side role + permission context. Mirrors EXPERIENCE.md's read/override/admin
-// behavior. The runtime role switch is a demo/UAT harness affordance, not a shipped feature;
-// every mutation is still (documented to be) re-checked server-side.
+/**
+ * ROLE CONTEXT — NOW A THIN ADAPTER OVER `stores/auth.store.ts`.
+ *
+ * ─── WHAT CHANGED, AND WHAT DELIBERATELY DID NOT ─────────────────────────────
+ *
+ * The session used to live in `useState` inside `RoleProvider`, with the
+ * capability mirrored by hand into a module-level snapshot for route loaders to
+ * read. It now lives in a Zustand store, per `04-state-management.md`'s
+ * "Auth → Zustand".
+ *
+ * ⚠️ `useRole()`, `Guard` AND `PermAction` KEEP THEIR EXACT SHAPES. Twenty-odd
+ * components and a dozen test files call `useRole()`, and the migration is a
+ * change of where the value is kept — not of what any of them see. Changing the
+ * consumer API at the same time would have made every one of those call sites
+ * part of the diff and buried the actual change.
+ *
+ * ─── WHY `RoleProvider` STILL EXISTS AT ALL ──────────────────────────────────
+ *
+ * A Zustand store is a module singleton, so strictly nothing needs to be
+ * provided. The component is kept because `initialRole` is load-bearing in
+ * tests: several render the tree as a specific role, and the store's default
+ * would otherwise be the only reachable identity. It now seeds the store instead
+ * of holding state of its own.
+ *
+ * ⚠️ ONE BEHAVIOUR IS GENUINELY BETTER NOW, AND IT IS WORTH NAMING. The old
+ * provider wrote the role into `data/capabilities.ts`'s snapshot *during render*
+ * — a side effect in a `useMemo` — because a route loader runs before render and
+ * an effect would have been too late. That workaround is gone: a store is
+ * readable from a loader directly, which is precisely the property 04 requires
+ * of `permissions` ("safe for `getState().permissions` to read from middleware,
+ * outside React"). The store is now the one source, not a source plus a mirror.
+ */
 
-export type PermAction = 'create' | 'edit-own' | 'propose' | 'approve' | 'override-edit' | 'administer'
+export type { PermAction }
 
 interface RoleContextValue {
   role: RoleKey
@@ -18,62 +46,67 @@ interface RoleContextValue {
   scope: 'own' | 'all'
 }
 
-const RoleContext = createContext<RoleContextValue | null>(null)
-
-function computeCan(user: User, action: PermAction): boolean {
-  switch (action) {
-    case 'approve':
-    case 'override-edit':
-      return user.cap === 'override'
-    case 'administer':
-      return user.cap === 'admin'
-    case 'propose':
-    case 'edit-own':
-      return user.cap === 'read' || user.cap === 'override'
-    case 'create':
-      return user.cap !== 'admin'
-    default:
-      return false
+/**
+ * Seeds the store's identity.
+ *
+ * ⚠️ WRITTEN DURING RENDER, NOT IN AN EFFECT, AND FOR THE SAME REASON THE OLD
+ * SNAPSHOT SYNC WAS: React Router calls a route's loader BEFORE rendering the
+ * route it guards, so a seed applied in an effect lands after the first guarded
+ * navigation has already been decided against the wrong identity.
+ *
+ * The write is guarded on inequality, so it happens once rather than on every
+ * render — an unconditional `setUser` would notify every subscriber each render
+ * and loop.
+ */
+export function RoleProvider({
+  children,
+  initialRole,
+}: {
+  children: ReactNode
+  initialRole?: RoleKey
+}) {
+  if (initialRole && useAuthStore.getState().currentUser.role !== initialRole) {
+    // Through `setUser`, NOT `switchRole` — `switchRole` throws in a production
+    // build by design, and seeding is not role switching.
+    useAuthStore.getState().setUser(userForRole(initialRole))
   }
-}
-
-export function RoleProvider({ children, initialRole = 'SE' }: { children: ReactNode; initialRole?: RoleKey }) {
-  const [role, setRole] = useState<RoleKey>(initialRole)
-  const value = useMemo<RoleContextValue>(() => {
-    const user = USERS.find((u) => u.role === role) ?? USERS[0]
-    /*
-     * Mirror the role into the module-level snapshot that route LOADERS read.
-     * A loader runs outside the React tree and cannot call `useRole()`, so the
-     * capability guard has no other way to see the session — see
-     * `@/data/capabilities`.
-     *
-     * ⚠️ DONE HERE, INSIDE THE MEMO, NOT IN AN EFFECT. An effect runs AFTER
-     * commit, and React Router calls a loader BEFORE rendering the route it
-     * guards — so on the very first navigation the loader would read the
-     * previous role. Writing during the memo is a side effect in render, which
-     * is normally wrong; it is correct here because the write is idempotent
-     * (same role in, same value out) and the ordering requirement is real.
-     */
-    _syncCurrentRole(role)
-    return {
-      role,
-      user,
-      setRole,
-      can: (action) => computeCan(user, action),
-      scope: user.cap === 'read' ? 'own' : 'all',
-    }
-  }, [role])
-  return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>
+  return <>{children}</>
 }
 
 export function useRole(): RoleContextValue {
-  const ctx = useContext(RoleContext)
-  if (!ctx) throw new Error('useRole must be used within RoleProvider')
-  return ctx
+  const currentUser = useAuthStore((s) => s.currentUser)
+  const permissions = useAuthStore((s) => s.permissions)
+  const switchRole = useAuthStore((s) => s.switchRole)
+  const scope = useAuthStore(selectScope)
+
+  /*
+   * Memoised on the store's own values, so the returned object keeps a stable
+   * identity between renders where the session did not change. Several consumers
+   * put `can` straight into an effect dependency list; a new function each render
+   * would re-run that work on every unrelated re-render.
+   */
+  return useMemo<RoleContextValue>(
+    () => ({
+      role: currentUser.role,
+      user: currentUser,
+      setRole: switchRole,
+      can: (action) => hasPermission(permissions, action),
+      scope,
+    }),
+    [currentUser, permissions, switchRole, scope],
+  )
 }
 
 /** Renders children only when the current role has the given capability. */
-export function Guard({ can, children, fallback = null }: { can: PermAction; children: ReactNode; fallback?: ReactNode }) {
+export function Guard({
+  can,
+  children,
+  fallback = null,
+}: {
+  can: PermAction
+  children: ReactNode
+  fallback?: ReactNode
+}) {
   const ctx = useRole()
   return <>{ctx.can(can) ? children : fallback}</>
 }
