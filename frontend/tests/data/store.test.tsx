@@ -35,12 +35,21 @@ const pickPair = (issues: { id: string; linkedIssueIds?: string[] }[]) => {
   throw new Error('seed has no unlinked pair — the fixture changed')
 }
 
+/**
+ * A justification long enough to clear the >= 20-character governance floor.
+ *
+ * `linkIssue`/`unlinkIssue` take it as a REQUIRED argument — see the store's own
+ * note on why. These tests assert reciprocity and audit, not the gate, so they
+ * pass one valid reason rather than restating the sentence at each call.
+ */
+const WHY = 'Same root cause suspected across these records.'
+
 describe('INVARIANT 1 — links are reciprocal', () => {
   it('linkIssue writes both sides', () => {
     const { result } = setup()
     const [a, b] = pickPair(result.current.issues)
 
-    act(() => result.current.linkIssue(a, b, ACTOR))
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
 
     expect(result.current.getIssue(a)?.linkedIssueIds).toContain(b)
     expect(result.current.getIssue(b)?.linkedIssueIds).toContain(a)
@@ -50,19 +59,52 @@ describe('INVARIANT 1 — links are reciprocal', () => {
     const { result } = setup()
     const [a, b] = pickPair(result.current.issues)
 
-    act(() => result.current.linkIssue(a, b, ACTOR))
-    act(() => result.current.unlinkIssue(a, b, ACTOR))
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
+    act(() => result.current.unlinkIssue(a, b, WHY, ACTOR))
 
     expect(result.current.getIssue(a)?.linkedIssueIds ?? []).not.toContain(b)
     expect(result.current.getIssue(b)?.linkedIssueIds ?? []).not.toContain(a)
+  })
+
+  /*
+   * THE ANTI-THEATRE ASSERTION. A gate that collects a reason and drops it is
+   * worse than no gate, because it looks enforced. Before this change
+   * `linkIssue` wrote a fixed detail (`↔ <id>`) and had nowhere to put a
+   * justification at all, so the reason existed only in component state.
+   */
+  it('WRITES THE JUSTIFICATION INTO THE AUDIT TRAIL, not just the link', () => {
+    const { result } = setup()
+    const [a, b] = pickPair(result.current.issues)
+
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
+
+    const entry = result.current.auditFor(a).find((e) => e.action === 'Issue linked')
+    expect(entry, 'no audit row for the link').toBeTruthy()
+    expect(entry!.detail).toContain(WHY)
+    // The pre-existing reciprocal marker survives alongside it.
+    expect(entry!.detail).toContain(b)
+  })
+
+  it('records the reason for an UNLINK too, which is the half that was missing', () => {
+    const { result } = setup()
+    const [a, b] = pickPair(result.current.issues)
+    const REASON = 'Raised separately in error; these are unrelated defects.'
+
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
+    act(() => result.current.unlinkIssue(a, b, REASON, ACTOR))
+
+    const entry = result.current.auditFor(a).find((e) => e.action === 'Issue unlinked')
+    expect(entry!.detail).toContain(REASON)
+    // Negative control: the unlink row must carry its OWN reason, not the link's.
+    expect(entry!.detail).not.toContain(WHY)
   })
 
   it('linking twice does not duplicate the id', () => {
     const { result } = setup()
     const [a, b] = pickPair(result.current.issues)
 
-    act(() => result.current.linkIssue(a, b, ACTOR))
-    act(() => result.current.linkIssue(a, b, ACTOR))
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
 
     const links = result.current.getIssue(a)?.linkedIssueIds ?? []
     expect(links.filter((x) => x === b)).toHaveLength(1)
@@ -139,8 +181,8 @@ describe('INVARIANT 3 — every mutation appends an audit entry', () => {
   // The runbook calls this the invariant most likely to be broken silently by a
   // future refactor, because nothing about a missing audit row is visible.
   const mutations: [string, (s: ReturnType<typeof useStore>, id: string, other: string) => void][] = [
-    ['linkIssue', (s, id, other) => s.linkIssue(id, other, ACTOR)],
-    ['unlinkIssue', (s, id, other) => s.unlinkIssue(id, other, ACTOR)],
+    ['linkIssue', (s, id, other) => s.linkIssue(id, other, WHY, ACTOR)],
+    ['unlinkIssue', (s, id, other) => s.unlinkIssue(id, other, WHY, ACTOR)],
     ['proposeTransition', (s, id) => s.proposeTransition(id, 'closed', 'r', ACTOR)],
     ['approveProposal', (s, id) => s.approveProposal(id, 'ok', ACTOR)],
     ['rejectProposal', (s, id) => s.rejectProposal(id, 'no', ACTOR)],

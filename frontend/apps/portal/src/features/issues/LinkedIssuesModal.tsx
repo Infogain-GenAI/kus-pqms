@@ -5,6 +5,11 @@ import { Icon } from '@pqms/ui-library'
 import { IconChip, Modal, TagChip } from '@/app/chrome'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
+import { useTranslation } from 'react-i18next'
+import { LinkJustifyBox } from './linking/LinkJustifyBox'
+import { LinkJustifyApplied } from './linking/LinkJustifyApplied'
+import { NS as LINK_JUSTIFY_NS } from './linking/LinkJustify.i18n'
+import { usePendingJustifications } from './linking/usePendingJustifications'
 import type { Issue } from '@/data/types'
 
 /** Fields whose match on another issue counts as a correlation signal, in display order.
@@ -30,6 +35,7 @@ const MATCH_FIELDS: { key: keyof Pick<Issue, 'system' | 'subSystem' | 'component
  */
 export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; issueId: string; onClose: () => void }) {
   const store = useStore()
+  const { t: tj } = useTranslation(LINK_JUSTIFY_NS)
   const { user } = useRole()
   const issue = store.getIssue(issueId)
   const committed = useMemo(() => issue?.linkedIssueIds ?? [], [issue?.linkedIssueIds])
@@ -58,12 +64,49 @@ export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; i
 
   const toggle = (id: string) => setDraft((d) => (d.includes(id) ? d.filter((x) => x !== id) : [...d, id]))
 
+  /*
+   * Same governance rule and same three-state lifecycle as the workspace's
+   * Manage Links, because it is the same mutation — a toggled checkbox IS a
+   * pending change. Two different justification interactions for one rule would
+   * have to be explained to every reviewer and user forever.
+   *
+   * WITHDRAWING A CHANGE (untoggling) DISCARDS ITS JUSTIFICATION — see
+   * `usePendingJustifications`, which owns that decision and the reasoning. The
+   * prototype's list is not a checkbox list, so it never had to answer this.
+   */
+  const additions = draft.filter((id) => !committed.includes(id))
+  const removals = committed.filter((id) => !draft.includes(id))
+  const changedIds = [...removals, ...additions]
+  const justify = usePendingJustifications(changedIds)
+  useEffect(() => { if (open) justify.reset() }, [open])
+
   const save = () => {
     if (!issue) return
     const actor = { name: user.name, role: user.role }
-    committed.filter((id) => !draft.includes(id)).forEach((id) => store.unlinkIssue(issueId, id, actor))
-    draft.filter((id) => !committed.includes(id)).forEach((id) => store.linkIssue(issueId, id, actor))
+    // Unreachable until every pending change is applied — see the Save button.
+    removals.forEach((id) => store.unlinkIssue(issueId, id, justify.reasonFor(id), actor))
+    additions.forEach((id) => store.linkIssue(issueId, id, justify.reasonFor(id), actor))
     onClose()
+  }
+
+  const justifyRow = (id: string) => {
+    const row = justify.reasons[id]
+    if (!row) return null
+    const kind = removals.includes(id) ? 'unlink' : 'link'
+    if (row.applied) {
+      return <LinkJustifyApplied kind={kind} text={row.text} onEdit={() => justify.edit(id)} />
+    }
+    return (
+      <LinkJustifyBox
+        text={row.text}
+        error={row.err}
+        onText={(next) => justify.setText(id, next)}
+        onApply={() => justify.apply(id)}
+        onCancel={() => justify.setText(id, '')}
+        label={`Justification for ${kind === 'unlink' ? 'unlinking' : 'linking'} ${id}`}
+        inputLabel={`Justification for ${kind === 'unlink' ? 'unlinking' : 'linking'} ${id}`}
+      />
+    )
   }
 
   if (!open || !issue) return null
@@ -96,8 +139,13 @@ export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; i
       }
       footer={
         <>
+          {changedIds.length > 0 && !justify.allApplied && (
+            <span style={{ marginRight: 'auto', font: 'var(--fw-regular) var(--fs-caption)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
+              {tj('saveBlocked')}
+            </span>
+          )}
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save changes</Button>
+          <Button disabled={changedIds.length === 0 || !justify.allApplied} onClick={save}>Save changes</Button>
         </>
       }
     >
@@ -128,7 +176,8 @@ export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; i
           visible.map(({ issue: c, reasons }) => {
             const linked = draft.includes(c.id)
             return (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)' }}>
+              <div key={c.id} style={{ padding: 'var(--space-3)', border: 'var(--border-width) solid ' + (changedIds.includes(c.id) ? 'var(--accent-300)' : 'var(--border-subtle)'), borderRadius: 'var(--radius-lg)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
                 <span style={{ marginTop: 2 }}>
                   <Checkbox checked={linked} onChange={() => toggle(c.id)} />
                 </span>
@@ -154,6 +203,8 @@ export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; i
                     </div>
                   )}
                 </div>
+              </div>
+              {justifyRow(c.id)}
               </div>
             )
           })

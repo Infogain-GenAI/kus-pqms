@@ -5,6 +5,7 @@ import { Icon } from '@pqms/ui-library'
 import { CardHead, SectionCard } from '@/app/chrome'
 import { useStore } from '@/data/store'
 import { IssueExistingPreviewModal } from './IssueExistingPreviewModal'
+import { LinkJustifyBox, applyJustification } from './linking/LinkJustifyBox'
 
 /**
  * Search & link issue — the V4-V5 Issue Entry linking section, also reused by Issue
@@ -22,8 +23,13 @@ export function LinkIssuesSection({
   excludeId,
 }: {
   linkedIds: string[]
-  onLink: (id: string) => void
-  onUnlink: (id: string) => void
+  /**
+   * Both callbacks now carry the audited justification the change was made with.
+   * The section captures it inline and does not call through until it is valid,
+   * so a caller cannot receive an unjustified mutation.
+   */
+  onLink: (id: string, justification: string) => void
+  onUnlink: (id: string, justification: string) => void
   /** The issue currently being created/edited — never offer to link it to itself. */
   excludeId?: string
 }) {
@@ -31,6 +37,39 @@ export function LinkIssuesSection({
   const [query, setQuery] = useState('')
   /** The issue open in the preview modal, by id. Null when closed. */
   const [previewId, setPreviewId] = useState<string | null>(null)
+  /**
+   * The one change awaiting its justification, or null.
+   *
+   * ⚠️ SINGLE, NOT A MAP. This surface commits immediately per action, so there
+   * is never more than one pending change — unlike the two draft/commit modals,
+   * which hold a pending justification per row. Starting a second change
+   * REPLACES the first rather than queuing it, and the abandoned text is
+   * discarded: a half-typed reason for a change the user walked away from must
+   * not be able to attach itself to the next one.
+   */
+  const [pending, setPending] = useState<{ id: string; kind: 'link' | 'unlink'; text: string; err: string } | null>(null)
+  const start = (id: string, kind: 'link' | 'unlink') => setPending({ id, kind, text: '', err: '' })
+  const applyPending = () => {
+    if (!pending) return
+    const err = applyJustification(pending.text)
+    if (err) { setPending({ ...pending, err }); return }
+    const why = pending.text.trim()
+    if (pending.kind === 'link') { onLink(pending.id, why); setQuery('') } else { onUnlink(pending.id, why) }
+    setPending(null)
+  }
+  const justifyFor = (id: string, kind: 'link' | 'unlink') =>
+    pending && pending.id === id && pending.kind === kind ? (
+      <LinkJustifyBox
+        text={pending.text}
+        error={pending.err}
+        onText={(next) => setPending({ ...pending, text: next, err: '' })}
+        onApply={applyPending}
+        onCancel={() => setPending(null)}
+        applyLabel={kind === 'link' ? 'Confirm link' : 'Confirm unlink'}
+        label={`Justification for ${kind === 'link' ? 'linking' : 'unlinking'} ${id}`}
+        inputLabel={`Justification for ${kind === 'link' ? 'linking' : 'unlinking'} ${id}`}
+      />
+    ) : null
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -82,14 +121,13 @@ export function LinkIssuesSection({
             </div>
           ) : (
             results.map((i, ix) => (
+              <div key={i.id} style={{ borderTop: ix === 0 ? 'none' : 'var(--border-width) solid var(--border-subtle)' }}>
               <div
-                key={i.id}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 'var(--space-3)',
                   padding: 'var(--space-3)',
-                  borderTop: ix === 0 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
                 }}
               >
                 <span className="ism-mono" style={{ fontSize: 'var(--fs-caption)', fontWeight: 600, flex: 'none' }}>{i.id}</span>
@@ -104,9 +142,11 @@ export function LinkIssuesSection({
                 <Button variant="link" size="sm" data-testid={`link-preview-${i.id}`} onClick={() => setPreviewId(i.id)}>
                   Preview
                 </Button>
-                <Button variant="secondary" size="sm" iconLeft={<Icon icon={Link2} size={13} />} onClick={() => { onLink(i.id); setQuery('') }}>
+                <Button variant="secondary" size="sm" iconLeft={<Icon icon={Link2} size={13} />} onClick={() => start(i.id, 'link')}>
                   Link
                 </Button>
+              </div>
+              <div style={{ padding: '0 var(--space-3) var(--space-3)' }}>{justifyFor(i.id, 'link')}</div>
               </div>
             ))
           )}
@@ -121,15 +161,13 @@ export function LinkIssuesSection({
               <div
                 key={id}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-3)',
-                  padding: 'var(--space-3)',
                   background: 'var(--selected-bg)',
                   border: 'var(--border-width) solid var(--accent-100)',
                   borderRadius: 'var(--radius-lg)',
+                  padding: 'var(--space-3)',
                 }}
               >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <span className="ism-mono" style={{ fontSize: 'var(--fs-caption)', fontWeight: 600, flex: 'none' }}>{id}</span>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-body-sm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {/* A linked id can outlive its issue in mock data — say so rather than render blank. */}
@@ -143,9 +181,11 @@ export function LinkIssuesSection({
                     Preview
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" iconLeft={<Icon icon={Link2Off} size={13} />} onClick={() => onUnlink(id)}>
+                <Button variant="ghost" size="sm" iconLeft={<Icon icon={Link2Off} size={13} />} onClick={() => start(id, 'unlink')}>
                   Unlink
                 </Button>
+              </div>
+              {justifyFor(id, 'unlink')}
               </div>
             ))}
           </div>
@@ -167,8 +207,10 @@ export function LinkIssuesSection({
         issue={previewId ? (getIssue(previewId) ?? null) : null}
         linked={!!previewId && linkedIds.includes(previewId)}
         onClose={() => setPreviewId(null)}
-        onLink={(id) => { onLink(id); setQuery('') }}
-        onUnlink={onUnlink}
+        /* Closes the modal and starts the SAME inline flow the rows use, so the
+           popup cannot commit a link the row buttons would have gated. */
+        onLink={(id) => { setPreviewId(null); start(id, 'link') }}
+        onUnlink={(id) => { setPreviewId(null); start(id, 'unlink') }}
       />
     </SectionCard>
   )

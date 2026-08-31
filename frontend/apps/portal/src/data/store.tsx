@@ -142,8 +142,29 @@ interface StoreValue {
     >,
     actor: Actor,
   ) => void
-  linkIssue: (id: string, otherId: string, actor: Actor) => void
-  unlinkIssue: (id: string, otherId: string, actor: Actor) => void
+  /**
+   * Link two issues, reciprocally, with a MANDATORY audited justification.
+   *
+   * ─── WHY `justification` IS REQUIRED AND NOT OPTIONAL ────────────────────────
+   *
+   * Every caller mutates a PERSISTED relationship between two live issues, and
+   * the governance rule is that each such change records why. An optional
+   * parameter is how that goes unenforced at one call site while looking done
+   * everywhere else — so it is required, and the compiler enumerates the
+   * surfaces instead of a reviewer having to.
+   *
+   * It sits BEFORE `actor`, matching `setStatus`, `proposeTransition` and
+   * `bulkStatus`, which all take their reason in that position. That placement
+   * also means an un-migrated 3-argument call fails as a TYPE error rather than
+   * quietly passing an actor where a reason belongs.
+   *
+   * ONE CALL IS ONE CHANGE IS ONE AUDIT ROW. The prototype's `saveSameModal()`
+   * settles this: "each change gets its own audit entry". So a batch of edits
+   * calls this once per change, each with its own reason, rather than sharing one
+   * blanket justification across several.
+   */
+  linkIssue: (id: string, otherId: string, justification: string, actor: Actor) => void
+  unlinkIssue: (id: string, otherId: string, justification: string, actor: Actor) => void
   proposeTransition: (id: string, target: StatusKey, rationale: string, actor: Actor, outcome?: DispositionOutcome) => void
   approveProposal: (id: string, remark: string, actor: Actor) => void
   rejectProposal: (id: string, remark: string, actor: Actor) => void
@@ -467,7 +488,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     appendAudit(id, actor, 'Issue updated', Object.keys(patch).join(', '))
   }, [appendAudit])
 
-  const linkIssue = useCallback<StoreValue['linkIssue']>((id, otherId, actor) => {
+  const linkIssue = useCallback<StoreValue['linkIssue']>((id, otherId, justification, actor) => {
     setIssues((list) =>
       list.map((i) => {
         if (i.id === id) return { ...i, linkedIssueIds: Array.from(new Set([...(i.linkedIssueIds ?? []), otherId])), updatedAt: now() }
@@ -475,10 +496,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return i
       }),
     )
-    appendAudit(id, actor, 'Issue linked', `↔ ${otherId}`)
+    appendAudit(id, actor, 'Issue linked', `↔ ${otherId} — ${justification}`)
   }, [appendAudit])
 
-  const unlinkIssue = useCallback<StoreValue['unlinkIssue']>((id, otherId, actor) => {
+  const unlinkIssue = useCallback<StoreValue['unlinkIssue']>((id, otherId, justification, actor) => {
     setIssues((list) =>
       list.map((i) => {
         if (i.id === id) return { ...i, linkedIssueIds: (i.linkedIssueIds ?? []).filter((x) => x !== otherId), updatedAt: now() }
@@ -486,7 +507,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return i
       }),
     )
-    appendAudit(id, actor, 'Issue unlinked', `↮ ${otherId} (soft delete)`)
+    appendAudit(id, actor, 'Issue unlinked', `↮ ${otherId} (soft delete) — ${justification}`)
   }, [appendAudit])
 
   const proposeTransition = useCallback<StoreValue['proposeTransition']>((id, target, rationale, actor, outcome) => {

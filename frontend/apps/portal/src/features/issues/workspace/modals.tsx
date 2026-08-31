@@ -5,8 +5,13 @@ import { Icon } from '@pqms/ui-library'
 import { Modal, ULabel } from '@/app/chrome'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
+import { LinkJustifyBox } from '../linking/LinkJustifyBox'
+import { LinkJustifyApplied } from '../linking/LinkJustifyApplied'
+import { NS as LINK_JUSTIFY_NS } from '../linking/LinkJustify.i18n'
+import { usePendingJustifications } from '../linking/usePendingJustifications'
 import type { DispositionOutcome, Issue } from '@/data/types'
 import { inputStyle } from './shared'
+import mlStyles from './manageLinks.module.css'
 import { Trans, useTranslation } from 'react-i18next'
 import { NS } from './IssueDetail.i18n'
 
@@ -138,6 +143,7 @@ export function EditIssueModal({ open, issue, onClose }: { open: boolean; issue:
 
 export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issue: Issue; onClose: () => void }) {
   const { t } = useTranslation(NS)
+  const { t: tj } = useTranslation(LINK_JUSTIFY_NS)
   const store = useStore()
   const { user } = useRole()
   const actor = { name: user.name, role: user.role }
@@ -147,10 +153,57 @@ export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issu
   useEffect(() => { if (open) setDraft(committed) }, [open, committed])
   const dirty = draft.length !== committed.length || draft.some((d) => !committed.includes(d))
   const candidates = store.correlations(issue.id).filter((c) => !draft.includes(c.id))
+
+  /*
+   * EVERY PENDING CHANGE CARRIES ITS OWN JUSTIFICATION, applied per row before
+   * Save will commit anything. The prototype's shape, not a batch gate: one
+   * reason covering "added 3, removed 2" is a weaker record, and its
+   * `saveSameModal()` says each change gets its own audit entry.
+   */
+  const additions = draft.filter((id) => !committed.includes(id))
+  const removals = committed.filter((id) => !draft.includes(id))
+  const changedIds = [...removals, ...additions]
+  const justify = usePendingJustifications(changedIds)
+
+  /*
+   * THE LIST SHOWS COMMITTED LINKS *AND* PENDING CHANGES, which is why it is not
+   * simply `draft`.
+   *
+   * Removing an id from `draft` used to make its row vanish — and a vanished row
+   * has nowhere to carry the justification its unlink now requires. The design
+   * keeps it in place instead, flagged (`_mrUnlink[p.id]` drives a Pending state
+   * with an Undo), so the change stays visible and reversible until Save.
+   */
+  const rows: { id: string; state: 'linked' | 'pendingLink' | 'pendingUnlink' }[] = [
+    ...committed.map((id) => ({ id, state: (draft.includes(id) ? 'linked' : 'pendingUnlink') as 'linked' | 'pendingUnlink' })),
+    ...additions.map((id) => ({ id, state: 'pendingLink' as const })),
+  ]
+  useEffect(() => { if (open) justify.reset() }, [open])
+
   const save = () => {
-    committed.filter((id) => !draft.includes(id)).forEach((id) => store.unlinkIssue(issue.id, id, actor))
-    draft.filter((id) => !committed.includes(id)).forEach((id) => store.linkIssue(issue.id, id, actor))
+    // Only reachable once every change is applied — see the Save button.
+    removals.forEach((id) => store.unlinkIssue(issue.id, id, justify.reasonFor(id), actor))
+    additions.forEach((id) => store.linkIssue(issue.id, id, justify.reasonFor(id), actor))
     onClose()
+  }
+
+  const justifyRow = (id: string, kind: 'link' | 'unlink') => {
+    const row = justify.reasons[id]
+    if (!row) return null
+    if (row.applied) {
+      return <LinkJustifyApplied kind={kind} text={row.text} onEdit={() => justify.edit(id)} />
+    }
+    return (
+      <LinkJustifyBox
+        text={row.text}
+        error={row.err}
+        onText={(next) => justify.setText(id, next)}
+        onApply={() => justify.apply(id)}
+        onCancel={() => justify.setText(id, '')}
+        label={`${kind === 'unlink' ? 'Justification for unlinking' : 'Justification for linking'} ${id}`}
+        inputLabel={`Justification for ${kind === 'unlink' ? 'unlinking' : 'linking'} ${id}`}
+      />
+    )
   }
   return (
     <Modal open={open} onClose={onClose} title={
@@ -161,21 +214,45 @@ export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issu
     } width={620} footer={
       <>
         <Button variant="ghost" onClick={onClose}>{t('linksModalCancel')}</Button>
-        <Button disabled={!dirty} iconLeft={<Icon icon={Check} size={15} />} onClick={save}>{t('linksModalSave')}</Button>
+        {/* Not merely `!dirty`: a dirty modal whose changes are unjustified must
+            not be saveable, or the gate is decorative. The blocked reason is
+            stated rather than left to a disabled button with no explanation. */}
+        {dirty && !justify.allApplied && (
+          <span style={{ marginRight: 'auto', font: 'var(--fw-regular) var(--fs-caption)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
+            {tj('saveBlocked')}
+          </span>
+        )}
+        <Button disabled={!dirty || !justify.allApplied} iconLeft={<Icon icon={Check} size={15} />} onClick={save}>{t('linksModalSave')}</Button>
       </>
     }>
       <ULabel>{t('linksModalCurrentHeading')}</ULabel>
-      {draft.length === 0 ? (
+      {rows.length === 0 ? (
         <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>{t('linksModalEmpty')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
-          {draft.map((lid) => {
+          {rows.map(({ id: lid, state }) => {
             const li = store.getIssue(lid)
+            const pendingUnlink = state === 'pendingUnlink'
             return (
-              <div key={lid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) var(--space-3)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)' }}>{lid}</span>
+              <div key={lid}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'var(--space-2) var(--space-3)', border: 'var(--border-width) solid ' + (pendingUnlink ? 'var(--danger-500)' : 'var(--border-subtle)'), borderRadius: 'var(--radius-md)', background: pendingUnlink ? 'var(--danger-50)' : undefined }}>
+                <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1 var(--font-mono)', color: 'var(--text-secondary)', textDecoration: pendingUnlink ? 'line-through' : undefined }}>{lid}</span>
                 <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', font: 'var(--fw-regular) var(--fs-body-sm)/1.2 var(--font-body)' }}>{li?.title}</span>
-                <Button variant="ghost" size="sm" style={{ color: 'var(--danger-500)', borderColor: '#E3B8B0' }} onClick={() => setDraft((d) => d.filter((x) => x !== lid))}>{t('linksModalUnlink')}</Button>
+                {state === 'pendingLink' && <span className={`${mlStyles.pendingBadge} ${mlStyles.pendingLink}`}>{t('linksModalPendingLink')}</span>}
+                {pendingUnlink && <span className={`${mlStyles.pendingBadge} ${mlStyles.pendingUnlink}`}>{t('linksModalPendingUnlink')}</span>}
+                {/*
+                  A PENDING CHANGE OFFERS UNDO, NOT THE ACTION AGAIN. Withdrawing
+                  discards the justification with it — see
+                  `usePendingJustifications` for why remembering it would be worse.
+                */}
+                {state === 'linked' ? (
+                  <Button variant="ghost" size="sm" style={{ color: 'var(--danger-500)', borderColor: '#E3B8B0' }} onClick={() => setDraft((d) => d.filter((x) => x !== lid))}>{t('linksModalUnlink')}</Button>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={() => setDraft((d) => (pendingUnlink ? [...d, lid] : d.filter((x) => x !== lid)))}>{t('linksModalUndo')}</Button>
+                )}
+              </div>
+              {/* Only a CHANGE carries a justification; an untouched row has none. */}
+              {state !== 'linked' && justifyRow(lid, pendingUnlink ? 'unlink' : 'link')}
               </div>
             )
           })}

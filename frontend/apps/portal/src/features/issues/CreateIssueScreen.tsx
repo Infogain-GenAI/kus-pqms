@@ -22,6 +22,12 @@ import { ExistingIssueModal } from './ExistingIssueModal'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { relatedRank } from '@/data/relatedRank'
+import {
+  clampJustification,
+  isJustificationValid,
+  justificationCounterCompact,
+  justificationError,
+} from '@/data/linkJustification'
 import { DtcChipInput } from './issue-entry/DtcChipInput'
 import { useTranslation } from 'react-i18next'
 import { NS } from './issue-entry/IssueEntry.i18n'
@@ -308,17 +314,19 @@ export function CreateIssueScreen() {
    * explaining. Reporting an untrimmed count next to a trimmed gate would tell a
    * user they have 20 when the button stays disabled.
    */
-  const justifyText = justify.trim()
-  const justifyTooShort = justifyText.length < 20
+  // The rule now lives in `@/data/linkJustification`, shared with the three
+  // workspace/list surfaces that gate the same mutation. The numbers and the
+  // message are unchanged — this screen was one of the two copies.
+  const justifyTooShort = !isJustificationValid(justify)
 
   const commitLink = () => {
     if (!linkConfirm) return
     if (justifyTooShort) {
-      setJustifyErr(`Enter a justification of at least 20 characters. ${justifyText.length} entered.`)
+      setJustifyErr(justificationError(justify) ?? '')
       return
     }
     setLinkedIds((l) => Array.from(new Set([...l, ...linkConfirm.ids])))
-    setLinkLogs((g) => [...g, { ids: linkConfirm.ids, justification: justifyText }])
+    setLinkLogs((g) => [...g, { ids: linkConfirm.ids, justification: justify.trim() }])
     setLinkConfirm(null)
   }
 
@@ -895,12 +903,12 @@ export function CreateIssueScreen() {
           aria-label="Justification"
           value={justify}
           maxLength={500}
-          onChange={(e) => { setJustify(e.target.value.slice(0, 500)); setJustifyErr('') }}
+          onChange={(e) => { setJustify(clampJustification(e.target.value)); setJustifyErr('') }}
           placeholder="e.g. Same charge-port lock failure on the same model year; likely one root cause."
         />
         <div className={entryStyles.justifyFoot}>
           {justifyErr && <span className={entryStyles.justifyError}>{justifyErr}</span>}
-          <span className={entryStyles.justifyCount}>{justify.length}/500</span>
+          <span className={entryStyles.justifyCount}>{justificationCounterCompact(justify)}</span>
         </div>
       </Modal>
 
