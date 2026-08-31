@@ -24,7 +24,7 @@
 import { describe, it, expect } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { routes } from '@/routes'
-import { bodyText, renderAt } from '../../../support/dataRouter'
+import { bodyText, renderAt, waitForBody } from '../../../support/dataRouter'
 
 const ISSUE = 'HV-260101'
 
@@ -37,7 +37,7 @@ const renderAs = (initialRole: 'SE' | 'ASM' | 'PQM' | 'ADMIN' = 'SE') =>
   renderAt(routes, `/issues/${ISSUE}`, { role: initialRole })
 
 /** The shell is lazily loaded, so nothing is synchronous. */
-const settled = () => waitFor(() => expect(bodyText()).toContain(ISSUE))
+const settled = () => waitForBody(ISSUE, 'the workspace shell')
 
 const btn = (name: RegExp) => screen.queryByRole('button', { name })
 

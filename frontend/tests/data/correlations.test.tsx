@@ -25,7 +25,7 @@ import { StoreProvider, useStore } from '@/data/store'
 import { ISSUES } from '@/data/seed'
 import { relatedRank } from '@/data/relatedRank'
 import { routes } from '@/routes'
-import { bodyText, renderAt } from '../support/dataRouter'
+import { bodyText, renderAt, waitForBody } from '../support/dataRouter'
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <RoleProvider>
@@ -152,7 +152,7 @@ describe('the Manage-Links modal shows them', () => {
 
   const openModal = async (issueId: string) => {
     const result = renderAt(routes, `/issues/${issueId}/detail`, { role: 'PQM' })
-    await waitFor(() => expect(bodyText()).toContain(issueId))
+    await waitForBody(issueId, 'the Issue Detail route')
     const manage = await screen.findByRole('button', { name: /Manage Related Issues/i })
     fireEvent.click(manage)
     await screen.findByText(/Link Another Issue/i)

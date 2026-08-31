@@ -1,4 +1,5 @@
-import { render } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
+import { expect } from 'vitest'
 import { RouterProvider, createMemoryRouter, type RouteObject } from 'react-router-dom'
 import type { RoleKey } from '@/data/types'
 import { RoleProvider } from '@/data/roles'
@@ -122,3 +123,66 @@ export function renderAt(
 
 /** Whole-document text, for the coarse "did this screen render" assertions. */
 export const bodyText = () => document.body.textContent ?? ''
+
+/**
+ * Wait for `needle` to appear in the rendered body, and say WHAT WENT WRONG when
+ * it does not.
+ *
+ * ─── WHY THIS EXISTS: AN INTERMITTENT FAILURE WE COULD NOT DIAGNOSE ──────────
+ *
+ * `IssueWorkspaceScreen.test.tsx` failed once in a pre-push run under 13-way
+ * concurrency and has not reproduced in 7 subsequent attempts. The bare form —
+ *
+ *     waitFor(() => expect(bodyText()).toContain(ISSUE))
+ *
+ * — reports only that it timed out. The received body scrolled out of the
+ * console, `run-checks.mjs` writes no log file, and re-running produces a
+ * different run. So the one occurrence taught us nothing, and three completely
+ * different fixes remained open.
+ *
+ * ⚠️ THE ELAPSED TIME IS THE MOST IMPORTANT FIELD, because two budgets bound
+ * these tests and they point at different faults:
+ *
+ *     ~5000ms   `asyncUtilTimeout` — THIS wait ran out. Ordinary slowness is a
+ *               sufficient explanation, since a cold lazy route costs ~600ms
+ *               standalone and this budget is only ~8x that.
+ *     ~20000ms  `testTimeout` — the whole TEST ran out, meaning the wait was
+ *               still spinning long past its own ceiling: a stall, not slowness.
+ *     fast      the assertion failed for a different reason entirely.
+ *
+ * The body excerpt splits the rest: error-fallback text means something THREW
+ * inside the lazy tree (main's ErrorBoundary would then render forever), an
+ * empty body means the tree never resolved, and a redirect shows up as a
+ * DIFFERENT SCREEN'S text.
+ *
+ * ⚠️ NO URL FIELD, DELIBERATELY. The first version printed
+ * `window.location.pathname` — which under `createMemoryRouter` is always `/`,
+ * because a memory router never touches `window.location`. A field that reads
+ * `/` no matter what had happened would invite the reader to conclude "no
+ * redirect occurred" from a value that carries no information at all. The
+ * router's location IS available to callers via `renderAt`'s return, and a
+ * redirect is visible in the body text regardless, so this reports only what it
+ * can actually observe.
+ *
+ * This changes no behaviour — same wait, same budget, same assertion. It only
+ * makes the next occurrence worth having.
+ */
+export async function waitForBody(needle: string, label = 'the rendered body'): Promise<void> {
+  const started = Date.now()
+  try {
+    await waitFor(() => expect(bodyText()).toContain(needle))
+  } catch (cause) {
+    const elapsed = Date.now() - started
+    const text = bodyText()
+    const excerpt = text.length > 700 ? `${text.slice(0, 700)}…[+${text.length - 700} more]` : text
+    throw new Error(
+      [
+        `waitForBody: ${JSON.stringify(needle)} never appeared in ${label}.`,
+        `  elapsed:      ${elapsed}ms  (asyncUtilTimeout is 5000, testTimeout 20000 — see the note above)`,
+        `  body length:  ${text.length}${text.length === 0 ? '  (NOTHING RENDERED AT ALL)' : ''}`,
+        `  body:         ${JSON.stringify(excerpt)}`,
+      ].join('\n'),
+      { cause },
+    )
+  }
+}
