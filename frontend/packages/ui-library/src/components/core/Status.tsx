@@ -10,10 +10,17 @@ export interface StatusProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'colo
   size?: StatusSize
   disabled?: boolean
   style?: CSSProperties
+  /**
+   * `StatusBadge` only. Drops the leading dot, for surfaces whose design shows
+   * the tinted chip alone — the Issue Entry suggestion card is the first.
+   * Added so that card does not need a SECOND status rendering: two components
+   * drawing one lifecycle status is how they drift apart.
+   */
+  dot?: boolean
 }
 
 /** StatusBadge — tinted badge (soft bg + status dot). Default, compact; use in tables/dense lists. */
-export function StatusBadge({ status = 'open', size = 'md', disabled = false, style, ...rest }: StatusProps) {
+export function StatusBadge({ status = 'open', size = 'md', disabled = false, dot = true, style, ...rest }: StatusProps) {
   const s = STATUS[status] ?? STATUS.open
   const z = STATUS_SIZES[size] ?? STATUS_SIZES.md
   return (
@@ -34,7 +41,7 @@ export function StatusBadge({ status = 'open', size = 'md', disabled = false, st
       }}
       {...rest}
     >
-      <span style={{ width: z.dot, height: z.dot, borderRadius: '50%', background: s.color, flex: 'none' }} />
+      {dot && <span style={{ width: z.dot, height: z.dot, borderRadius: '50%', background: s.color, flex: 'none' }} />}
       {s.label}
     </span>
   )

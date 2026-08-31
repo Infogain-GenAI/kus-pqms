@@ -1,0 +1,118 @@
+/*
+ * Inline justification box for a pending link/unlink.
+ *
+ * Values traced from the canonical's `taStyle` on `unlinkJustify` / the pending
+ * link cards, which specifies them inline:
+ *
+ *   textarea   1px border, 9px radius, 11px/13px padding, 13.5px text, 1.55 line
+ *   error      #D92D20 border when `hasErr`
+ *   resting    #E7ECF1 border on #fff
+ *
+ * `#E7ECF1` is the design's own resting border here and sits between
+ * `--border-subtle` and `--neutral-200`; kept literal rather than snapped to the
+ * nearest token, for the same reason recorded in `SystemClassificationPicker`:
+ * the box has to read as an input, not as a panel edge. CSS is not linted by
+ * `ds-gate`, so no ceiling is spent either way.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--neutral-50);
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: normal;
+}
+
+.box,
+.boxError {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 13px;
+  border: var(--border-width) solid #e7ecf1;
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+  outline: none;
+  resize: vertical;
+}
+
+.boxError {
+  border-color: var(--danger-500);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.error {
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--danger-500);
+}
+
+.counter {
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--text-disabled);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* ── Applied justification summary ──────────────────────────────────────────
+   The accepted-reason row. Success tint because it reports a completed step,
+   using the tokens that EXIST — `--success-50` / `--success-500` / `--success-600`.
+   An earlier version referenced `--success-100`, `--accent-200` and
+   `--danger-100`, none of which are defined anywhere: valid CSS that compiles,
+   ships and renders nothing. `check-css-vars` is the only gate that sees that
+   class of defect, which is why it is worth its runtime. */
+
+.applied {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--success-500);
+  border-radius: var(--radius-md);
+  background: var(--success-50);
+}
+
+.appliedText {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.appliedLabel {
+  font-weight: var(--fw-semibold);
+  color: var(--success-600);
+}

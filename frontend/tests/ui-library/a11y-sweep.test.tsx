@@ -42,6 +42,10 @@ const PROPS: Record<string, Record<string, unknown>> = {
   Textarea: { 'aria-label': 'Notes' },
   Select: { 'aria-label': 'Choice', children: <option value="a">A</option> },
   SearchField: { 'aria-label': 'Search' },
+  // Given real options deliberately: the sweep's job is to axe-check a realistic
+  // state, and an empty combobox exercises almost none of the markup that can
+  // carry a violation.
+  Combobox: { 'aria-label': 'Choose', options: [{ value: 'a', label: 'A' }], selected: [], onSelect: () => {} },
   Checkbox: { 'aria-label': 'Check' },
   Radio: { 'aria-label': 'Radio', name: 'g' },
   Switch: { 'aria-label': 'Toggle' },

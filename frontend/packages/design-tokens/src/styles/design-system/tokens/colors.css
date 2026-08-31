@@ -91,4 +91,15 @@
   --hover-overlay:   var(--neutral-50);
   --selected-bg:     var(--accent-50);
   --disabled-bg:     var(--neutral-100);
+
+  /* Tints — an existing hue at 8% opacity (`14` hex = 20/255).
+     Soft badge and chip backgrounds. Each is defined AS the literal it replaces,
+     character for character, so converting a use cannot change a pixel. */
+  --accent-500-tint:       #2A6FDB14;
+  --status-review-tint:    #7C5CDB14;
+  --status-disposed-tint:  #0E938414;
+  --danger-500-tint:       #D92D2014;
+  --warning-500-tint:      #E2820B14;
+  --success-500-tint:      #1F8A5B14;
+  --kia-midnight-tint:     #05141F14;
 }

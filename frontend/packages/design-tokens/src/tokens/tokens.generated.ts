@@ -67,6 +67,13 @@ export const tokens = {
   '--hover-overlay': "var(--neutral-50)",
   '--selected-bg': "var(--accent-50)",
   '--disabled-bg': "var(--neutral-100)",
+  '--accent-500-tint': "#2A6FDB14",
+  '--status-review-tint': "#7C5CDB14",
+  '--status-disposed-tint': "#0E938414",
+  '--danger-500-tint': "#D92D2014",
+  '--warning-500-tint': "#E2820B14",
+  '--success-500-tint': "#1F8A5B14",
+  '--kia-midnight-tint': "#05141F14",
   '--font-display': "\"Kia Signature Fix\", \"Inter\", system-ui, sans-serif",
   '--font-body': "\"Inter\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
   '--font-mono': "\"SF Mono\", ui-monospace, Menlo, Consolas, monospace",
@@ -149,6 +156,7 @@ export const tokens = {
   '--shadow-lg': "0 12px 28px rgba(5, 20, 31, 0.14), 0 4px 8px rgba(5, 20, 31, 0.06)",
   '--shadow-focus': "0 0 0 3px rgba(42, 111, 219, 0.30)",
   '--border-width': "1px",
+  '--border-width-emphasis': "2px",
   '--ease-standard': "cubic-bezier(0.2, 0, 0, 1)",
   '--ease-emphasized': "cubic-bezier(0.2, 0, 0, 1.2)",
   '--dur-fast': "120ms",
@@ -226,6 +234,13 @@ export type TokenName =
   | '--hover-overlay'
   | '--selected-bg'
   | '--disabled-bg'
+  | '--accent-500-tint'
+  | '--status-review-tint'
+  | '--status-disposed-tint'
+  | '--danger-500-tint'
+  | '--warning-500-tint'
+  | '--success-500-tint'
+  | '--kia-midnight-tint'
   | '--font-display'
   | '--font-body'
   | '--font-mono'
@@ -308,6 +323,7 @@ export type TokenName =
   | '--shadow-lg'
   | '--shadow-focus'
   | '--border-width'
+  | '--border-width-emphasis'
   | '--ease-standard'
   | '--ease-emphasized'
   | '--dur-fast'

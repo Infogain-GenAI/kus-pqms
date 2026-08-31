@@ -59,6 +59,40 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['tests/**/*.test.{ts,tsx}'],
     globals: true,
+    /*
+     * ─── THE OUTER BUDGET, AND WHY IT MUST EXCEED THE INNER ONE ──────────────
+     *
+     * `tests/support/setup.ts` raises Testing Library's `asyncUtilTimeout` to
+     * 5000ms for the lazily-loaded route tree. It left THIS number at vitest's
+     * default — which is also 5000ms — and two equal budgets is the defect:
+     *
+     *   `asyncUtilTimeout` is the ceiling for ONE `waitFor`.
+     *   `testTimeout` is the ceiling for the WHOLE test.
+     *
+     * When they are equal, a test can never actually spend its inner budget. A
+     * render plus two dynamic-import compilations plus a click plus a `find*`
+     * each cost part of the total, so the test dies on the OUTER limit while no
+     * single `waitFor` came near its own. The error then names `testTimeout` and
+     * points nowhere near the cause, which is why this was read as flakiness for
+     * a while rather than as a misconfiguration.
+     *
+     * OBSERVED: `correlations.test.tsx > no longer says 'No classification-
+     * matched candidates.' for BD-260006` failed 2 runs in 6 with "Test timed
+     * out in 5000ms". It mounts the real route tree at an Issue Detail URL, where
+     * `DetailSection` is `lazy()` and itself lazy-loads `IssueEditForm` — two
+     * compilations in jsdom before the target button exists.
+     *
+     * 20000ms is chosen to clear the sum of the waits a single test may
+     * legitimately perform, not just one of them. Like `waitFor`, it is a ceiling
+     * a passing test never spends: it changes only how long a genuinely stuck
+     * test takes to report. It weakens no assertion.
+     *
+     * THE INVARIANT TO KEEP: testTimeout must stay comfortably ABOVE
+     * asyncUtilTimeout. Raising the inner one to meet this again reintroduces
+     * exactly this bug. If cold load keeps growing, split the route's module
+     * graph — the lever setup.ts already names — rather than raising either.
+     */
+    testTimeout: 20000,
     // Raises Testing Library's `waitFor` budget above the default 1s. The route
     // tree is lazily loaded end to end, and 1s measures machine load rather than
     // the app once ten checks run concurrently — see the file for the numbers.

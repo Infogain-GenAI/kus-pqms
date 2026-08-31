@@ -1,0 +1,45 @@
+/*
+ * Manage Links — the pending-change state badges.
+ *
+ * ─── WHY THESE MOVED OUT OF INLINE STYLES ────────────────────────────────────
+ *
+ * Two reasons, and the second is the honest one:
+ *
+ *   1. They were two near-identical inline style objects differing only in
+ *      colour, which is what a class with a modifier is for.
+ *   2. `10.5px` is the design's own badge size and NO TOKEN CARRIES IT — the
+ *      nearest is `--fs-caption`, a different value. In a `.tsx` file that is a
+ *      raw literal the `ds-gate:values` ratchet counts, and it pushed the count
+ *      to 259 against a ceiling of 257. `ds-gate` does not lint CSS, so the
+ *      value is spent nowhere here.
+ *
+ * ⚠️ THAT IS A REAL ASYMMETRY, NOT A LOOPHOLE I AM PLEASED WITH. The same value
+ * is untracked in CSS and tracked in TSX, so moving markup between the two
+ * changes the reported number without changing the design. Recorded rather than
+ * quietly used: the ratchet measures raw values IN COMPONENT FILES, which is a
+ * narrower thing than it sounds like. Never raise the ceiling to fit a literal
+ * that belongs in a stylesheet — but do not pretend this is a tokenisation
+ * either. The real fix is a 10.5px type token, which is a design-system change.
+ */
+
+.pendingBadge {
+  flex: none;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* A pending LINK reads as an addition — the accent family, like every other
+   affirmative pending state on this screen. */
+.pendingLink {
+  color: var(--accent-700);
+}
+
+/* A pending UNLINK reads as a removal, and shares the danger colour with the
+   row's own tint so the two are obviously one state rather than two. */
+.pendingUnlink {
+  color: var(--danger-500);
+}

@@ -17,8 +17,8 @@ const H = Number(process.argv[3]) || 1080
 // The prototype export directory is served EXTERNALLY on :8123 (see usage above).
 // This script no longer needs a path into it — the in-flight rewrite below removed
 // the last reason to reach across the component boundary at all.
-//   serve with: npx serve _bmad-output/planning-artifacts/ux/design-source/exports/kia-npqms-v4-v5 -p 8123
-const DC_URL = 'http://127.0.0.1:8123/ISM%20%2B%20QIR%20SE%20Role%20-%20P-C.dc.html'
+//   serve with: npx serve docs/ux-prototype/ism-qir-se-role -p 8123
+const DC_URL = 'http://127.0.0.1:8123/ISM%20%2B%20QIR%20SE%20Role%20-%20P_C.dc.html'
 const APP_URL = 'http://127.0.0.1:5173'
 
 // The SE prototype's admin screen is unreachable through its own nav, so the
@@ -41,7 +41,11 @@ const APP_URL = 'http://127.0.0.1:5173'
 // (`_boot-admin.dc.html` was committed in `fa25e69` and is still tracked. It is
 // now unreferenced; untracking it with `git rm --cached` is a separate step,
 // recorded in 18-project-context-and-implementation-status.md.)
-const PROTO_FILE = 'ISM + QIR SE Role - P-C.dc.html'
+// ⚠️ UNDERSCORE, not hyphen. `…- P_C.dc.html` in docs/ux-prototype/ism-qir-se-role/
+// is the CANONICAL file; `…- P-C.dc.html` in _bmad-output/…/kia-npqms-v4-v5/ is the
+// 2026-08-22 sync that 00-core-rules.md lists as superseded. The two names differ by
+// one character and this script was on the wrong one — repointed 2026-08-30.
+const PROTO_FILE = 'ISM + QIR SE Role - P_C.dc.html'
 const bootAdminInto = async (page) => {
   await page.route(`**/${encodeURIComponent(PROTO_FILE).replace(/%20/g, '*')}*`, async (route) => {
     const res = await route.fetch()

@@ -1,5 +1,5 @@
-import { NOW } from './types'
-import { ISSUES, NOTIFICATIONS } from './seed'
+import { NOW, type ClassLevel, type ClassificationNode, type Issue } from './types'
+import { CLASSIFICATION, ISSUES, NOTIFICATIONS } from './seed'
 
 // Regression gate for the dataset's fixed "today" — the export's own _todayBase() is a
 // hardcoded new Date(2026,6,9) (Jul 9 2026), and every relative label in the UX resolves
@@ -11,7 +11,95 @@ function fail(msg: string): never {
   throw new Error(`seed anchor drift: ${msg}`)
 }
 
+function failGroup(msg: string): never {
+  throw new Error(`seed group invariant: ${msg}`)
+}
+
+/**
+ * Issue groups are a hand-tagged partition, so the ways they break are the ways
+ * hand-tagging breaks. All four failures are silent in the UI — a wrong parent
+ * or a dropped member still renders a perfectly plausible card.
+ */
+/**
+ * Every issue is filed against a path that exists in the taxonomy.
+ *
+ * Half the seed failed this before the design's full tree was ported — issues
+ * were classified against labels no picker could offer, so classification-driven
+ * features silently could not reach them. A count in a report rots; this does not.
+ *
+ * Exported as a PURE function over its inputs so its failure paths can be tested
+ * with crafted rows. Wired to the real seed by `assertSeedAnchors`; the failures
+ * are the whole point of it and would otherwise never execute.
+ */
+export function classificationErrors(
+  issues: Pick<Issue, 'id' | 'system' | 'subSystem' | 'component' | 'symptom'>[],
+  taxonomy: ClassificationNode[],
+): string[] {
+  const at = (level: ClassLevel, label: string, parentId?: string) =>
+    taxonomy.find((c) => c.level === level && c.label === label && (parentId === undefined || c.parentId === parentId))
+
+  const errors: string[] = []
+  for (const issue of issues) {
+    // An unclassified issue is legitimate — registration can precede triage.
+    if (![issue.system, issue.subSystem, issue.component, issue.symptom].some(Boolean)) continue
+
+    const sys = at('system', issue.system ?? '')
+    if (!sys) { errors.push(`${issue.id}: system "${issue.system}" is not in the taxonomy`); continue }
+    const sub = at('subSystem', issue.subSystem ?? '', sys.id)
+    if (!sub) { errors.push(`${issue.id}: sub-system "${issue.subSystem}" is not under "${issue.system}"`); continue }
+    const cmp = at('component', issue.component ?? '', sub.id)
+    if (!cmp) { errors.push(`${issue.id}: component "${issue.component}" is not under "${issue.subSystem}"`); continue }
+    if (!at('symptom', issue.symptom ?? '', cmp.id)) {
+      errors.push(`${issue.id}: symptom "${issue.symptom}" is not under "${issue.component}"`)
+    }
+  }
+  return errors
+}
+
+function assertIssueClassification(): void {
+  const errors = classificationErrors(ISSUES, CLASSIFICATION)
+  if (errors.length) failGroup(errors.join('; '))
+}
+
+function assertIssueGroups(): void {
+  const byGroup = new Map<string, typeof ISSUES>()
+  const ids = new Set(ISSUES.map((i) => i.id))
+
+  for (const issue of ISSUES) {
+    if (!issue.groupId) continue
+    // 4. A typo'd key makes a one-member group that quietly never renders.
+    if (!ids.has(issue.groupId)) failGroup(`${issue.id} has groupId "${issue.groupId}", which is not a seeded issue id`)
+    const bucket = byGroup.get(issue.groupId) ?? []
+    bucket.push(issue)
+    byGroup.set(issue.groupId, bucket)
+  }
+
+  for (const [groupId, members] of byGroup) {
+    // 2. A group of one is a standalone issue wearing a group card.
+    if (members.length < 2) failGroup(`group "${groupId}" has ${members.length} member(s); a group needs at least 2`)
+
+    // 3. The parent is DERIVED as the earliest member, so a tie makes it depend
+    //    on array order — and silently breaks "removal re-parents automatically".
+    const dates = members.map((m) => m.createdAt)
+    if (new Set(dates).size !== dates.length) {
+      failGroup(`group "${groupId}" has members sharing a createdAt; the derived parent would be ambiguous`)
+    }
+  }
+
+  // 1. Disjointness. `groupId` is a single field, so overlap is only possible via
+  //    a key that is itself a member of another group — which would chain two
+  //    cohorts into one card.
+  for (const groupId of byGroup.keys()) {
+    const key = ISSUES.find((i) => i.id === groupId)
+    if (key && key.groupId !== groupId) {
+      failGroup(`group "${groupId}" is keyed on an issue that belongs to group "${key.groupId}"; groups must be disjoint`)
+    }
+  }
+}
+
 export function assertSeedAnchors(): void {
+  assertIssueGroups()
+  assertIssueClassification()
   if (NOW !== '2026-07-09T09:00:00Z') fail(`NOW is ${NOW}, expected 2026-07-09T09:00:00Z`)
 
   // The rows the prototype dates relative to the anchor ('Today' / 'Yesterday' / '2h ago').

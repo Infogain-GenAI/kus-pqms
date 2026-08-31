@@ -58,6 +58,15 @@ export interface NewIssueInput {
   modelYear: number
   /** Issues linked at creation time. Linked reciprocally, same as linkIssue(). */
   linkedIssueIds?: string[]
+  /**
+   * Justifications captured by the link-confirmation modal, one per link action.
+   *
+   * They are held on the DRAFT until registration and written to the audit trail
+   * here — the design does the same, accumulating `pendingLinkLogs` and applying
+   * them when the issue is registered. Linking during a draft has no issue to
+   * hang an audit entry on until that moment.
+   */
+  linkJustifications?: { ids: string[]; justification: string }[]
   system?: string
   subSystem?: string
   component?: string
@@ -81,6 +90,10 @@ interface StoreValue {
   auditFor: (issueId: string) => AuditEntry[]
   classChildren: (parentId?: string) => ClassificationNode[]
   classByLevel: (level: ClassLevel, parentId?: string) => ClassificationNode[]
+  /** Members of an issue's group, PARENT FIRST. Empty when it belongs to none. */
+  groupMembers: (issueId: string) => Issue[]
+  /** Where an issue sits in its group. Derived — nothing stores "parent". */
+  relKind: (issueId: string) => 'standalone' | 'parent' | 'child'
   correlations: (issueId: string) => Issue[]
   /**
    * The parts pickable in the Add-activity form — the seeded eligible list plus
@@ -128,8 +141,29 @@ interface StoreValue {
     >,
     actor: Actor,
   ) => void
-  linkIssue: (id: string, otherId: string, actor: Actor) => void
-  unlinkIssue: (id: string, otherId: string, actor: Actor) => void
+  /**
+   * Link two issues, reciprocally, with a MANDATORY audited justification.
+   *
+   * ─── WHY `justification` IS REQUIRED AND NOT OPTIONAL ────────────────────────
+   *
+   * Every caller mutates a PERSISTED relationship between two live issues, and
+   * the governance rule is that each such change records why. An optional
+   * parameter is how that goes unenforced at one call site while looking done
+   * everywhere else — so it is required, and the compiler enumerates the
+   * surfaces instead of a reviewer having to.
+   *
+   * It sits BEFORE `actor`, matching `setStatus`, `proposeTransition` and
+   * `bulkStatus`, which all take their reason in that position. That placement
+   * also means an un-migrated 3-argument call fails as a TYPE error rather than
+   * quietly passing an actor where a reason belongs.
+   *
+   * ONE CALL IS ONE CHANGE IS ONE AUDIT ROW. The prototype's `saveSameModal()`
+   * settles this: "each change gets its own audit entry". So a batch of edits
+   * calls this once per change, each with its own reason, rather than sharing one
+   * blanket justification across several.
+   */
+  linkIssue: (id: string, otherId: string, justification: string, actor: Actor) => void
+  unlinkIssue: (id: string, otherId: string, justification: string, actor: Actor) => void
   proposeTransition: (id: string, target: StatusKey, rationale: string, actor: Actor, outcome?: DispositionOutcome) => void
   approveProposal: (id: string, remark: string, actor: Actor) => void
   rejectProposal: (id: string, remark: string, actor: Actor) => void
@@ -245,6 +279,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (level: ClassLevel, parentId?: string) => classification.filter((c) => c.level === level && (parentId ? c.parentId === parentId : true)),
     [classification],
   )
+  /**
+   * Group membership, ordered by registration — earliest first.
+   *
+   * ⚠️ THE FIRST ELEMENT IS THE PARENT. That is the whole definition; there is
+   * no stored parent pointer, matching the design (`groupMembers()[0]` after a
+   * sort on `_registeredMs`). The consequence is deliberate: pull an issue out
+   * of a group and the next-earliest becomes parent on its own, with nothing to
+   * update and nothing left dangling.
+   */
+  const groupMembers = useCallback(
+    (issueId: string) => {
+      const self = issues.find((i) => i.id === issueId)
+      if (!self?.groupId) return []
+      return issues
+        .filter((i) => i.groupId === self.groupId)
+        .slice()
+        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
+    },
+    [issues],
+  )
+
+  const relKind = useCallback(
+    (issueId: string): 'standalone' | 'parent' | 'child' => {
+      const members = groupMembers(issueId)
+      if (members.length === 0) return 'standalone'
+      return members[0].id === issueId ? 'parent' : 'child'
+    },
+    [groupMembers],
+  )
+
   /**
    * Link candidates for the Manage-Related-Issues modal, ranked.
    *
@@ -393,6 +457,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ])
     appendAudit(issue.id, actor, input.submit ? 'Submitted' : 'Draft saved', input.submit ? 'Draft → Open' : undefined)
     if (links.length) appendAudit(issue.id, actor, 'Issues linked', links.join(', '))
+    for (const log of input.linkJustifications ?? []) {
+      appendAudit(issue.id, actor, 'Linked issue(s) added', `${log.ids.join(', ')} — ${log.justification}`)
+    }
     return issue
   }, [issues, appendAudit])
 
@@ -411,7 +478,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     appendAudit(id, actor, 'Issue updated', Object.keys(patch).join(', '))
   }, [appendAudit])
 
-  const linkIssue = useCallback<StoreValue['linkIssue']>((id, otherId, actor) => {
+  const linkIssue = useCallback<StoreValue['linkIssue']>((id, otherId, justification, actor) => {
     setIssues((list) =>
       list.map((i) => {
         if (i.id === id) return { ...i, linkedIssueIds: Array.from(new Set([...(i.linkedIssueIds ?? []), otherId])), updatedAt: now() }
@@ -419,10 +486,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return i
       }),
     )
-    appendAudit(id, actor, 'Issue linked', `↔ ${otherId}`)
+    appendAudit(id, actor, 'Issue linked', `↔ ${otherId} — ${justification}`)
   }, [appendAudit])
 
-  const unlinkIssue = useCallback<StoreValue['unlinkIssue']>((id, otherId, actor) => {
+  const unlinkIssue = useCallback<StoreValue['unlinkIssue']>((id, otherId, justification, actor) => {
     setIssues((list) =>
       list.map((i) => {
         if (i.id === id) return { ...i, linkedIssueIds: (i.linkedIssueIds ?? []).filter((x) => x !== otherId), updatedAt: now() }
@@ -430,7 +497,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return i
       }),
     )
-    appendAudit(id, actor, 'Issue unlinked', `↮ ${otherId} (soft delete)`)
+    appendAudit(id, actor, 'Issue unlinked', `↮ ${otherId} (soft delete) — ${justification}`)
   }, [appendAudit])
 
   const proposeTransition = useCallback<StoreValue['proposeTransition']>((id, target, rationale, actor, outcome) => {
@@ -628,7 +695,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: StoreValue = {
     issues, classification, notifications, unreadCount,
-    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, correlations, partOptions, teamDirectory,
+    getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, groupMembers, relKind, correlations, partOptions, teamDirectory,
     priorityFor, priorityResult, savePriority,
     createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
     requestClassification, addComment, addActivity, addPart, setPartStatus,

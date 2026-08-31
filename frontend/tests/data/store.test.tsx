@@ -14,6 +14,8 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { StoreProvider, useStore } from '@/data/store'
+import { classificationErrors } from '@/data/assertSeed'
+import type { ClassificationNode, Issue } from '@/data/types'
 import type { Actor } from '@/data/types'
 
 const ACTOR: Actor = { name: 'Test Actor', role: 'SE' } as Actor
@@ -33,12 +35,21 @@ const pickPair = (issues: { id: string; linkedIssueIds?: string[] }[]) => {
   throw new Error('seed has no unlinked pair — the fixture changed')
 }
 
+/**
+ * A justification long enough to clear the >= 20-character governance floor.
+ *
+ * `linkIssue`/`unlinkIssue` take it as a REQUIRED argument — see the store's own
+ * note on why. These tests assert reciprocity and audit, not the gate, so they
+ * pass one valid reason rather than restating the sentence at each call.
+ */
+const WHY = 'Same root cause suspected across these records.'
+
 describe('INVARIANT 1 — links are reciprocal', () => {
   it('linkIssue writes both sides', () => {
     const { result } = setup()
     const [a, b] = pickPair(result.current.issues)
 
-    act(() => result.current.linkIssue(a, b, ACTOR))
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
 
     expect(result.current.getIssue(a)?.linkedIssueIds).toContain(b)
     expect(result.current.getIssue(b)?.linkedIssueIds).toContain(a)
@@ -48,19 +59,52 @@ describe('INVARIANT 1 — links are reciprocal', () => {
     const { result } = setup()
     const [a, b] = pickPair(result.current.issues)
 
-    act(() => result.current.linkIssue(a, b, ACTOR))
-    act(() => result.current.unlinkIssue(a, b, ACTOR))
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
+    act(() => result.current.unlinkIssue(a, b, WHY, ACTOR))
 
     expect(result.current.getIssue(a)?.linkedIssueIds ?? []).not.toContain(b)
     expect(result.current.getIssue(b)?.linkedIssueIds ?? []).not.toContain(a)
+  })
+
+  /*
+   * THE ANTI-THEATRE ASSERTION. A gate that collects a reason and drops it is
+   * worse than no gate, because it looks enforced. Before this change
+   * `linkIssue` wrote a fixed detail (`↔ <id>`) and had nowhere to put a
+   * justification at all, so the reason existed only in component state.
+   */
+  it('WRITES THE JUSTIFICATION INTO THE AUDIT TRAIL, not just the link', () => {
+    const { result } = setup()
+    const [a, b] = pickPair(result.current.issues)
+
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
+
+    const entry = result.current.auditFor(a).find((e) => e.action === 'Issue linked')
+    expect(entry, 'no audit row for the link').toBeTruthy()
+    expect(entry!.detail).toContain(WHY)
+    // The pre-existing reciprocal marker survives alongside it.
+    expect(entry!.detail).toContain(b)
+  })
+
+  it('records the reason for an UNLINK too, which is the half that was missing', () => {
+    const { result } = setup()
+    const [a, b] = pickPair(result.current.issues)
+    const REASON = 'Raised separately in error; these are unrelated defects.'
+
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
+    act(() => result.current.unlinkIssue(a, b, REASON, ACTOR))
+
+    const entry = result.current.auditFor(a).find((e) => e.action === 'Issue unlinked')
+    expect(entry!.detail).toContain(REASON)
+    // Negative control: the unlink row must carry its OWN reason, not the link's.
+    expect(entry!.detail).not.toContain(WHY)
   })
 
   it('linking twice does not duplicate the id', () => {
     const { result } = setup()
     const [a, b] = pickPair(result.current.issues)
 
-    act(() => result.current.linkIssue(a, b, ACTOR))
-    act(() => result.current.linkIssue(a, b, ACTOR))
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
+    act(() => result.current.linkIssue(a, b, WHY, ACTOR))
 
     const links = result.current.getIssue(a)?.linkedIssueIds ?? []
     expect(links.filter((x) => x === b)).toHaveLength(1)
@@ -137,8 +181,8 @@ describe('INVARIANT 3 — every mutation appends an audit entry', () => {
   // The runbook calls this the invariant most likely to be broken silently by a
   // future refactor, because nothing about a missing audit row is visible.
   const mutations: [string, (s: ReturnType<typeof useStore>, id: string, other: string) => void][] = [
-    ['linkIssue', (s, id, other) => s.linkIssue(id, other, ACTOR)],
-    ['unlinkIssue', (s, id, other) => s.unlinkIssue(id, other, ACTOR)],
+    ['linkIssue', (s, id, other) => s.linkIssue(id, other, WHY, ACTOR)],
+    ['unlinkIssue', (s, id, other) => s.unlinkIssue(id, other, WHY, ACTOR)],
     ['proposeTransition', (s, id) => s.proposeTransition(id, 'closed', 'r', ACTOR)],
     ['approveProposal', (s, id) => s.approveProposal(id, 'ok', ACTOR)],
     ['rejectProposal', (s, id) => s.rejectProposal(id, 'no', ACTOR)],
@@ -230,5 +274,55 @@ describe('savePriority — the manual-override path', () => {
     act(() => result.current.savePriority(id, { any: 30 }, {}, 'A', ACTOR))
 
     expect(result.current.priorityResult(id).isOverride).toBe(false)
+  })
+})
+
+/**
+ * The classification invariant's own failure paths.
+ *
+ * These never execute against the real seed — that is the point of the seed
+ * being valid — so they are exercised here with crafted rows. Without this the
+ * guard is four branches nobody has ever seen run.
+ */
+describe('classificationErrors catches each way a filing can be wrong', () => {
+  const TAXONOMY: ClassificationNode[] = [
+    { id: 's1', level: 'system', code: 'S1', label: 'Engine', issueCount: 0 },
+    { id: 'b1', level: 'subSystem', code: 'S1-01', label: 'Fuel System', parentId: 's1', issueCount: 0 },
+    { id: 'c1', level: 'component', code: 'S1-01-01', label: 'Fuel Injector', parentId: 'b1', issueCount: 0 },
+    { id: 'm1', level: 'symptom', code: 'S1-01-01-01', label: 'Engine vibration', parentId: 'c1', issueCount: 0 },
+  ]
+  const row = (over: Partial<Issue>) =>
+    ({ id: 'X-1', system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', ...over }) as Issue
+
+  it('accepts a fully valid path', () => {
+    expect(classificationErrors([row({})], TAXONOMY)).toEqual([])
+  })
+
+  it('skips an issue with no classification at all', () => {
+    // Registration can precede triage, so "unclassified" is not "mis-classified".
+    const blank = { id: 'X-2' } as Issue
+    expect(classificationErrors([blank], TAXONOMY)).toEqual([])
+  })
+
+  it('rejects an unknown system', () => {
+    expect(classificationErrors([row({ system: 'Teleportation' })], TAXONOMY)[0]).toMatch(/system .* not in the taxonomy/)
+  })
+
+  it('rejects a sub-system that exists but not under that system', () => {
+    expect(classificationErrors([row({ subSystem: 'Rack' })], TAXONOMY)[0]).toMatch(/sub-system .* not under/)
+  })
+
+  it('rejects a component that is not under its sub-system', () => {
+    // The exact defect the seed carried: the sub-system name repeated as the component.
+    expect(classificationErrors([row({ component: 'Fuel System' })], TAXONOMY)[0]).toMatch(/component .* not under/)
+  })
+
+  it('rejects a symptom that is not under its component', () => {
+    expect(classificationErrors([row({ symptom: 'Harsh upshift' })], TAXONOMY)[0]).toMatch(/symptom .* not under/)
+  })
+
+  it('reports one error per bad issue rather than stopping at the first', () => {
+    const errs = classificationErrors([row({ system: 'Nope' }), row({ id: 'X-3', symptom: 'Nope' })], TAXONOMY)
+    expect(errs).toHaveLength(2)
   })
 })

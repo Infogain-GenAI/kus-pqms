@@ -23,17 +23,23 @@ import { useAuthStore, userForRole } from '@/stores/auth'
  *
  * ─── WHY THE ASYNC BUDGET IS RAISED ──────────────────────────────────────────
  *
- * Testing Library's default `waitFor` budget is 1000ms. Two test files here —
- * `IssueWorkspaceScreen.test.tsx` and `routes.test.tsx` — mount the REAL route
- * tree from `apps/portal/src/routes.tsx`, which is lazily loaded end to end: the
- * layout, the workspace shell and each section are separate dynamic imports, and
- * jsdom pays for compiling every one of them before first paint.
+ * Testing Library's default `waitFor` budget is 1000ms. Every test file that
+ * calls `renderAt(routes, …)` mounts the REAL route tree from
+ * `apps/portal/src/routes.tsx`, which is lazily loaded end to end: the layout,
+ * the workspace shell and each section are separate dynamic imports, and jsdom
+ * pays for compiling every one of them before first paint.
  *
  * That is comfortably under a second in isolation. It is NOT under a second when
  * `scripts/run-checks.mjs` runs ten checks concurrently — which is how the
  * pre-push hook runs them, and therefore how they run in the case that matters.
  * The first cold-load test measured 1121ms under that load and failed, while the
  * same test passed in isolation on the same commit.
+ *
+ * ⚠️ NOT ENUMERATED ON PURPOSE. This paragraph used to name two such files. By
+ * the time anyone checked there were six, and the list read as an exhaustive
+ * one — so it understated the blast radius of this setting while looking
+ * authoritative. `grep -rl "renderAt(routes"` answers it correctly at any time;
+ * a count written here is only ever correct on the day it was written.
  *
  * SO THE OLD BUDGET WAS MEASURING MACHINE LOAD, NOT THE APPLICATION. A test that
  * passes alone and fails in the suite teaches people to re-run the suite until it

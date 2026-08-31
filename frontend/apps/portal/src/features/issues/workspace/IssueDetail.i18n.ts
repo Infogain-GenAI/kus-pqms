@@ -77,6 +77,10 @@ const messages: ComponentI18nMessages = {
     linksModalCandidatesHeading: 'Link Another Issue',
     linksModalNoCandidates: 'No classification-matched candidates.',
     linksModalLink: 'Link',
+    linksModalPendingLink: 'Pending link',
+    linksModalPendingUnlink: 'Pending unlink',
+    linksModalUndo: 'Undo',
+
     linksModalFootnote: 'Links notify both owners; unlink is a soft delete recorded in the audit trail.',
 
     editFormTitle: 'Edit Issue',

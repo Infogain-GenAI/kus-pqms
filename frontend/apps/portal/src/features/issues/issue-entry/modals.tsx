@@ -37,7 +37,7 @@ export function ClearFormConfirmModal({
       title="Clear all entered information?"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>{t('clearFormCancel')}</Button>
+          <Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
           <Button onClick={() => { onConfirm(); onClose() }}>{t('clearFormConfirm')}</Button>
         </>
       }

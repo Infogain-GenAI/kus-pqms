@@ -71,7 +71,7 @@
 .reason {
   margin: var(--space-1) 0 0;
   padding-left: var(--space-2);
-  border-left: 2px solid var(--border-subtle);
+  border-left: var(--border-width-emphasis) solid var(--border-subtle);
   font-family: var(--font-body);
   font-size: var(--fs-caption);
   line-height: 1.5;

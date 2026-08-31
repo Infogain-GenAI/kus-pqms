@@ -93,11 +93,11 @@ export function IssueEditForm({
   const [classification, setClassification] = useState<ClassificationValue>(initialClass)
 
   // ── 3 · Related issues ────────────────────────────────────────────────────
-  // The Vue form gates unlinking behind a justification prompt. That is not
-  // reproduced: this app has no justification capture anywhere, and inventing
-  // one here would put a half-specified version in front of the real decision.
-  // Linking still applies immediately through the store, as the shell's Manage
-  // Related Issues modal already does.
+  // GATED NOW, IN BOTH DIRECTIONS. This note used to say the Vue form's
+  // justification prompt was not reproduced because "this app has no
+  // justification capture anywhere" — true when it was written, and no longer.
+  // `LinkIssuesSection` captures the reason inline and does not call through
+  // until it clears the shared rule, so both callbacks below receive one.
   const linked = issue.linkedIssueIds ?? []
 
   // ── 4 · Issue information ─────────────────────────────────────────────────
@@ -182,8 +182,8 @@ export function IssueEditForm({
         <LinkIssuesSection
           linkedIds={linked}
           excludeId={issue.id}
-          onLink={(id) => store.linkIssue(issue.id, id, { name: 'You', role: 'SE' })}
-          onUnlink={(id) => store.unlinkIssue(issue.id, id, { name: 'You', role: 'SE' })}
+          onLink={(id, why) => store.linkIssue(issue.id, id, why, { name: 'You', role: 'SE' })}
+          onUnlink={(id, why) => store.unlinkIssue(issue.id, id, why, { name: 'You', role: 'SE' })}
         />
       </div>
 

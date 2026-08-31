@@ -113,7 +113,7 @@
 
 .comment {
   padding-left: var(--space-2);
-  border-left: 2px solid var(--border-subtle);
+  border-left: var(--border-width-emphasis) solid var(--border-subtle);
   color: var(--text-secondary);
   line-height: 1.5;
 }

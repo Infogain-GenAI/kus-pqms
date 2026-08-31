@@ -394,6 +394,21 @@ description depends on it.
 > `lucide-local.js`, `_ds/` — and resolves them by relative path, so it
 > renders only from that directory.
 
+> ⚠️ **A size or hash mismatch here usually means LINE ENDINGS, not a changed
+> file.** These figures were recorded on a checkout whose line endings differ
+> from a Windows one. CRLF normalisation adds one byte per line, which moves
+> both the byte count and the md5 while changing nothing about the content —
+> so the numbers above can be "wrong" on a file that is perfectly intact.
+>
+> **Check that before concluding the artefact changed:** compare the byte
+> difference against the file's CR count (`tr -cd '\r' < FILE | wc -c`). If
+> they match, it is normalisation.
+>
+> The numbers are deliberately NOT refreshed. Refreshing them relocates the
+> same trap onto whoever next works from a different line-ending setting.
+> **Identity is settled by the content markers below, not by these figures** —
+> which is why they are recorded as corroboration rather than as the test.
+
 **What makes it canonical is content lineage, not its date.** This file
 carries `PRI_MATRIX`, `_resetPageState`, `_priorityInherited` and the
 `caretStyle()` helper; **no other candidate in this repository contains any

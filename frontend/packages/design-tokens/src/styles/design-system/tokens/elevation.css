@@ -22,6 +22,10 @@
 
   /* Borders */
   --border-width: 1px;
+  /* The emphasis width — selected rows, active accents, left indicator stripes.
+     Named, not numbered: `-2` invites a `-3`, and `--border-width` has no number
+     to pair with. Defined AS `2px`, so converting a use cannot change a pixel. */
+  --border-width-emphasis: 2px;
 
   /* Motion */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);     /* @kind other */

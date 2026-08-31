@@ -10,7 +10,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid currentColor;
+  border: var(--border-width-emphasis) solid currentColor;
   border-top-color: transparent;
   display: inline-block;
   animation: kia-spin 0.7s linear infinite;

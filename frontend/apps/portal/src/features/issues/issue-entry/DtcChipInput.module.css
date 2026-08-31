@@ -24,7 +24,12 @@
   min-height: 42px;
   box-sizing: border-box;
   padding: 6px 10px;
-  border: var(--border-width) solid #dde3e9;
+  /* `--border-subtle` (#E7ECF1 via `--neutral-200`), NOT the #DDE3E9 the combobox
+     trigger uses. The design genuinely runs two greys here — the lighter one on
+     the FIELD and the darker one on the suggestion PANEL below — so this is not
+     an inconsistency to normalise away. #DDE3E9 was taken from the nearest
+     control while building this input; it was the wrong neighbour. */
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: 9px;
   background: var(--surface-card);
   cursor: text;

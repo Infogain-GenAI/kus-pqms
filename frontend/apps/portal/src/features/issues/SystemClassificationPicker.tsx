@@ -1,10 +1,12 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronRight, Info } from 'lucide-react'
 import { Combobox, Icon, type ComboboxOption } from '@pqms/ui-library'
 import { useStore } from '@/data/store'
 import { useRole } from '@/data/roles'
 import type { ClassLevel } from '@/data/types'
 import { RequestNewSystemModal } from './classification/RequestNewSystemModal'
+import { NS } from './SystemClassificationPicker.i18n'
 import styles from './SystemClassificationPicker.module.css'
 
 /**
@@ -46,6 +48,12 @@ export function SystemClassificationPicker({
   /** System is governance-locked in Edit mode: changing it is a request, not an edit. */
   systemReadOnly = false,
   issueId,
+  errors,
+  symptomDisabled = false,
+  symptomFooter,
+  requestPrompt = 'Can’t find the required System?',
+  requestLabel = 'Request New System',
+  onRequestSystem,
 }: {
   value: ClassificationValue
   onChange: (next: ClassificationValue) => void
@@ -54,9 +62,34 @@ export function SystemClassificationPicker({
   systemReadOnly?: boolean
   /** Audits the request against this issue when raised from a workspace form. */
   issueId?: string
+  /** Per-field messages, shown only once the caller decides to show them. */
+  errors?: Partial<Record<'system' | 'subSystem' | 'component' | 'symptom', string | undefined>>
+  /** Issue Entry disables Symptom while a new one is pending approval. */
+  symptomDisabled?: boolean
+  /** Rendered under Symptom — Issue Entry puts the "Pending Approval" badge here. */
+  symptomFooter?: ReactNode
+  /**
+   * The request affordance's copy differs by screen:
+   *   Issue Entry  `Can't find the required classification?` → `Request New`
+   *   Edit Issue   `Need to change the System?`              → `Raise a Request`
+   * Defaults preserve what `IssueEditForm` renders.
+   */
+  requestPrompt?: string
+  requestLabel?: string
+  /**
+   * MERGE NOTE — an escape hatch, not a second design.
+   *
+   * This component owns a request modal (`RequestNewSystemModal` +
+   * `store.requestClassification`), which is the right home for it. Issue Entry
+   * additionally runs a SYMPTOM-level request with its own pending-approval
+   * badge, which the system-level modal does not express. When this is supplied
+   * the row defers to the caller; otherwise the internal modal opens.
+   */
+  onRequestSystem?: () => void
 }) {
   const store = useStore()
   const { user } = useRole()
+  const { t } = useTranslation(NS)
   const ids = useId()
   /**
    * Which level the request modal is asking about. The affordance reads
@@ -95,7 +128,7 @@ export function SystemClassificationPicker({
   return (
     <div className={styles.root}>
       <div className={styles.path}>
-        <span className={styles.pathLabel}>PATH</span>
+        <span className={styles.pathLabel}>{t('path')}</span>
         {segments.map((seg, i) => (
           <span key={seg.label + i} style={{ display: 'contents' }}>
             {i > 0 && <Icon icon={ChevronRight} size={13} className={styles.sep} />}
@@ -107,16 +140,16 @@ export function SystemClassificationPicker({
       {modelCodes.length === 0 && (
         <div className={styles.hint}>
           <Icon icon={Info} size={14} />
-          Select a Model Code in Vehicle information to enable classification.
+          {t('modelCodeFirst')}
         </div>
       )}
 
       {/* This button was DISABLED — rendered with no handler behind it, because
           nothing implemented the flow. It now opens the request modal. */}
       <div className={styles.requestRow}>
-        <span>Can&apos;t find the required System?</span>
-        <button type="button" className={styles.requestLink} onClick={() => setRequesting('system')}>
-          Request New System
+        <span>{requestPrompt}</span>
+        <button type="button" className={styles.requestLink} onClick={() => (onRequestSystem ? onRequestSystem() : setRequesting('system'))}>
+          {requestLabel}
         </button>
       </div>
 
@@ -144,39 +177,48 @@ export function SystemClassificationPicker({
       <div className={styles.grid}>
         <Field
           id={`${ids}-sys`}
-          label="System *"
+          label={t('labelSystem')}
           options={toOptions(systems)}
           selected={value.system}
           disabled={locked || systemReadOnly}
           placeholder={locked ? 'Select a model code first' : 'Search system… (e.g. “Bat”, “Electrical”)'}
+          emptyText="No matching system."
+          error={errors?.system}
           onSelect={(v) => onChange({ system: v })}
           note={systemReadOnly ? 'Governance-locked — changing the System is a request, not an edit.' : undefined}
         />
         <Field
           id={`${ids}-sub`}
-          label="Sub-system *"
+          label={t('labelSubSystem')}
           options={toOptions(subs)}
           selected={value.subSystem}
           disabled={locked || !value.system}
           placeholder={value.system ? 'Search sub-system…' : 'Select a system first'}
+          emptyText="No matching sub-system."
+          error={errors?.subSystem}
           onSelect={(v) => onChange({ ...value, subSystem: v, component: undefined, symptom: undefined })}
         />
         <Field
           id={`${ids}-comp`}
-          label="Component *"
+          label={t('labelComponent')}
           options={toOptions(comps)}
           selected={value.component}
           disabled={locked || !value.subSystem}
           placeholder={value.subSystem ? 'Search component…' : 'Select a sub-system first'}
+          emptyText="No matching component."
+          error={errors?.component}
           onSelect={(v) => onChange({ ...value, component: v, symptom: undefined })}
         />
         <Field
           id={`${ids}-symp`}
-          label="Symptom *"
+          label={t('labelSymptom')}
           options={toOptions(symptoms)}
           selected={value.symptom}
-          disabled={locked || !value.component}
+          disabled={locked || !value.component || symptomDisabled}
           placeholder={value.component ? 'Search symptom…' : 'Select a component first'}
+          emptyText="No matching symptom."
+          error={errors?.symptom}
+          footer={symptomFooter}
           onSelect={(v) => onChange({ ...value, symptom: v })}
         />
       </div>
@@ -193,6 +235,9 @@ function Field({
   placeholder,
   onSelect,
   note,
+  emptyText,
+  error,
+  footer,
 }: {
   id: string
   label: string
@@ -202,6 +247,10 @@ function Field({
   placeholder: string
   onSelect: (value: string) => void
   note?: string
+  /** The design gives each level its own no-match line ("No matching system."). */
+  emptyText: string
+  error?: string
+  footer?: ReactNode
 }) {
   return (
     <div>
@@ -212,8 +261,14 @@ function Field({
         onSelect={onSelect}
         disabled={disabled}
         placeholder={placeholder}
-        aria-labelledby={id}
+        emptyText={emptyText}
+        invalid={!!error}
+        // The accessible name is the field name WITHOUT the asterisk — labelling
+        // via the visible span made it "System *", which reads as "System star".
+        aria-label={label.replace(/\s*\*$/, '')}
       />
+      {footer}
+      {error && <p className={styles.error}>{error}</p>}
       {note && <p className={styles.error}>{note}</p>}
     </div>
   )

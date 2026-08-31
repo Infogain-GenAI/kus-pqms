@@ -26,3 +26,6 @@ desktop.ini
 _boot-admin.dc.html
 
 docs/POC-HANDOVER.md
+
+# Vite build output
+.vite/

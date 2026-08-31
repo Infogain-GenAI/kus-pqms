@@ -73,8 +73,26 @@ export interface ComboboxProps {
 }
 
 export function Combobox({
-  options,
-  selected,
+  /**
+   * ⚠️ RUNTIME DEFAULTS, even though both props are REQUIRED in the type.
+   *
+   * The types stay required so a real caller still has to supply them — these
+   * defaults are not an invitation to omit them. They exist because a missing
+   * array here THREW during render (`options.filter` at the trigger's summary),
+   * and a throw in render tears down the React tree. That is a wildly
+   * disproportionate failure for a prop with an obvious, already-designed empty
+   * behaviour: an empty combobox renders its `emptyText` ("No options found").
+   *
+   * Found by `a11y-sweep.test.tsx`, which renders every barrel export with its
+   * default props and had no entry for this one. React caught the throw and
+   * logged it, so the suite stayed green while the component failed on every
+   * render of that path — the exact thing a passing run can hide.
+   *
+   * It also matters beyond the sweep: any consumer whose options arrive async
+   * has a first render where the array is not there yet.
+   */
+  options = [],
+  selected = [],
   onSelect,
   multiple = false,
   disabled = false,

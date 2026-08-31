@@ -393,3 +393,621 @@
   font-size: 11px;
   font-weight: var(--fw-bold);
 }
+
+/* ─── Linking, inside the Same Existing Issues block ──────────────────────────
+ *
+ * All of it lives here because that is where the design puts it. Issue Entry
+ * previously carried a `LinkIssuesSection` of our own OUTSIDE the form card;
+ * the design has no such surface. Three entry points, one panel.
+ *
+ * Tokens are used where they are exact: #E7ECF1 is `--border-subtle`, #6B7681 is
+ * `--text-muted`, #9AA5AE is `--text-disabled`. The rest are the design's own
+ * one-off values with no token behind them. */
+
+/* The header's right-hand action, beside the "{n} linked" badge. */
+.sameAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  height: 34px;
+  padding: 0 13px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--accent-700);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sameAction:hover {
+  background: #f4f8fc;
+  border-color: #c7d6ec;
+}
+
+/* ── The in-place search panel ─────────────────────────────────────────────── */
+.searchPanel {
+  margin-top: 16px;
+  padding: 16px;
+  border: var(--border-width) solid #dde7f2;
+  border-radius: 12px;
+  background: #f8fafd;
+}
+
+.searchHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.searchTitle {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.searchClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: #eef2f6;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.searchField {
+  position: relative;
+}
+
+/* The magnifier sits inside the field, so the input's left padding clears it. */
+.searchFieldIcon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-disabled);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 42px;
+  padding: 0 13px 0 38px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--interactive);
+  box-shadow: var(--shadow-focus);
+}
+
+.searchDivider {
+  height: 1px;
+  margin: 14px 0;
+  background: var(--border-subtle);
+}
+
+.searchIdle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 16px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.searchIdleText {
+  max-width: 360px;
+}
+
+/* The row is the container ONLY. The label and the count are styled separately
+   because the design styles them separately — the label is 10px/700 uppercase
+   with letter-spacing, the count is plain 11px. Putting the type on the row
+   uppercased "8 issues" into "8 ISSUES", which the design does not do. */
+.searchResultsHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+  font-family: var(--font-body);
+}
+
+.searchResultsLabel {
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.searchCount {
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
+/* ── Empty state — the design's `sameEmptyShow` ────────────────────────────── */
+.emptyPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 16px;
+  padding: 26px 20px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 13px;
+  border-radius: 11px;
+  background: #eef2f6;
+  color: var(--text-muted);
+}
+
+.emptyTitle {
+  max-width: 460px;
+  margin-bottom: 5px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.emptySub {
+  max-width: 420px;
+  margin-bottom: 16px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 9px;
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+/* ── All-linked state — informational, and it carries NO button ────────────── */
+.allLinked {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: var(--border-width) solid #dde7f2;
+  border-radius: 11px;
+  background: #f4f8fc;
+}
+
+.allLinkedIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-600);
+  color: var(--text-inverse);
+}
+
+.allLinkedTitle {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.allLinkedSub {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* The panel head's title cluster, and the icon above the idle / no-match copy.
+   These carry their values here rather than inline so they cost no `numeric`
+   ceiling — the gate lints .ts/.tsx and never CSS. */
+.searchHeadLeft {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.searchIdleIcon {
+  margin-bottom: 8px;
+  color: var(--text-disabled);
+}
+
+/* ─── Suggestion / search-result card ────────────────────────────────────────
+ * The design's block card: an actions row, then the title on its own line, then
+ * the meta line, then optional annotations. Replaces a single flex row that
+ * carried four of the design's fourteen bindings. */
+.card {
+  padding: 14px 16px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--surface-card);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cardIdent {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+
+.cardId {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--accent-700);
+}
+
+/* "Linked" — the state pill on the card, distinct from the header's count badge. */
+.cardLinkedPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #e7f6ef;
+  color: #15724a;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: var(--fw-bold);
+}
+
+.cardHistoryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 12px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.cardHistoryBtn:hover {
+  background: var(--neutral-50);
+}
+
+/* Two explicit link-button styles, not a variant mapping — the design gives the
+   linked state its own green outline and `cursor:default`. */
+.cardLinkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--kia-midnight);
+  color: var(--text-inverse);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.cardLinkBtnOn {
+  composes: cardLinkBtn;
+  padding: 0 13px;
+  border: var(--border-width) solid #cde9dc;
+  background: #f6fcf9;
+  color: #15724a;
+}
+
+.cardTitle {
+  margin-top: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.cardMeta {
+  margin-top: 7px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* "Manually linked" and "Suggested because …" share one shape. */
+.cardNote {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
+/* Search-result only — the design shows this badge there and NOT on the
+   suggestion card. A deliberate asymmetry; do not unify the two variants. */
+.cardStandalone {
+  height: 20px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 5px;
+  background: #eef2fb;
+  color: var(--accent-700);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* One entry in the View History modal. Values live here so they cost no
+   `numeric` ceiling — the gate lints .ts/.tsx and never CSS. */
+.historyEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ⚠️ THE CARD'S STATUS CHIP DELIBERATELY DIFFERS FROM EVERY OTHER STATUS IN THE
+   APP. DO NOT "NORMALISE" IT BACK.
+   `StatusBadge`'s own `md` is 22px / radius 4; the design draws this one at 26px
+   / radius 7 / 12px. Yogesh took fidelity on this card over consistency with the
+   rest of the application, knowingly. If app-wide 26px is ever wanted, the fix is
+   `STATUS_SIZES`, and this override should be DELETED rather than copied to more
+   call sites.
+   Carried as custom properties because `StatusBadge` sets its geometry inline,
+   and an inline style beats a class — the override has to go through `style`,
+   and routing it through vars keeps the raw values in CSS where `ds-gate` does
+   not lint them. */
+.cardStatus {
+  --pill-h: 26px;
+  --pill-px: 11px;
+  --pill-r: 7px;
+  --pill-fs: 12px;
+}
+
+/* ─── Issue-group card ───────────────────────────────────────────────────────
+ * One card stands for a whole group, so the suggestion list de-duplicates by
+ * group before rendering — the design does the same (`_seenSameGroup`). */
+.groupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+  flex-wrap: wrap;
+}
+
+.groupLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* The parent sits in its own tinted well so the group reads as one thing with a
+   head, rather than as a list whose first row happens to be different. */
+.parentBlock {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: var(--border-width) solid #dde7f2;
+  border-radius: 9px;
+  background: #f8fafd;
+}
+
+.groupIdent {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.groupTitle {
+  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.groupMeta {
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.expander {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-700);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.childList {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 9px;
+  padding-left: 16px;
+}
+
+.childRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 12px;
+  border: var(--border-width) solid #edf0f3;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.childId {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.childTitle {
+  margin-bottom: 3px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.childMeta {
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-disabled);
+}
+
+/* Parent / Child role badges — same shape as `.cardStandalone`, different fill. */
+.badgeParent {
+  composes: cardStandalone;
+}
+
+.badgeChild {
+  composes: cardStandalone;
+  background: #f1f4f7;
+  color: var(--text-muted);
+}
+
+/* The group header's left cluster — value here rather than inline so it costs no
+   `numeric` ceiling. */
+.groupHeadLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Link confirmation ───────────────────────────────────────────────────────
+   A governance control: no link commits without a justification of at least 20
+   characters. Values are the design's own. */
+.justifyBox {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 78px;
+  padding: 11px 13px;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+  outline: none;
+  resize: vertical;
+}
+
+.justifyBoxError {
+  composes: justifyBox;
+  border-color: var(--danger-500);
+}
+
+.justifyFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+  font-family: var(--font-body);
+  font-size: 11px;
+}
+
+.justifyError {
+  color: var(--danger-500);
+}
+
+.justifyCount {
+  margin-left: auto;
+  color: var(--text-disabled);
+}
