@@ -1,9 +1,11 @@
 import { useEffect, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ExternalLink, Link as LinkIcon } from 'lucide-react'
 import { Button, Icon, StatusBadge } from '@pqms/ui-library'
 import { useStore } from '@/data/store'
 import { fmtDate } from '@/data/util'
 import type { Issue } from '@/data/types'
+import { NS } from './ExistingIssueModal.i18n'
 import styles from './ExistingIssueModal.module.css'
 
 /**
@@ -51,6 +53,7 @@ export function ExistingIssueModal({
   unlinkSlot?: ReactNode
 }) {
   const store = useStore()
+  const { t } = useTranslation(NS)
 
   useEffect(() => {
     if (!issue) return
@@ -79,49 +82,49 @@ export function ExistingIssueModal({
               {linked && (
                 <span className={styles.linkedPill}>
                   <Icon icon={LinkIcon} size={12} />
-                  Linked
+                  {t('linkedPill')}
                 </span>
               )}
             </div>
             <button type="button" className={styles.viewIssue} onClick={() => onOpenIssue(issue.id)}>
               <Icon icon={ExternalLink} size={14} />
-              View Issue
+              {t('viewIssue')}
             </button>
           </div>
           <div className={styles.title}>{issue.title}</div>
           <div className={styles.meta}>
-            {issue.model} · MY{issue.modelYear} · Registered {fmtDate(issue.createdAt)}
+            {t('meta', { model: issue.model, year: issue.modelYear, date: fmtDate(issue.createdAt) })}
           </div>
         </div>
 
         <div className={styles.body}>
           <div>
-            <div className={styles.sectionLabel}>Classification</div>
+            <div className={styles.sectionLabel}>{t('sectionClassification')}</div>
             <p className={styles.sectionText}>{classification}</p>
           </div>
 
           <div>
-            <div className={styles.sectionLabel}>Issue description</div>
+            <div className={styles.sectionLabel}>{t('sectionDescription')}</div>
             <p className={styles.sectionText}>{issue.description || '—'}</p>
           </div>
 
           <div>
-            <div className={styles.sectionLabel}>Investigation summary</div>
+            <div className={styles.sectionLabel}>{t('sectionInvestigation')}</div>
             {activities.length > 0 ? (
               <p className={styles.sectionText}>{activities[0].summary}</p>
             ) : (
-              <p className={styles.empty}>No investigation activity recorded yet.</p>
+              <p className={styles.empty}>{t('investigationEmpty')}</p>
             )}
           </div>
 
           <div>
-            <div className={styles.sectionLabel}>Actions taken</div>
+            <div className={styles.sectionLabel}>{t('sectionActions')}</div>
             {activities.length > 0 ? (
               <p className={styles.sectionText}>
                 {activities.map((a) => a.type).join(' · ')}
               </p>
             ) : (
-              <p className={styles.empty}>No actions recorded yet.</p>
+              <p className={styles.empty}>{t('actionsEmpty')}</p>
             )}
           </div>
 
@@ -133,7 +136,7 @@ export function ExistingIssueModal({
           */}
 
           <div>
-            <div className={styles.sectionLabel}>Related history</div>
+            <div className={styles.sectionLabel}>{t('sectionHistory')}</div>
             {history.length > 0 ? (
               history.map((h) => (
                 <div key={h.id} className={styles.historyRow}>
@@ -145,16 +148,16 @@ export function ExistingIssueModal({
                 </div>
               ))
             ) : (
-              <p className={styles.empty}>No history recorded for this issue yet.</p>
+              <p className={styles.empty}>{t('historyEmpty')}</p>
             )}
           </div>
         </div>
 
         <div className={styles.foot}>
-          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button variant="ghost" onClick={onClose}>{t('close')}</Button>
           {linked
-            ? (unlinkSlot ?? <Button variant="secondary" onClick={onUnlink}>Unlink issue</Button>)
-            : <Button onClick={onLink}>Link issue</Button>}
+            ? (unlinkSlot ?? <Button variant="secondary" onClick={onUnlink}>{t('unlink')}</Button>)
+            : <Button onClick={onLink}>{t('link')}</Button>}
         </div>
       </div>
     </div>

@@ -1,10 +1,12 @@
 import { useId, useMemo, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronRight, Info } from 'lucide-react'
 import { Combobox, Icon, type ComboboxOption } from '@pqms/ui-library'
 import { useStore } from '@/data/store'
 import { useRole } from '@/data/roles'
 import type { ClassLevel } from '@/data/types'
 import { RequestNewSystemModal } from './classification/RequestNewSystemModal'
+import { NS } from './SystemClassificationPicker.i18n'
 import styles from './SystemClassificationPicker.module.css'
 
 /**
@@ -87,6 +89,7 @@ export function SystemClassificationPicker({
 }) {
   const store = useStore()
   const { user } = useRole()
+  const { t } = useTranslation(NS)
   const ids = useId()
   /**
    * Which level the request modal is asking about. The affordance reads
@@ -125,7 +128,7 @@ export function SystemClassificationPicker({
   return (
     <div className={styles.root}>
       <div className={styles.path}>
-        <span className={styles.pathLabel}>PATH</span>
+        <span className={styles.pathLabel}>{t('path')}</span>
         {segments.map((seg, i) => (
           <span key={seg.label + i} style={{ display: 'contents' }}>
             {i > 0 && <Icon icon={ChevronRight} size={13} className={styles.sep} />}
@@ -137,7 +140,7 @@ export function SystemClassificationPicker({
       {modelCodes.length === 0 && (
         <div className={styles.hint}>
           <Icon icon={Info} size={14} />
-          Select a Model Code in Vehicle information to enable classification.
+          {t('modelCodeFirst')}
         </div>
       )}
 
@@ -174,7 +177,7 @@ export function SystemClassificationPicker({
       <div className={styles.grid}>
         <Field
           id={`${ids}-sys`}
-          label="System *"
+          label={t('labelSystem')}
           options={toOptions(systems)}
           selected={value.system}
           disabled={locked || systemReadOnly}
@@ -186,7 +189,7 @@ export function SystemClassificationPicker({
         />
         <Field
           id={`${ids}-sub`}
-          label="Sub-system *"
+          label={t('labelSubSystem')}
           options={toOptions(subs)}
           selected={value.subSystem}
           disabled={locked || !value.system}
@@ -197,7 +200,7 @@ export function SystemClassificationPicker({
         />
         <Field
           id={`${ids}-comp`}
-          label="Component *"
+          label={t('labelComponent')}
           options={toOptions(comps)}
           selected={value.component}
           disabled={locked || !value.subSystem}
@@ -208,7 +211,7 @@ export function SystemClassificationPicker({
         />
         <Field
           id={`${ids}-symp`}
-          label="Symptom *"
+          label={t('labelSymptom')}
           options={toOptions(symptoms)}
           selected={value.symptom}
           disabled={locked || !value.component || symptomDisabled}

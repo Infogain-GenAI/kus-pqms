@@ -609,7 +609,7 @@ export function CreateIssueScreen() {
                 Supplying the count is plumbing, not invention.
               */}
               {linkedIds.length > 0 && (
-                <span className={entryStyles.sameLinked}>{linkedIds.length} linked</span>
+                <span className={entryStyles.sameLinked}>{linkedIds.length} {t('sameExistingLinked')}</span>
               )}
               {/* Entry point 1 of 3. `toggleSameSearch` — a toggle, not an open:
                   pressing it again closes the panel and restores whichever body
@@ -620,7 +620,7 @@ export function CreateIssueScreen() {
                 onClick={() => setSameSearchOpen((o) => !o)}
               >
                 <Icon icon={Search} size={15} />
-                Search &amp; link another issue
+                {t('searchLinkAnother')}
               </button>
             </div>
             {/*
@@ -635,7 +635,7 @@ export function CreateIssueScreen() {
                     <span className={entryStyles.sameHeadIcon} aria-hidden>
                       <Icon icon={Search} size={15} />
                     </span>
-                    <div className={entryStyles.searchTitle}>Search &amp; link existing issue</div>
+                    <div className={entryStyles.searchTitle}>{t('searchLinkExisting')}</div>
                   </div>
                   <button
                     type="button"
@@ -662,21 +662,21 @@ export function CreateIssueScreen() {
                   <div className={entryStyles.searchIdle}>
                     <Icon icon={Search} size={20} className={entryStyles.searchIdleIcon} />
                     <div className={entryStyles.searchIdleText}>
-                      Search by Issue ID, title or keyword to find and link an existing issue or issue group.
+                      {t('searchIdle')}
                     </div>
                   </div>
                 ) : searchResults.length === 0 ? (
                   <div className={entryStyles.searchIdle}>
                     <Icon icon={SearchX} size={22} className={entryStyles.searchIdleIcon} />
                     <div className={entryStyles.searchIdleText}>
-                      No issues match “{sameSearchQ}”. Try a different Issue ID, title or keyword.
+                      {t('searchNoMatch', { query: sameSearchQ })}
                     </div>
                   </div>
                 ) : (
                   <>
                     <div className={entryStyles.searchResultsHead}>
-                      <span className={entryStyles.searchResultsLabel}>Search results</span>
-                      <span className={entryStyles.searchCount}>{searchResults.length} {searchResults.length === 1 ? 'issue' : 'issues'}</span>
+                      <span className={entryStyles.searchResultsLabel}>{t('searchResults')}</span>
+                      <span className={entryStyles.searchCount}>{t('searchCount', { count: searchResults.length })}</span>
                     </div>
                     <div className={entryStyles.sameList}>
                       {toEntries(searchResults.map((i) => ({ issue: i }))).map((e) =>
@@ -717,14 +717,14 @@ export function CreateIssueScreen() {
                   <Icon icon={Search} size={20} />
                 </span>
                 <div className={entryStyles.emptyTitle}>
-                  No similar issues were found based on the current issue information.
+                  {t('sameExistingEmpty')}
                 </div>
                 <div className={entryStyles.emptySub}>
-                  You can still search the full issue register and link any existing issue to this one.
+                  {t('emptySub')}
                 </div>
                 <button type="button" className={entryStyles.emptyCta} onClick={() => setSameSearchOpen(true)}>
                   <Icon icon={Search} size={16} />
-                  Search &amp; link existing issue
+                  {t('searchLinkExisting')}
                 </button>
               </div>
             ) : allSuggestionsLinked ? (
@@ -733,9 +733,9 @@ export function CreateIssueScreen() {
                   <Icon icon={Check} size={16} />
                 </span>
                 <div>
-                  <div className={entryStyles.allLinkedTitle}>All matched issues linked</div>
+                  <div className={entryStyles.allLinkedTitle}>{t('allLinkedTitle')}</div>
                   <div className={entryStyles.allLinkedSub}>
-                    Linked issues now appear in the panel on the right. Manage them there before submitting.
+                    {t('allLinkedSub')}
                   </div>
                 </div>
               </div>
@@ -827,14 +827,14 @@ export function CreateIssueScreen() {
       {/* Request-new classification (submits to approval queue; non-blocking) */}
       <Modal open={requestOpen} onClose={() => setRequestOpen(false)} title="Request New Classification" footer={
         <>
-          <Button variant="ghost" onClick={() => setRequestOpen(false)}>Cancel</Button>
-          <Button disabled={!requestValue.trim() || !cls.component} onClick={() => { setPendingSymptom(requestValue.trim()); setCls((c) => ({ ...c, symptom: undefined })); setRequestValue(''); setRequestOpen(false) }}>Submit Request</Button>
+          <Button variant="ghost" onClick={() => setRequestOpen(false)}>{t('cancel')}</Button>
+          <Button disabled={!requestValue.trim() || !cls.component} onClick={() => { setPendingSymptom(requestValue.trim()); setCls((c) => ({ ...c, symptom: undefined })); setRequestValue(''); setRequestOpen(false) }}>{t('requestSubmit')}</Button>
         </>
       }>
         <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>
-          Submit a request. Once approved, it will be added.
+          {t('requestBody')}
         </p>
-        <ULabel>New symptom value * {cls.component ? '' : '(select a component first)'}</ULabel>
+        <ULabel>{t('requestSymptomLabel')} {cls.component ? '' : t('requestSymptomNeedsComponent')}</ULabel>
         <Input aria-label="New symptom" value={requestValue} onChange={(e) => setRequestValue(e.target.value)} placeholder="e.g. Latch fails to release" disabled={!cls.component} />
       </Modal>
 
@@ -849,7 +849,7 @@ export function CreateIssueScreen() {
         {(() => {
           const entries = historyFor ? store.auditFor(historyFor) : []
           if (entries.length === 0) {
-            return <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)' }}>No history recorded for this issue yet.</p>
+            return <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)' }}>{t('historyEmpty')}</p>
           }
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
@@ -879,7 +879,7 @@ export function CreateIssueScreen() {
         title="Link issue"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setLinkConfirm(null)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setLinkConfirm(null)}>{t('cancel')}</Button>
             <Button disabled={justifyTooShort} onClick={commitLink}>
               {linkConfirm && linkConfirm.ids.length > 1 ? 'Link Issues' : 'Link Issue'}
             </Button>
@@ -887,10 +887,9 @@ export function CreateIssueScreen() {
         }
       >
         <p style={{ margin: '0 0 var(--space-4)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)', color: 'var(--text-secondary)' }}>
-          Linking {linkConfirm?.label} to this issue. Record why these belong together — it
-          becomes part of the issue&apos;s history.
+          {t('linkConfirmBody', { label: linkConfirm?.label })}
         </p>
-        <ULabel>Justification *</ULabel>
+        <ULabel>{t('justificationLabel')}</ULabel>
         <textarea
           className={justifyErr ? entryStyles.justifyBoxError : entryStyles.justifyBox}
           aria-label="Justification"
@@ -987,6 +986,7 @@ function SuggestionCard({
   // note INSTEAD of a "Suggested because" line, never both.
   const manualOnly = (reasons ?? []).length === 1 && reasons?.[0] === 'Manually linked'
   const suggestReasons = manualOnly ? [] : (reasons ?? [])
+  const { t } = useTranslation(NS)
 
   return (
     <div className={entryStyles.card}>
@@ -1009,11 +1009,11 @@ function SuggestionCard({
             className={entryStyles.cardStatus}
             style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
           />
-          {variant === 'search' && <span className={entryStyles.cardStandalone}>Standalone Issue</span>}
+          {variant === 'search' && <span className={entryStyles.cardStandalone}>{t('cardStandalone')}</span>}
           {linked && (
             <span className={entryStyles.cardLinkedPill}>
               <Icon icon={Link} size={11} />
-              Linked
+              {t('cardLinked')}
             </span>
           )}
         </div>
@@ -1021,12 +1021,12 @@ function SuggestionCard({
           {onInspect && (
             <button type="button" className={entryStyles.cardHistoryBtn} onClick={onInspect}>
               <Icon icon={Eye} size={14} />
-              View
+              {t('cardView')}
             </button>
           )}
           <button type="button" className={entryStyles.cardHistoryBtn} onClick={onViewHistory}>
             <Icon icon={History} size={14} />
-            View History
+            {t('cardViewHistory')}
           </button>
           <button
             type="button"
@@ -1043,13 +1043,13 @@ function SuggestionCard({
       {manualOnly && (
         <div className={entryStyles.cardNote}>
           <Icon icon={Link2} size={12} />
-          Manually linked
+          {t('cardManuallyLinked')}
         </div>
       )}
       {suggestReasons.length > 0 && (
         <div className={entryStyles.cardNote}>
           <Icon icon={Sparkles} size={12} style={{ color: 'var(--accent-600)', flex: 'none' }} />
-          Suggested because: {suggestReasons.join(' · ')}
+          {t('cardSuggestedBecause', { reasons: suggestReasons.join(' · ') })}
         </div>
       )}
     </div>
@@ -1100,6 +1100,7 @@ function GroupCard({
   const [expanded, setExpanded] = useState(false)
   const count = children.length + 1
   const suggestReasons = reasons ?? []
+  const { t } = useTranslation(NS)
 
   return (
     <div className={entryStyles.card}>
@@ -1107,12 +1108,12 @@ function GroupCard({
         <div className={entryStyles.groupHeadLeft}>
           <span className={entryStyles.groupLabel}>
             {variant === 'search' && <Icon icon={GitBranch} size={13} />}
-            Issue Group · {count} Issues
+            {t('groupHeader', { count })}
           </span>
           {linked && (
             <span className={entryStyles.cardLinkedPill}>
               <Icon icon={Link} size={11} />
-              Linked
+              {t('cardLinked')}
             </span>
           )}
         </div>
@@ -1147,7 +1148,7 @@ function GroupCard({
               className={entryStyles.cardStatus}
               style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
             />
-            <span className={entryStyles.badgeParent}>Parent</span>
+            <span className={entryStyles.badgeParent}>{t('badgeParent')}</span>
           </div>
           <div className={entryStyles.groupTitle}>{parent.title}</div>
           <div className={entryStyles.groupMeta}>{metaLineFor(parent)}</div>
@@ -1174,7 +1175,7 @@ function GroupCard({
                     className={entryStyles.cardStatus}
                     style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
                   />
-                  <span className={entryStyles.badgeChild}>Child</span>
+                  <span className={entryStyles.badgeChild}>{t('badgeChild')}</span>
                 </div>
                 <div className={entryStyles.childTitle}>{c.title}</div>
                 <div className={entryStyles.childMeta}>{metaLineFor(c)}</div>
@@ -1187,7 +1188,7 @@ function GroupCard({
       {suggestReasons.length > 0 && (
         <div className={entryStyles.cardNote}>
           <Icon icon={Sparkles} size={12} style={{ color: 'var(--accent-600)', flex: 'none' }} />
-          Suggested because: {suggestReasons.join(' · ')}
+          {t('cardSuggestedBecause', { reasons: suggestReasons.join(' · ') })}
         </div>
       )}
     </div>

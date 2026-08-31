@@ -358,6 +358,35 @@ describe('Same Existing Issues — cards, search and history', () => {
       // so the modal must render without a workspace provider in the tree.
       expect(body()).toMatch(/history —/i)
     })
+
+    /*
+     * THE POPULATED BRANCH. The test above proves the modal OPENS; it happened to
+     * do so for an issue with no audit rows, so the list itself — timestamps,
+     * actors, actions — was never rendered by any test. A modal frame with an
+     * empty body passes an "it opens" assertion perfectly.
+     *
+     * Routed through SEARCH rather than the suggestion list on purpose: only
+     * `HV-260101` carries seeded audit rows, and searching by id lands on it
+     * deterministically, where which issues rank as suggestions depends on the
+     * classification the form happens to be filled with.
+     */
+    it('renders the audit rows themselves, not just the modal frame', () => {
+      openBlock()
+      fireEvent.click(btn(/search & link another issue/i))
+      fireEvent.change(screen.getByRole('textbox', { name: /search issues to link/i }), {
+        target: { value: 'HV-260101' },
+      })
+      // NOT VACUOUS BY CONSTRUCTION: the rows must be absent until the modal is
+      // opened, or the assertions below would pass on text the page already had.
+      expect(body()).not.toContain('Issue ID generated')
+
+      fireEvent.click(screen.getAllByRole('button', { name: /view history/i })[0])
+
+      // Seeded AUDIT rows for HV-260101 — action, detail and actor all render.
+      expect(body()).toContain('Issue ID generated')
+      expect(body()).toContain('Classification selected')
+      expect(body()).toContain('Arpita Chavda')
+    })
   })
 
   describe('the in-place search panel', () => {

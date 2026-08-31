@@ -23,16 +23,8 @@ const messages: ComponentI18nMessages = {
     sectionClassification: 'System Classification',
     sectionIssue: 'Issue Information',
 
-    classificationPath: 'PATH',
-    classificationModelCodeFirst: 'Select a Model Code in Vehicle information to enable classification.',
     classificationCannotFind: "Can't find the required classification?",
     classificationRequestNew: 'Request New',
-    // ⚠️ The ` *` is part of the string here, while other required fields on this
-    // screen use a styled span. Preserved from the pre-i18n code, not corrected.
-    classificationSystem: 'System *',
-    classificationSubSystem: 'Sub-system *',
-    classificationComponent: 'Component *',
-    classificationSymptom: 'Symptom *',
     classificationPendingApproval: 'Pending Approval',
 
     sameExistingTitle: 'Same Existing Issues',
@@ -40,7 +32,6 @@ const messages: ComponentI18nMessages = {
       'We found existing issues with similar system classification. Review the issue or issue group before linking.',
     sameExistingLinked: 'linked',
     sameExistingEmpty: 'No similar issues were found based on the current issue information.',
-    sameExistingPreview: 'Preview',
 
     fieldTitle: 'Issue title *',
     fieldDescription: 'Description *',
@@ -51,7 +42,6 @@ const messages: ComponentI18nMessages = {
     // stored, so the chip control did not make it inaccurate.
     fieldDtcOptional: '· optional · comma-separated',
 
-    clearFormCancel: 'Cancel',
     clearFormConfirm: 'Clear form',
     clearFormBody:
       'This will reset the entire form back to blank — Issue Information, Vehicle Information, System Classification, and any linked issues. This can’t be undone.',
@@ -64,6 +54,77 @@ const messages: ComponentI18nMessages = {
     submittedStatusValue: 'Submitted · Open',
     submittedBackToList: 'Back to Issue List',
     submittedOpenWorkspace: 'Open Issue Workspace',
+
+    /*
+     * ─── SEARCH & LINK PANEL ────────────────────────────────────────
+     *
+     * `searchLinkExisting` is used TWICE — the panel's own heading and the
+     * empty state's primary button — with the same words in both. One key, not
+     * two: the design uses one phrase for one action, and a second key would let
+     * the two drift apart silently.
+     */
+    searchLinkAnother: 'Search & link another issue',
+    searchLinkExisting: 'Search & link existing issue',
+    searchIdle: 'Search by Issue ID, title or keyword to find and link an existing issue or issue group.',
+    searchNoMatch: 'No issues match “{{query}}”. Try a different Issue ID, title or keyword.',
+    searchResults: 'Search results',
+    /*
+     * ICU variants replacing `{n} {n === 1 ? 'issue' : 'issues'}` — a hand-rolled
+     * plural of exactly the kind 00 bans and `validationBanner` below already
+     * exists to correct. The ds-gate could not see this one: it lives in a
+     * ternary rather than JSX text, so it was never in the copy count.
+     */
+    searchCount_one: '{{count}} issue',
+    searchCount_other: '{{count}} issues',
+
+    /*
+     * ─── BODY STATES ────────────────────────────────────────────────
+     * The empty state's TITLE reuses `sameExistingEmpty` above rather than
+     * restating it.
+     */
+    emptySub: 'You can still search the full issue register and link any existing issue to this one.',
+    allLinkedTitle: 'All matched issues linked',
+    allLinkedSub: 'Linked issues now appear in the panel on the right. Manage them there before submitting.',
+
+    /* ─── REQUEST-NEW-CLASSIFICATION MODAL ───────────────────────── */
+    requestSubmit: 'Submit Request',
+    requestBody: 'Submit a request. Once approved, it will be added.',
+    requestSymptomLabel: 'New symptom value *',
+    requestSymptomNeedsComponent: '(select a component first)',
+
+    /* ─── HISTORY MODAL ─────────────────────────────────────────── */
+    historyEmpty: 'No history recorded for this issue yet.',
+
+    /*
+     * ─── LINK CONFIRMATION ───────────────────────────────────────
+     * One key for a sentence that was split across two JSX text nodes around
+     * `{linkConfirm?.label}`. The apostrophe is the STRAIGHT one, which is what
+     * the JSX `&apos;` entity rendered and what the canonical uses throughout.
+     */
+    linkConfirmBody: "Linking {{label}} to this issue. Record why these belong together — it becomes part of the issue's history.",
+    justificationLabel: 'Justification *',
+
+    /*
+     * ─── SUGGESTION / GROUP CARDS ──────────────────────────────────
+     * Both cards live in `CreateIssueScreen.tsx` and are rendered only by it, so
+     * they share the screen's namespace on the same reasoning as its modals.
+     */
+    cardStandalone: 'Standalone Issue',
+    cardLinked: 'Linked',
+    cardView: 'View',
+    cardViewHistory: 'View History',
+    /*
+     * ⚠️ DISPLAY ONLY. 'Manually linked' is ALSO a sentinel value in
+     * `reasons[]`, which `SuggestionCard` compares against to decide whether to
+     * show this note INSTEAD of "Suggested because". That comparison is against
+     * the untranslated marker in the data, not against this key — translating
+     * the sentinel too would silently break the branch and show both lines.
+     */
+    cardManuallyLinked: 'Manually linked',
+    cardSuggestedBecause: 'Suggested because: {{reasons}}',
+    groupHeader: 'Issue Group · {{count}} Issues',
+    badgeParent: 'Parent',
+    badgeChild: 'Child',
 
     /*
      * ICU variants replacing a hand-rolled plural that was split across two JSX
