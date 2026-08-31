@@ -1,8 +1,8 @@
-import { get, post } from '@/shared/http'
+import { get, patch } from '@/shared/http'
 import type { NotificationListResult, NotificationQuery } from '@/api/notifications'
 import type { AppNotification, NotificationCategory, NotificationRecordType } from '@/data/types'
 import { parseResponse } from './issue.schemas'
-import { backendNotificationPageSchema } from './notification.schemas'
+import { backendNotificationPageSchema, unreadCountSchema } from './notification.schemas'
 
 /**
  * REAL-API NOTIFICATION SERVICE.
@@ -62,10 +62,23 @@ export function toNotification(dto: BackendNotificationDto): AppNotification {
   }
 }
 
-/** `GET /notifications`. */
+/**
+ * `GET /notifications?receiver=&page=&size=`.
+ *
+ * Backs both the header dropdown (small `size`) and the full-page feed (larger
+ * `size`) from one endpoint, most-recent-first.
+ *
+ * ⚠️ `page` IS 0-BASED. The backend's page envelope is Spring's, and the issue
+ * mappers already carry the same note — a 1-based page number here silently
+ * skips the first page's worth of rows rather than erroring.
+ */
 export async function listNotifications(query: NotificationQuery = {}): Promise<NotificationListResult> {
   const raw = await get<unknown>('/notifications', {
-    params: { receiver: query.recipient, size: query.limit },
+    params: {
+      receiver: query.recipient,
+      page: query.page,
+      size: query.limit,
+    },
   })
   // Validate, THEN map — see the same note in `issue.service.ts`. Mapping an
   // unchecked shape loses the evidence the schema exists to name.
@@ -75,17 +88,60 @@ export async function listNotifications(query: NotificationQuery = {}): Promise<
     // Prefer the server's own count: it knows the whole set, while this page may
     // have been limited. Falling back to the page's own unread count is better
     // than zero, and is flagged here so nobody reads it as authoritative.
+    //
+    // ⚠️ THE FALLBACK IS A LAST RESORT, NOT THE BADGE'S SOURCE. Use
+    // `unreadCount()` below for that. Vue's service states the reason: "Never
+    // derive an unread count from list()'s (bounded/paginated) result — it would
+    // undercount whenever more unread rows exist than the requested page size."
     unreadCount: page.unreadCount ?? rows.filter((n) => !n.read).length,
     rows,
   }
 }
 
-/** `POST /notifications/{id}/read`. */
-export function markRead(id: string): Promise<void> {
-  return post<void>(`/notifications/${encodeURIComponent(id)}/read`)
+/**
+ * `GET /notifications/unread-count?receiver=` — the cheap, poll-friendly
+ * endpoint the header badge uses.
+ *
+ * ⚠️ THIS EXISTS SO THE BADGE IS NEVER DERIVED FROM A PAGE. A dropdown asking
+ * for six rows would cap the badge at six, and five unread would look identical
+ * to five hundred. Separate endpoint, separate query, no page size involved.
+ *
+ * Verified against the real controller in the Vue port rather than guessed.
+ */
+export async function unreadCount(recipient?: string): Promise<number> {
+  const raw = await get<unknown>('/notifications/unread-count', {
+    params: { receiver: recipient },
+  })
+  return parseResponse(unreadCountSchema, raw, 'GET /notifications/unread-count').unreadCount
 }
 
-/** `POST /notifications/read-all`. */
+/**
+ * `PATCH /notifications/{id}/read?receiver=`.
+ *
+ * ⚠️ `PATCH`, NOT `POST`, AND `receiver` IS REQUIRED RATHER THAN OPTIONAL.
+ * Both were wrong here until this was checked against the Vue service, whose
+ * every endpoint and parameter is verified against `NotificationController.java`
+ * and the service's own Postman collection rather than inferred.
+ *
+ * The `receiver` parameter is the backend's OWNERSHIP CHECK, not a filter: a
+ * mismatched receiver 404s rather than mutating. Omitting it does not mark
+ * somebody else's notification read — it fails, and the optimistic update in
+ * `notifications.queries.ts` then rolls back for a reason nobody can see from
+ * the client.
+ */
+export function markRead(id: string, recipient?: string): Promise<void> {
+  return patch<void>(`/notifications/${encodeURIComponent(id)}/read`, undefined, {
+    params: { receiver: recipient },
+  })
+}
+
+/**
+ * `PATCH /notifications/read-all?receiver=`.
+ *
+ * ⚠️ `receiver` GOES IN THE QUERY STRING, NOT A REQUEST BODY. The real endpoint
+ * takes no body at all; sending one is silently ignored and the call then
+ * marks nothing, because the receiver it needed never arrived.
+ */
 export function markAllRead(recipient?: string): Promise<void> {
-  return post<void>('/notifications/read-all', { receiver: recipient })
+  return patch<void>('/notifications/read-all', undefined, { params: { receiver: recipient } })
 }

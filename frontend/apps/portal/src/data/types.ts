@@ -8,6 +8,17 @@ import type { SourceChannel } from './sourceChannels'
 export type Cap = 'read' | 'override' | 'admin'
 export type RoleKey = 'SE' | 'ASM' | 'PQM' | 'ADMIN'
 
+/**
+ * The actions a session can be gated on.
+ *
+ * ⚠️ MOVED HERE FROM `data/roles.tsx`, WHICH STILL RE-EXPORTS IT. `roles.tsx`
+ * is now a thin adapter over `stores/auth.store.ts`, and the store needs this
+ * type — so leaving the declaration in `roles.tsx` would have made the store
+ * import from its own consumer and closed a module cycle. `data/types` is the
+ * leaf both can depend on.
+ */
+export type PermAction = 'create' | 'edit-own' | 'propose' | 'approve' | 'override-edit' | 'administer'
+
 export interface User {
   id: string
   name: string

@@ -44,6 +44,22 @@ export function AppHeader() {
   const [notifOpen, setNotifOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  /*
+   * ⚠️ THE ROLE SWITCHER IS DEV-ONLY, AND AS OF THE ZUSTAND MIGRATION IT WOULD
+   * THROW IF SHOWN IN PRODUCTION.
+   *
+   * `switchRole()` now refuses to run in a production build — 04 calls that a
+   * security control rather than hygiene, because it is the second layer of the
+   * fuse on fixtures-mode's auth bypass. So the button that calls it must not be
+   * offered there either: a visible control that throws when clicked is a worse
+   * outcome than an absent one.
+   *
+   * ⚠️ HIDING IT IS NOT THE CONTROL. The throw is. This flag only stops a user
+   * meeting an error; it stops nobody reaching the function. Do not remove the
+   * throw on the grounds that the UI is already hidden.
+   */
+  const roleSwitchAvailable = !import.meta.env.PROD
+
   useEffect(() => {
     if (!roleMenu) return
     const onDown = (e: MouseEvent) => {
@@ -129,7 +145,7 @@ export function AppHeader() {
         <div ref={menuRef} style={{ position: 'relative' }}>
           <button
             aria-label="User menu (switch role — demo harness)"
-            onClick={() => setRoleMenu((v) => !v)}
+            onClick={() => { if (roleSwitchAvailable) setRoleMenu((v) => !v) }}
             style={{ display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer' }}
           >
             <Avatar name={user.name} size="md" />
@@ -140,7 +156,7 @@ export function AppHeader() {
               </span>
             </span>
           </button>
-          {roleMenu && (
+          {roleMenu && roleSwitchAvailable && (
             <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 'var(--sidenav-width)', background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', padding: 6, zIndex: 60 }}>
               <div style={{ padding: '8px 10px 6px', font: 'var(--fw-semibold) 10.5px/1 var(--font-body)', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Switch role (demo)</div>
               {ROLES.map((r) => (

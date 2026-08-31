@@ -38,3 +38,12 @@ export const backendNotificationPageSchema = z
     unreadCount: z.number().optional(),
   })
   .strict()
+
+/**
+ * `GET /notifications/unread-count`.
+ *
+ * A one-field response, and strict like the rest: an endpoint that starts
+ * returning `{count: n}` instead of `{unreadCount: n}` would otherwise parse to
+ * `undefined` and render a badge of NaN, or none at all.
+ */
+export const unreadCountSchema = z.object({ unreadCount: z.number() }).strict()

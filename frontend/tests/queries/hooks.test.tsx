@@ -14,11 +14,17 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { withQueryClient, createTestQueryClient } from '../support/queryWrapper'
 import { queryKeys } from '@/shared/query/keys'
 import * as services from '@/services'
-import { useIssueDetail, useIssueList, useIssueScopeCounts } from '@/features/issues/issues.queries'
+import {
+  useIssueDetail,
+  useIssueKpiCounts,
+  useIssueList,
+  useIssueScopeCounts,
+} from '@/features/issues/issues.queries'
 import {
   useNotifications,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+  useUnreadNotificationCount,
 } from '@/features/notifications/notifications.queries'
 
 afterEach(() => {
@@ -168,7 +174,7 @@ describe('optimistic mark-read', () => {
     })
 
     act(() => {
-      result.current.mutate('N-1')
+      result.current.mutate({ id: 'N-1' })
     })
 
     // Asserted deliberately while the request is still in flight — that is the
@@ -195,7 +201,7 @@ describe('optimistic mark-read', () => {
     })
 
     act(() => {
-      result.current.mutate('N-1')
+      result.current.mutate({ id: 'N-1' })
     })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
@@ -218,10 +224,10 @@ describe('optimistic mark-read', () => {
     })
 
     act(() => {
-      result.current.mutate('N-1')
+      result.current.mutate({ id: 'N-1' })
     })
     act(() => {
-      result.current.mutate('N-1')
+      result.current.mutate({ id: 'N-1' })
     })
 
     await waitFor(() => {
@@ -256,5 +262,132 @@ describe('optimistic mark-read', () => {
     })
 
     act(() => release())
+  })
+})
+
+describe('useIssueKpiCounts', () => {
+  it('resolves the dashboard totals', async () => {
+    vi.spyOn(services.issues, 'kpiCounts').mockResolvedValue({ total: 3, byStatus: { OPEN: 3 } })
+
+    const { result } = renderHook(() => useIssueKpiCounts(), { wrapper: withQueryClient() })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.total).toBe(3)
+  })
+
+  // Unparameterised, so every caller must land on ONE cache entry — otherwise
+  // the dashboard's several KPI tiles each fetch the same totals separately.
+  it('uses one key for every caller', () => {
+    const client = createTestQueryClient()
+    client.setQueryData(queryKeys.issues.kpiCounts(), { total: 1, byStatus: {} })
+    expect(client.getQueryData(queryKeys.issues.kpiCounts())).toEqual({ total: 1, byStatus: {} })
+  })
+})
+
+describe('the unread badge is its own query', () => {
+  /*
+   * ⚠️ THE REASON THIS ENDPOINT EXISTS AT ALL. The list is a bounded page — the
+   * dropdown asks for six — so counting its unread rows caps the badge at the
+   * page size, and five unread renders identically to five hundred. Vue's
+   * service states it directly: "Never derive an unread count from list()'s
+   * (bounded/paginated) result."
+   */
+  it('counts the whole set, not the returned page', async () => {
+    vi.stubEnv('VITE_USE_FIXTURES', 'false')
+    vi.spyOn(services.notifications, 'unreadCount').mockResolvedValue(137)
+
+    const { result } = renderHook(() => useUnreadNotificationCount('u-se'), {
+      wrapper: withQueryClient(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toBe(137)
+  })
+
+  it('is disabled in fixtures mode, like the list', () => {
+    vi.stubEnv('VITE_USE_FIXTURES', 'true')
+    const spy = vi.spyOn(services.notifications, 'unreadCount')
+
+    const { result } = renderHook(() => useUnreadNotificationCount(), {
+      wrapper: withQueryClient(),
+    })
+
+    expect(result.current.fetchStatus).toBe('idle')
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  /*
+   * ⚠️ THE KEY-MATCHING BUG THIS PINS. `unreadCount('u-se')` ends in a STRING,
+   * and TanStack matches a trailing string segment by equality — so a write
+   * addressed to `unreadCount()` misses every recipient-scoped entry silently.
+   * The badge would keep its stale number and nothing would report it. Writes
+   * use `unreadCountAll()`; only `useQuery` uses the exact key.
+   */
+  it('an optimistic write reaches a recipient-scoped entry', () => {
+    const client = createTestQueryClient()
+    client.setQueryData(queryKeys.notifications.unreadCount('u-se'), 4)
+
+    client.setQueriesData<number>({ queryKey: queryKeys.notifications.unreadCountAll() }, 0)
+
+    expect(client.getQueryData(queryKeys.notifications.unreadCount('u-se'))).toBe(0)
+  })
+
+  it('is invalidated by the notifications prefix, so marking read refreshes it', () => {
+    const client = createTestQueryClient()
+    client.setQueryData(queryKeys.notifications.unreadCount('u-se'), 4)
+    client.setQueryData(queryKeys.notifications.list(), { rows: [], unreadCount: 0 })
+
+    // A badge that keeps its old number after the list updates is the most
+    // visible possible symptom of a key that does not nest under the prefix.
+    expect(client.getQueriesData({ queryKey: queryKeys.notifications.all() })).toHaveLength(2)
+  })
+
+  it('decrements optimistically when one row is marked read', async () => {
+    vi.stubEnv('VITE_USE_FIXTURES', 'false')
+    const client = createTestQueryClient()
+    client.setQueryData(queryKeys.notifications.unreadCount('u-se'), 137)
+
+    let release: () => void = () => {}
+    vi.spyOn(services.notifications, 'markRead').mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+
+    const { result } = renderHook(() => useMarkNotificationRead(), {
+      wrapper: withQueryClient(client),
+    })
+
+    act(() => {
+      result.current.mutate({ id: 'N-1', recipient: 'u-se' })
+    })
+
+    // Decremented, NOT recomputed from the cached list: the badge counts the
+    // whole set while the list is one page, so recomputing would drop it to the
+    // page's unread count and lose every unread row beyond it.
+    await waitFor(() => {
+      expect(client.getQueryData(queryKeys.notifications.unreadCount('u-se'))).toBe(136)
+    })
+
+    act(() => release())
+  })
+
+  it('carries the recipient through to the service', async () => {
+    vi.stubEnv('VITE_USE_FIXTURES', 'false')
+    const spy = vi.spyOn(services.notifications, 'markRead').mockResolvedValue(undefined)
+    vi.spyOn(services.notifications, 'list').mockResolvedValue({ rows: [], unreadCount: 0 })
+
+    const { result } = renderHook(() => useMarkNotificationRead(), {
+      wrapper: withQueryClient(),
+    })
+
+    act(() => {
+      result.current.mutate({ id: 'N-1', recipient: 'qe_user_01@pqms.internal' })
+    })
+
+    // On the real path `receiver` is the backend's OWNERSHIP CHECK, not a
+    // filter — dropping it 404s rather than mutating.
+    await waitFor(() => expect(spy).toHaveBeenCalledWith('N-1', 'qe_user_01@pqms.internal'))
   })
 })

@@ -16,6 +16,7 @@
 process.env.TZ = 'America/New_York'
 
 import { configure } from '@testing-library/dom'
+import { useAuthStore, userForRole } from '@/stores/auth'
 
 /**
  * Global test-environment configuration.
@@ -28,17 +29,17 @@ import { configure } from '@testing-library/dom'
  * the workspace shell and each section are separate dynamic imports, and jsdom
  * pays for compiling every one of them before first paint.
  *
- * ⚠️ NOT ENUMERATED ON PURPOSE. This paragraph used to name two such files. By
- * the time anyone checked there were six, and the list read as an exhaustive
- * one — so it understated the blast radius of this setting while looking
- * authoritative. `grep -rl "renderAt(routes"` answers it correctly at any time;
- * a count written here is only ever correct on the day it was written.
- *
  * That is comfortably under a second in isolation. It is NOT under a second when
  * `scripts/run-checks.mjs` runs ten checks concurrently — which is how the
  * pre-push hook runs them, and therefore how they run in the case that matters.
  * The first cold-load test measured 1121ms under that load and failed, while the
  * same test passed in isolation on the same commit.
+ *
+ * ⚠️ NOT ENUMERATED ON PURPOSE. This paragraph used to name two such files. By
+ * the time anyone checked there were six, and the list read as an exhaustive
+ * one — so it understated the blast radius of this setting while looking
+ * authoritative. `grep -rl "renderAt(routes"` answers it correctly at any time;
+ * a count written here is only ever correct on the day it was written.
  *
  * SO THE OLD BUDGET WAS MEASURING MACHINE LOAD, NOT THE APPLICATION. A test that
  * passes alone and fails in the suite teaches people to re-run the suite until it
@@ -120,4 +121,29 @@ beforeEach(() => {
   } catch {
     /* storage unavailable in this environment; nothing to isolate */
   }
+})
+
+/**
+ * ─── PER-TEST SESSION ISOLATION ──────────────────────────────────────────────
+ *
+ * ⚠️ ADDED WITH THE ZUSTAND AUTH STORE, AND IT IS THE HAZARD THAT MIGRATION
+ * INTRODUCES. `RoleProvider` used to hold the session in `useState`, so every
+ * mount started from `initialRole` and unmounting genuinely discarded it. The
+ * session now lives in a module singleton (`@/stores/auth`), and a module
+ * singleton is created once per test FILE — so a test that renders as ADMIN
+ * leaves the process logged in as ADMIN for everything that follows it.
+ *
+ * The failure mode is the dangerous kind: a later test that renders with no
+ * `initialRole` silently inherits the previous test's identity and its
+ * permissions. It does not throw. It shows MORE affordances than it should, so
+ * an assertion that something IS rendered passes for the wrong reason, and the
+ * suite goes green while the gate it was meant to prove is untested.
+ *
+ * Reset here rather than in the files that happen to switch roles, for the same
+ * reason as the storage clear above: any test may render as a role later, and a
+ * per-file copy is the one someone forgets. A test that wants a specific
+ * identity sets it inside the test, which runs after this.
+ */
+beforeEach(() => {
+  useAuthStore.getState().setUser(userForRole('SE'))
 })

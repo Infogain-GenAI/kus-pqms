@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import { useStore } from 'zustand'
 import type { DataTableSort } from '@pqms/ui-library'
+import { createIssueFiltersStore, type IssueFiltersStore } from '@/stores/issue-management'
 
 /**
  * PERSISTED ISSUE-LIST VIEW STATE — search, filters, sort, page, page size and
@@ -131,7 +133,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 /** Keeps known filter keys with string values; everything else falls back. */
-function readFilters(raw: unknown, fallback: IssueFilterState): IssueFilterState {
+export function readFilters(raw: unknown, fallback: IssueFilterState): IssueFilterState {
   const rec = asRecord(raw)
   if (!rec) return { ...fallback }
   const out = { ...fallback }
@@ -151,7 +153,7 @@ function readFilters(raw: unknown, fallback: IssueFilterState): IssueFilterState
  * silently rearrange a user's table on reload. Unknown keys — a column removed
  * since the blob was written — are dropped, since rendering one would throw.
  */
-function readColumns(raw: unknown, allowed: readonly string[], fallback: string[]): string[] {
+export function readColumns(raw: unknown, allowed: readonly string[], fallback: string[]): string[] {
   if (!Array.isArray(raw)) return [...fallback]
   const seen = new Set<string>()
   const out: string[] = []
@@ -166,7 +168,7 @@ function readColumns(raw: unknown, allowed: readonly string[], fallback: string[
   return out.length > 0 ? out : [...fallback]
 }
 
-function readSort(raw: unknown, allowed: readonly string[], fallback: DataTableSort): DataTableSort {
+export function readSort(raw: unknown, allowed: readonly string[], fallback: DataTableSort): DataTableSort {
   const rec = asRecord(raw)
   if (!rec) return { ...fallback }
   const key = rec.key
@@ -180,7 +182,7 @@ function readSort(raw: unknown, allowed: readonly string[], fallback: DataTableS
 }
 
 /** A positive integer, or the fallback. Guards `page: 0` and `page: NaN` alike. */
-function readCount(raw: unknown, fallback: number): number {
+export function readCount(raw: unknown, fallback: number): number {
   return typeof raw === 'number' && Number.isInteger(raw) && raw > 0 ? raw : fallback
 }
 
@@ -252,26 +254,54 @@ export function clearIssueListView(): void {
 }
 
 /**
- * The screen's view state, hydrated from storage and mirrored back to it.
+ * The screen's view state — NOW BACKED BY A ZUSTAND `persist` STORE.
  *
- * ─── IT RETURNS PER-FIELD SETTERS, AND THAT IS THE POINT ─────────────────────
+ * ─── WHAT MOVED, AND WHAT DID NOT ────────────────────────────────────────────
  *
- * Each setter has React's own `Dispatch<SetStateAction<T>>` signature, so the
- * screen's existing `setPage(1)` and `setFlt((f) => ({ ...f, status: s }))`
- * calls work unchanged. Persistence is therefore invisible at the call sites —
- * which is what stops the next person adding a seventh piece of view state and
- * forgetting to persist it. The alternative, one storage key per field, would
- * spread the same decision over six places and diverge from Vue's single blob.
+ * The state and its sessionStorage mirroring used to live here in `useState`
+ * plus an effect. They now live in `stores/issue-management/issue-filters.store.ts` under
+ * `persist`, per `04-state-management.md`'s "Issue-filters persistence".
  *
- * Hydration runs in a LAZY initialiser, so storage is read once on mount rather
- * than on every render, and the first paint already shows the restored view —
- * no flash of an unfiltered list settling into a filtered one.
+ * ⚠️ THE RETURNED SHAPE IS BYTE-FOR-BYTE THE SAME, and that is the point. Each
+ * setter still has React's own `Dispatch<SetStateAction<T>>` signature, so the
+ * screen's `setPage(1)` and `setFlt((f) => ({ ...f, status: s }))` calls are
+ * unchanged and every one of this module's 23 tests runs against the new
+ * implementation without being touched.
+ *
+ * The four validators above did not move either — the store's `merge` imports
+ * and calls THESE. Reimplementing them inside the store would have created two
+ * copies of the untrusted-input rules, free to disagree on exactly the blobs
+ * they exist to handle.
+ *
+ * ─── ⚠️ WHY THE STORE IS BUILT LAZILY AND REHYDRATED ON EVERY MOUNT ──────────
+ *
+ * A Zustand store is a module singleton created once per process. That is wrong
+ * for this hook in two ways, and both are load-bearing:
+ *
+ * 1. `defaults` and `allowedColumns` arrive as ARGUMENTS, from the screen's own
+ *    column definitions. The store cannot validate a stored blob without them,
+ *    so it cannot exist before the first call.
+ * 2. The previous implementation read storage on EVERY mount, in a lazy
+ *    initialiser. Anything else changes behaviour: mount, unmount, write to
+ *    storage from elsewhere, remount — the singleton would still hold its stale
+ *    in-memory copy and ignore what storage now says. `rehydrate()` here keeps
+ *    storage authoritative, exactly as before.
+ *
+ * Hydration stays SYNCHRONOUS and inside the initialiser, so the first paint
+ * already shows the restored view. An effect would render the unfiltered list
+ * for a frame and then snap to the filtered one.
  */
+let storeRef: IssueFiltersStore | null = null
+
+
 export function useIssueListView(
   defaults: IssueListView,
   allowedColumns: readonly string[],
+  initialScope: 'my' | 'all',
 ): {
   view: IssueListView
+  scope: 'my' | 'all'
+  setScope: (next: 'my' | 'all') => void
   setQ: Dispatch<SetStateAction<string>>
   setFlt: Dispatch<SetStateAction<IssueFilterState>>
   setCols: Dispatch<SetStateAction<string[]>>
@@ -279,73 +309,63 @@ export function useIssueListView(
   setPage: Dispatch<SetStateAction<number>>
   setPageSize: Dispatch<SetStateAction<number>>
 } {
-  const [view, setView] = useState<IssueListView>(() => readIssueListView(defaults, allowedColumns))
+  const store = useState(() => {
+    if (!storeRef) storeRef = createIssueFiltersStore(defaults, allowedColumns)
+    // Re-read storage on mount. `sessionStorage` is synchronous, so the merged
+    // state is in place before this initialiser returns and therefore before the
+    // first render reads it.
+    void storeRef.persist.rehydrate()
+
+    /*
+     * ⚠️ SCOPE IS RE-SEEDED FROM THE ROLE ON EVERY MOUNT, and that IS its
+     * persistence policy rather than an omission. 04: "Scope always resets to
+     * the role-derived default on mount, never restores from a previous
+     * session… restoring a stale one would show a returning user a scope their
+     * current role may not warrant."
+     *
+     * Seeded HERE, inside the same initialiser, because the store is a singleton
+     * that outlives the screen: without this, unmounting and remounting would
+     * keep whichever scope was last selected, which is precisely the restore
+     * that 04 forbids.
+     */
+    storeRef.getState().setScope(initialScope)
+    return storeRef
+  })[0]
+
+  const q = useStore(store, (s) => s.q)
+  const flt = useStore(store, (s) => s.flt)
+  const cols = useStore(store, (s) => s.cols)
+  const sort = useStore(store, (s) => s.sort)
+  const page = useStore(store, (s) => s.page)
+  const pageSize = useStore(store, (s) => s.pageSize)
+  const scope = useStore(store, (s) => s.scope)
 
   /*
-   * Mirror on change.
-   *
-   * An effect rather than a write inside each setter: a setter can be called
-   * twice in one event (Apply sets filters AND resets the page), and writing
-   * from the setter would persist the intermediate state and then the final one.
-   * The effect sees only what React committed.
-   *
-   * Nothing is written until the view actually CHANGES. Without that, mounting
-   * the screen immediately re-writes what was just read — harmless in itself,
-   * but it means a storage failure at read time is instantly papered over by a
-   * write of the defaults, destroying the very blob the user would want back
-   * after a transient error.
-   *
-   * ⚠️ THE GUARD COMPARES OBJECT IDENTITY, NOT A "have I run yet" FLAG. A flag
-   * is wrong here and was wrong at first: `<StrictMode>` — which this app mounts
-   * in dev — deliberately runs every effect twice, so the flag is already true
-   * on the second run and the mount write happens anyway. Identity has no such
-   * hole: `setView` always produces a NEW object, so `view` can only still be
-   * the hydrated one while nothing has been changed, no matter how many times
-   * React chooses to run this.
+   * `view` is rebuilt only when one of the six actually changes. The screen
+   * destructures it and passes several fields into memo dependency lists, where
+   * a fresh object every render would re-run filtering and sorting on every
+   * unrelated re-render.
    */
-  const hydrated = useRef(view)
-  useEffect(() => {
-    if (view === hydrated.current) return
-    writeIssueListView(view)
-  }, [view])
+  const view = useMemo<IssueListView>(
+    () => ({ q, flt, cols, sort, page, pageSize }),
+    [q, flt, cols, sort, page, pageSize],
+  )
 
   /*
-   * The six setters, built ONCE.
-   *
-   * `useMemo` around the whole set rather than a `useCallback` per field: the
-   * factory below is an ordinary function, not a hook, so it can be called in a
-   * loop or conditionally without the hook-order hazard that a `useCallback`
-   * inside a helper would carry. `setView`'s identity is guaranteed stable by
-   * React, so the empty dependency list is honest — these never need rebuilding.
-   *
-   * Stable identities matter here: the screen passes several of these straight
-   * to memoised children and effect dependency lists, where a new function each
-   * render would re-run work on every keystroke.
-   *
-   * Each setter takes the value OR an updater, matching `useState`, and returns
-   * the previous view untouched when the value did not actually change — so
-   * setting a field to what it already holds does not re-render or re-persist.
+   * The setters come straight off the store, so their identities are stable for
+   * the store's lifetime — the same guarantee the old `useMemo`-built setters
+   * gave, now for free.
    */
-  const setters = useMemo(() => {
-    const field = <K extends keyof IssueListView>(key: K): Dispatch<SetStateAction<IssueListView[K]>> =>
-      (next) =>
-        setView((prev) => {
-          const value =
-            typeof next === 'function'
-              ? (next as (p: IssueListView[K]) => IssueListView[K])(prev[key])
-              : next
-          return Object.is(value, prev[key]) ? prev : { ...prev, [key]: value }
-        })
-
-    return {
-      setQ: field('q'),
-      setFlt: field('flt'),
-      setCols: field('cols'),
-      setSort: field('sort'),
-      setPage: field('page'),
-      setPageSize: field('pageSize'),
-    }
-  }, [])
-
-  return { view, ...setters }
+  const s = store.getState()
+  return {
+    view,
+    scope,
+    setScope: s.setScope,
+    setQ: s.setQ,
+    setFlt: s.setFlt,
+    setCols: s.setCols,
+    setSort: s.setSort,
+    setPage: s.setPage,
+    setPageSize: s.setPageSize,
+  }
 }
