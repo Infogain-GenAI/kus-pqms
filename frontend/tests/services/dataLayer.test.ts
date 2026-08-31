@@ -345,6 +345,11 @@ describe('VITE_USE_FIXTURES actually switches the implementation', () => {
   it('exposes every service through the one object', () => {
     // Catches a service added to the folder and never wired in — a module
     // nobody can reach.
-    expect(Object.keys(services).sort()).toEqual(['issues', 'notifications'])
+    expect(Object.keys(services).sort()).toEqual([
+      'issueDetail',
+      'issues',
+      'masterData',
+      'notifications',
+    ])
   })
 })

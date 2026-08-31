@@ -62,8 +62,77 @@ export const queryKeys = {
     kpiCounts: () => ['issues', 'kpiCounts'] as const,
   },
 
+  /**
+   * The five collections that hang off one issue.
+   *
+   * ⚠️ NESTED UNDER THE ISSUE ID, NOT UNDER THE COLLECTION NAME. `['issueDetail',
+   * id, 'parts']` rather than `['parts', id]` — so closing an issue can
+   * invalidate everything about it with `issueDetail.all(id)`, and leaving the
+   * screen cannot accidentally invalidate another issue's parts. Ordering a key
+   * by the thing you invalidate BY is the whole design rule here.
+   */
+  issueDetail: {
+    all: (issueId: string) => ['issueDetail', issueId] as const,
+    parts: (issueId: string) => ['issueDetail', issueId, 'parts'] as const,
+    comments: (issueId: string) => ['issueDetail', issueId, 'comments'] as const,
+    activities: (issueId: string) => ['issueDetail', issueId, 'activities'] as const,
+    audit: (issueId: string) => ['issueDetail', issueId, 'audit'] as const,
+    /**
+     * ⚠️ KEYED BY ACTIVITY, NOT BY ISSUE, because that is the scope the endpoint
+     * has — `/investigation-activities/{id}/change-requests`. Filing it under the
+     * issue would mean approving one correction invalidated every activity's
+     * requests on the screen.
+     */
+    changeRequests: (activityId: string) => ['changeRequests', activityId] as const,
+  },
+
+  /**
+   * Reference data — the taxonomy, the part catalogue, people, priorities.
+   *
+   * ⚠️ SERVER STATE WITH A LONG `staleTime`, NOT A STORE. It is fetched once and
+   * rarely changes, which is exactly what makes "just keep it in a store" so
+   * tempting; 04 classifies by ownership, not lifetime. See `stores/README.md`.
+   */
+  masterData: {
+    all: () => ['masterData'] as const,
+    classification: () => ['masterData', 'classification'] as const,
+    classificationLevel: (level: string, parentId?: string) =>
+      ['masterData', 'classification', level, parentId ?? ''] as const,
+    partOptions: () => ['masterData', 'partOptions'] as const,
+    teamDirectory: () => ['masterData', 'teamDirectory'] as const,
+    users: () => ['masterData', 'users'] as const,
+    vinOptions: (issueId: string) => ['masterData', 'vinOptions', issueId] as const,
+    /**
+     * ⚠️ UNDER `masterData` RATHER THAN `issueDetail`, even though it is
+     * issue-scoped. Priority is scored once and read everywhere; filing it under
+     * the issue's invalidation prefix would refetch the matrix every time a
+     * comment was added.
+     */
+    priority: (issueId: string) => ['masterData', 'priority', issueId] as const,
+  },
+
   notifications: {
     all: () => ['notifications'] as const,
     list: (query: NotificationQuery = {}) => ['notifications', 'list', query] as const,
+    /**
+     * The badge's own count.
+     *
+     * ⚠️ UNDER THE SAME `notifications` PREFIX ON PURPOSE. Marking one read
+     * invalidates `['notifications']`, which must take the count with it — a
+     * badge that keeps its old number after the list updates is the most
+     * visible possible symptom of a key that does not nest.
+     */
+    /**
+     * ⚠️ THE PREFIX, FOR WRITES AND INVALIDATION — NOT the same thing as
+     * `unreadCount(recipient)` below.
+     *
+     * `unreadCount('u-se')` is an EXACT key ending in a string, and TanStack
+     * matches a trailing string segment by equality. So an optimistic write
+     * addressed to `unreadCount()` would silently miss every recipient-scoped
+     * entry — the badge would keep its stale number and nothing would report it.
+     * Writes and invalidations use this; only `useQuery` uses the exact key.
+     */
+    unreadCountAll: () => ['notifications', 'unreadCount'] as const,
+    unreadCount: (recipient?: string) => ['notifications', 'unreadCount', recipient ?? ''] as const,
   },
 } as const
