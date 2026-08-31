@@ -15,7 +15,8 @@ import { describe, it, expect } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import { routes } from '@/routes'
 import { CLOSED_NOTES, issueLock } from '@/data/issueLock'
-import { bodyText, renderAt } from '../support/dataRouter'
+import { bodyText, renderAt, waitForBody } from '../support/dataRouter'
+import detailMessages from '@/features/issues/workspace/IssueDetail.i18n'
 
 /**
  * Seeded issues, chosen for what they are rather than at random:
@@ -35,7 +36,17 @@ const OPEN = 'HV-260101'
  */
 const at = (id: string, path: string) => renderAt(routes, `/issues/${id}/${path}`, { role: 'SE' })
 
-const settled = (id: string) => waitFor(() => expect(bodyText()).toContain(id))
+/**
+ * Same hole as `IssueWorkspaceScreen.test.tsx` had: the id alone is satisfied by
+ * the not-found screen, which renders "Issue <id> was not found." Asserting its
+ * absence is what makes this prove a real screen rendered.
+ */
+const settled = async (id: string) => {
+  await waitForBody(id, 'the Issue Detail route')
+  expect(bodyText(), 'the NOT-FOUND screen rendered').not.toContain(
+    detailMessages.en.shellNotFound.replace('{{issueId}}', id),
+  )
+}
 const btn = (name: RegExp) => screen.queryByRole('button', { name }) as HTMLButtonElement | null
 
 describe('the derivation', () => {

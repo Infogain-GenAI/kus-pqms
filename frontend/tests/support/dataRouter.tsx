@@ -167,10 +167,61 @@ export const bodyText = () => document.body.textContent ?? ''
  * This changes no behaviour — same wait, same budget, same assertion. It only
  * makes the next occurrence worth having.
  */
+/**
+ * ─── ⚠️ A STOPGAP, NOT A DESIGN. READ BEFORE TRUSTING IT ─────────────────────
+ *
+ * This is a SCOPED first-paint budget for waits that mount the real, lazily
+ * loaded route tree. The global `asyncUtilTimeout` stays at 5000ms so every
+ * ordinary assertion keeps failing fast; only this wait gets longer.
+ *
+ * IT IS THE SECOND PULL OF A LEVER `tests/support/setup.ts` WARNED AGAINST.
+ * That file says: "IF COLD LOAD KEEPS GROWING, this is the wrong lever to pull
+ * twice. The next response is to split the route's own module graph." Cold load
+ * HAS kept growing, so its condition is met and we are knowingly overriding it,
+ * on a ruling, to unblock a push. Splitting the route's module graph remains the
+ * correct fix and is DEFERRED, not rejected. If this recurs, do that — do not
+ * raise this number.
+ *
+ * ─── THE ARITHMETIC, so the number is not a round guess ──────────────────────
+ *
+ * Measured first-paint cost of the workspace shell, same tree, same command:
+ *
+ *   machine state                     suite total   first paint      result
+ *   cold / light                          92 s        ~224–584 ms    pass
+ *   moderately loaded suite              188 s        up to 1901 ms  pass
+ *   under `run-checks` (13-way, the       —           up to 3089 ms  pass
+ *     real pre-push condition)
+ *   degraded, late-session               323 s        >5070 ms       FAILED
+ *
+ * The same file measured 1936ms standalone early in a session and 9108ms late in
+ * it — a 4.7x drift on identical code. So 5000ms was not a wrong number, it was
+ * a number calibrated against a baseline that moves.
+ *
+ * 15000ms is ~5x the worst cost observed under the REAL pre-push condition
+ * (3089ms) and clears the one observed failure (>5070ms). It is not sized
+ * against the pathological case below.
+ *
+ * ⚠️ AND HERE IS WHERE THIS STOPGAP RUNS OUT. Under DOUBLE the hook's load
+ * (`run-checks` plus a full suite in parallel) first paint was measured at
+ * 12898ms and 33098ms. 33098ms EXCEEDS `testTimeout` (20000ms), so at that load
+ * NO scoped budget can help — the whole test dies first. The invariant
+ * `testTimeout > this` is preserved here with 5000ms to spare, and the moment a
+ * real (single-hook) run needs more than ~15000ms, the answer is the module-graph
+ * split, not another increase.
+ *
+ * `PQMS_REPORT_FIRST_PAINT=1` logs each wait's duration — that is how the table
+ * above was produced, and how to re-derive it rather than trusting these figures
+ * on a different machine.
+ */
+const FIRST_PAINT_TIMEOUT = 15000
+
 export async function waitForBody(needle: string, label = 'the rendered body'): Promise<void> {
   const started = Date.now()
   try {
-    await waitFor(() => expect(bodyText()).toContain(needle))
+    await waitFor(() => expect(bodyText()).toContain(needle), { timeout: FIRST_PAINT_TIMEOUT })
+    if (process.env.PQMS_REPORT_FIRST_PAINT) {
+      console.log(`[first-paint] ${label}: ${Date.now() - started}ms`)
+    }
   } catch (cause) {
     const elapsed = Date.now() - started
     const text = bodyText()

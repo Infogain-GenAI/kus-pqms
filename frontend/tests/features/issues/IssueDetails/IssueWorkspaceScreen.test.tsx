@@ -25,6 +25,7 @@ import { describe, it, expect } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { routes } from '@/routes'
 import { bodyText, renderAt, waitForBody } from '../../../support/dataRouter'
+import detailMessages from '@/features/issues/workspace/IssueDetail.i18n'
 
 const ISSUE = 'HV-260101'
 
@@ -37,7 +38,21 @@ const renderAs = (initialRole: 'SE' | 'ASM' | 'PQM' | 'ADMIN' = 'SE') =>
   renderAt(routes, `/issues/${ISSUE}`, { role: initialRole })
 
 /** The shell is lazily loaded, so nothing is synchronous. */
-const settled = () => waitForBody(ISSUE, 'the workspace shell')
+/**
+ * ⚠️ THE ID ALONE DOES NOT PROVE THE WORKSPACE RENDERED, and this used to assert
+ * only that. `shellNotFound` renders "Issue <id> was not found." — which
+ * CONTAINS the id — so a not-found render satisfied the old assertion and every
+ * test in this file would have proceeded against the wrong screen. Found by
+ * forcing the needle to a nonexistent issue and watching it still pass.
+ *
+ * So the absence of the not-found sentence is asserted too, derived from the
+ * message rather than written as a literal, so a reword breaks one place.
+ */
+const NOT_FOUND = detailMessages.en.shellNotFound.replace('{{issueId}}', ISSUE)
+const settled = async () => {
+  await waitForBody(ISSUE, 'the workspace shell')
+  expect(bodyText(), 'the NOT-FOUND screen rendered, not the workspace').not.toContain(NOT_FOUND)
+}
 
 const btn = (name: RegExp) => screen.queryByRole('button', { name })
 
