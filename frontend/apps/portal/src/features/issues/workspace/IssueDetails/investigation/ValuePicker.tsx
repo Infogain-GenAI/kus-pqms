@@ -31,6 +31,7 @@ export function ValuePicker({
   disabled = false,
   mono = false,
   addLabel,
+  onAdd,
   placeholder,
   invalid,
 }: {
@@ -42,8 +43,24 @@ export function ValuePicker({
   disabled?: boolean
   /** Monospace the chips — for part numbers and VINs. */
   mono?: boolean
-  /** Renders the manual-entry trigger beneath the field when provided. */
+  /** Renders the add trigger beneath the field when provided. */
   addLabel?: string
+  /**
+   * What the add trigger does. WITHOUT it the trigger opens the INLINE
+   * single-value input below; WITH it, the trigger calls this instead.
+   *
+   * ─── THE TWO PATHS ARE NOT INTERCHANGEABLE ─────────────────────────────────
+   *
+   * Inline entry captures ONE STRING into this field and forgets it. That is the
+   * whole requirement for a VIN, which is a bare identifier nobody catalogues.
+   *
+   * A part needs a quantity and a member needs a role and a company, and both
+   * are normally added several at a time — so those pass `onAdd` and open
+   * `MultiRowDraftModal`, whose rows join the shared directory and become
+   * options for every later activity. Vue splits this the same way: `VinsPicker`
+   * has no manual path at all, while the parts and members pickers open modals.
+   */
+  onAdd?: () => void
   placeholder?: string
   invalid?: string
 }) {
@@ -114,7 +131,7 @@ export function ValuePicker({
 
       {addLabel && !manual && (
         <div className={styles.addRow}>
-          <button type="button" className={styles.addLink} disabled={disabled} onClick={() => setManual(true)}>
+          <button type="button" className={styles.addLink} disabled={disabled} onClick={() => (onAdd ? onAdd() : setManual(true))}>
             {addLabel}
           </button>
         </div>

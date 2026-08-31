@@ -105,7 +105,7 @@ value**, where two Tier 1 files were right and Tier 0's stale value won.
 | React 19+, React Router v8, Vite 7+ | React **18.3**, `react-router-dom` **6.30**, Vite **5.4** | **architect decision required** — and see the measured consequence below |
 | Tailwind CSS with a `@theme` block | **none** — inline style objects + CSS custom properties | **architect decision required** |
 | Vitest + React Testing Library; coverage 90/90/90/80 | **adopted 2026-08-26 — but on Vitest 2, not 4**, because Vite 5.4 bounds it | **partly closed**; the version ceiling is the Vite row above |
-| TanStack Query + Zustand | **no state library** — one React context over a seed array | **architect decision required** |
+| TanStack Query + Zustand | **no state library** — one React context over a seed array | **DECIDED 2026-08-31 — both adopted**, see `decisions/0006-state-management-library-adoption.md`; migration in progress |
 | Node 24 pinned via `.nvmrc` | no `.nvmrc`; Node 24.19.0 in use, unpinned | **repo is behind and will adopt** |
 | Turborepo | **not used** — pnpm workspaces only | **architect decision required** |
 
@@ -2610,11 +2610,14 @@ Two things follow, and the order matters:
   and notifications are server state, context plus the query client may cover
   it. **Do not add a store because this file names one.**
 
-**[PLACEHOLDER — whether TanStack Query and Zustand are adopted, and in which
-SPEC. Trigger: before the first screen with server data is restructured. Owner:
-Frontend Lead + client architect.]** Until answered, the boundary rule in this
-file still governs: **server state and client state are never held in the same
-place**, whatever the mechanism.
+**RESOLVED 2026-08-31 — both adopted.** See
+`../decisions/0006-state-management-library-adoption.md`. TanStack Query first,
+Zustand second, in this file's stated order; `zod@^4` accompanies the query layer
+because 05 requires validation at the mapper boundary.
+
+The boundary rule is unchanged by the adoption and governs regardless of
+mechanism: **server state and client state are never held in the same place.**
+That rule is what the migration is; the packages are not.
 
 30-restructuring-an-existing-react-project.md Phase 3.5 already warns this is
 where estimates go wrong. On a codebase with no query layer at all, that warning

@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { RoutedOutlet } from '@/app/RoutedOutlet'
 import { AppHeader } from '@/app/AppHeader'
 
 /**
@@ -29,7 +29,7 @@ export function AdminLayout() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-app)' }}>
       <AppHeader />
       <main id="main-content" style={{ flex: 1 }}>
-        <Outlet />
+        <RoutedOutlet />
       </main>
     </div>
   )

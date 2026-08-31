@@ -29,7 +29,7 @@ value**, where two Tier 1 files were right and Tier 0's stale value won.
 | React 19+, React Router v8, Vite 7+ | React **18.3**, `react-router-dom` **6.30**, Vite **5.4** | **architect decision required** — and see the measured consequence below |
 | Tailwind CSS with a `@theme` block | **none** — inline style objects + CSS custom properties | **architect decision required** |
 | Vitest + React Testing Library; coverage 90/90/90/80 | **adopted 2026-08-26 — but on Vitest 2, not 4**, because Vite 5.4 bounds it | **partly closed**; the version ceiling is the Vite row above |
-| TanStack Query + Zustand | **no state library** — one React context over a seed array | **architect decision required** |
+| TanStack Query + Zustand | **no state library** — one React context over a seed array | **DECIDED 2026-08-31 — both adopted**, see `decisions/0006-state-management-library-adoption.md`; migration in progress |
 | Node 24 pinned via `.nvmrc` | no `.nvmrc`; Node 24.19.0 in use, unpinned | **repo is behind and will adopt** |
 | Turborepo | **not used** — pnpm workspaces only | **architect decision required** |
 

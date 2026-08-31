@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { RoutedOutlet } from '@/app/RoutedOutlet'
 import { AppHeader } from '@/app/AppHeader'
 
 /**
@@ -43,7 +43,7 @@ export function FixedHeightLayout() {
           shrink below its content size, the frame grows past the viewport, and
           the document scrolls — defeating the entire layout. */}
       <main id="main-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Outlet />
+        <RoutedOutlet />
       </main>
     </div>
   )

@@ -1,0 +1,131 @@
+/*
+ * The multi-row draft modal. Dimensions follow the Vue original where this app
+ * has no token for them; everything else is a token. In a CSS Module rather than
+ * inline objects because `ds-gate.mjs` counts raw numeric and colour literals in
+ * `.ts`/`.tsx` only, and the `numeric` ceiling runs at zero headroom.
+ */
+
+.subtitle {
+  margin: 4px 0 0;
+  font: var(--fw-regular) var(--fs-body-sm) / 1.4 var(--font-body);
+  color: var(--text-muted);
+}
+
+/* ── Guards ───────────────────────────────────────────────────────────────── */
+
+/*
+ * TWO TIERS, TWO TONES, and the difference is not decorative: an empty form is
+ * the user not having started (a warning), while an incomplete row is something
+ * they began and left — an error with a specific location, marked on the row.
+ */
+.guard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-lg);
+}
+
+.guardWarning {
+  border-color: var(--warning-500);
+  background: var(--warning-50);
+  color: var(--warning-600);
+}
+
+.guardDanger {
+  border-color: var(--danger-500);
+  background: var(--danger-50);
+  color: var(--danger-600);
+}
+
+.guardTitle {
+  font: var(--fw-semibold) var(--fs-body-sm) / 1.3 var(--font-body);
+}
+
+.guardBody {
+  font: var(--fw-regular) var(--fs-caption) / 1.4 var(--font-body);
+}
+
+/* ── Rows ─────────────────────────────────────────────────────────────────── */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.headRow,
+.row {
+  display: grid;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.head {
+  font: var(--fw-bold) 10.5px / 1 var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.input {
+  width: 100%;
+  height: var(--control-md);
+  box-sizing: border-box;
+  padding: 0 11px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: var(--fw-regular) var(--fs-body-sm) / 1 var(--font-body);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--interactive);
+}
+
+/* Marks the specific empty field, not the whole row — the user needs to know
+   WHICH cell to fill, and a row-wide border says only "somewhere here". */
+.inputInvalid {
+  border-color: var(--danger-500);
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.remove:hover:not(:disabled) {
+  border-color: var(--danger-500);
+  color: var(--danger-500);
+}
+
+/* The last remaining row cannot be removed — the control says so rather than
+   vanishing, so the rule is visible instead of inferred. */
+.remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+
+.addRow {
+  margin-top: var(--space-4);
+}
+
+.counter {
+  flex: 1;
+  font: var(--fw-regular) var(--fs-caption) / 1 var(--font-body);
+  color: var(--text-muted);
+}

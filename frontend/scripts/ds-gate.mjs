@@ -1,7 +1,7 @@
 // Design-system adherence gate with a machine-written ceiling.
 //
 // Usage:  node scripts/ds-gate.mjs <family>
-//   families: values | imports | numeric
+//   families: values | imports | numeric | copy
 //
 // WHY THE CEILING IS WRITTEN BY A SCRIPT AND NOT BY A HUMAN
 // A single hand-edited `--max-warnings N` is a budget, not a ratchet. This
@@ -29,7 +29,7 @@ import { ESLint } from 'eslint'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { NUMERIC_DIM_MESSAGE } from './ds-messages.mjs'
+import { JSX_COPY_MESSAGE, NUMERIC_DIM_MESSAGE } from './ds-messages.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CEILINGS = join(root, '.ds-ceilings.json')
@@ -63,6 +63,17 @@ const FAMILIES = {
   numeric: {
     label: 'numeric hard-coded dimensions',
     match: (m) => m.ruleId === 'no-restricted-syntax' && m.message === NUMERIC_DIM_MESSAGE,
+  },
+  // User-facing copy written inline in JSX text. A BURN-DOWN, like values and
+  // numeric: Tier 0 bans hardcoded copy, the codebase is full of it, and the
+  // route out is a *.copy.ts module per feature folder. This number should only
+  // ever fall.
+  //
+  // Scoped to JSXText only — see the selector in eslint.adherence.config.mjs for
+  // why string props are deliberately out of scope for now.
+  copy: {
+    label: 'hardcoded JSX copy',
+    match: (m) => m.ruleId === 'no-restricted-syntax' && m.message === JSX_COPY_MESSAGE,
   },
 }
 

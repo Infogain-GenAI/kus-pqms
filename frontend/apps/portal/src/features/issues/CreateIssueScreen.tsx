@@ -21,13 +21,16 @@ import { SystemClassificationPicker, type ClassificationValue } from './SystemCl
 import { ExistingIssueModal } from './ExistingIssueModal'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
-import { relatedRank } from './issue-entry/relatedRank'
+import { relatedRank } from '@/data/relatedRank'
 import { DtcChipInput } from './issue-entry/DtcChipInput'
+import { useTranslation } from 'react-i18next'
+import { NS } from './issue-entry/IssueEntry.i18n'
 import entryStyles from './issue-entry/issue-entry.module.css'
 import { useRole } from '@/data/roles'
 import { useStore } from '@/data/store'
 
 export function CreateIssueScreen() {
+  const { t } = useTranslation(NS)
   const nav = useNavigate()
   const { user } = useRole()
   const store = useStore()
@@ -106,7 +109,7 @@ export function CreateIssueScreen() {
   const componentLabel = cls.component
 
   /**
-   * Candidates for "Same Existing Issues", ranked — see `issue-entry/relatedRank.ts`.
+   * Candidates for "Same Existing Issues", ranked — see `@/data/relatedRank`.
    *
    * READINESS IS STILL GATED ON SYMPTOM, and that matches the prototype
    * (`sameReady = !!(f0.symptom && …)`); it was never the defect. What changed is
@@ -418,7 +421,7 @@ export function CreateIssueScreen() {
         <PageCrumb backTo="/issues" trail={[{ label: 'Issue Management', to: '/issues' }, { label: 'Issue Entry' }]} />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
-          <h1 style={{ margin: 0, font: 'var(--fw-bold) 27px/1.15 var(--font-display)', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>New issue</h1>
+          <h1 style={{ margin: 0, font: 'var(--fw-bold) 27px/1.15 var(--font-display)', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>{t('title')}</h1>
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             {/* Clear now asks first — it resets three sections and every linked
                 issue, with no undo, and sits beside Register.
@@ -444,14 +447,14 @@ export function CreateIssueScreen() {
               onClick={() => { if (hasData) setClearOpen(true) }}
               style={{ height: 40, padding: '0 16px', borderRadius: 9, font: 'var(--fw-semibold) 13.5px/1 var(--font-body)' }}
             >
-              Clear
+              {t('clear')}
             </Button>
             <Button
               iconLeft={<Icon icon={Send} size={15} />}
               onClick={register}
               style={{ height: 40, padding: '0 18px', borderRadius: 9 }}
             >
-              Register Issue
+              {t('register')}
             </Button>
           </div>
         </div>
@@ -489,14 +492,14 @@ export function CreateIssueScreen() {
         <div className={entryStyles.formCard}>
         {/* Vehicle Information */}
         <div className={entryStyles.section}>
-          <h2 className={entryStyles.sectionHead}>Vehicle Information</h2>
+          <h2 className={entryStyles.sectionHead}>{t('sectionVehicle')}</h2>
           <ModelCodeYearPicker value={vehicle} onChange={setVehicle} />
           {err('modelCode') && <p className={entryStyles.fieldError}>{err('modelCode')}</p>}
         </div>
 
         {/* System Classification */}
         <div className={entryStyles.section}>
-          <h2 className={entryStyles.sectionHead}>System Classification</h2>
+          <h2 className={entryStyles.sectionHead}>{t('sectionClassification')}</h2>
           {/*
             The PATH bar, the model-code hint, the "Request New" affordance and
             the four cascading comboboxes are one component, shared with
@@ -522,14 +525,16 @@ export function CreateIssueScreen() {
             symptomFooter={pendingSymptom ? (
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)' }}>{pendingSymptom}</span>
-                <Badge tone="warning" size="sm">Pending Approval</Badge>
+                <Badge tone="warning" size="sm">{t('classificationPendingApproval')}</Badge>
               </div>
             ) : undefined}
-            // Issue Entry's own copy. The component's defaults are Edit's, and
-            // BOTH differ from the design — recorded on the prop, not fixed
-            // here, because Edit is not this change's scope.
-            requestPrompt="Can’t find the required classification?"
-            requestLabel="Request New"
+            // Issue Entry's own copy, now from the screen's i18n namespace.
+            // The component's defaults are Edit's and still differ from the
+            // design; not fixed here, because Edit is not this change's scope.
+            // These two keys carry the prototype's STRAIGHT apostrophe, which
+            // this file previously got wrong as a typographic one.
+            requestPrompt={t('classificationCannotFind')}
+            requestLabel={t('classificationRequestNew')}
           />
 
           {/*
@@ -586,9 +591,9 @@ export function CreateIssueScreen() {
                 <Icon icon={CopyCheck} size={15} />
               </span>
               <div style={{ flex: 1 }}>
-                <div className={entryStyles.sameHeadTitle}>Same Existing Issues</div>
+                <div className={entryStyles.sameHeadTitle}>{t('sameExistingTitle')}</div>
                 <div className={entryStyles.sameHeadSub}>
-                  We found existing issues with similar system classification. Review the issue or issue group before linking.
+                  {t('sameExistingSubtitle')}
                 </div>
               </div>
               {/*
@@ -770,24 +775,25 @@ export function CreateIssueScreen() {
 
         {/* Issue Information */}
         <div className={entryStyles.section}>
-          <h2 className={entryStyles.sectionHead}>Issue Information</h2>
+          <h2 className={entryStyles.sectionHead}>{t('sectionIssue')}</h2>
           <div className={entryStyles.sectionStack}>
             <div>
-              <ULabel>Issue title *</ULabel>
+              <ULabel>{t('fieldTitle')}</ULabel>
               <Input aria-label="Issue title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. EV6 — HV battery rapid SOC drop under cold soak" error={err('title')} />
             </div>
             <div>
-              <ULabel>Description *</ULabel>
+              <ULabel>{t('fieldDescription')}</ULabel>
               <Textarea aria-label="Description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Symptoms, reproduction steps, environmental conditions, frequency, and any safety implications…" error={err('description')} />
             </div>
             <div>
-              <ULabel>DTC / trouble code <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>· optional · comma-separated</span></ULabel>
+              <ULabel>{t('fieldDtc')} <span style={{ color: 'var(--text-disabled)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{t('fieldDtcOptional')}</span></ULabel>
               {/* "· comma-separated" was dropped when this stopped being a
                   comma-separated STRING and became a chip control. That was the
                   wrong call: comma is still one of the keys that commits a chip
                   (with Enter, Tab and blur), so the design's copy is accurate —
                   it describes what the user may type, not how the value is
-                  stored. Restored to the design's wording. */}
+                  stored. Restored to the design's wording, verified against the
+                  canonical's own span. The copy now lives in `fieldDtcOptional`. */}
               <DtcChipInput aria-label="DTC codes" codes={dtcCodes} onChange={setDtcCodes} />
             </div>
           </div>

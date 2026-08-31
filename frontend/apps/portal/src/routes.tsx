@@ -1,5 +1,6 @@
 import { redirect, type RouteObject } from 'react-router-dom'
-import { ChunkLoadErrorBoundary } from '@/app/ChunkLoadErrorBoundary'
+import { RouteErrorBoundary } from '@/app/RouteErrorBoundary'
+import { redirectPreservingQuery, requireCapability } from '@/app/capabilityGuard'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { BlankLayout } from '@/layouts/BlankLayout'
 import { DefaultLayout } from '@/layouts/DefaultLayout'
@@ -67,8 +68,18 @@ import { FixedHeightLayout } from '@/layouts/FixedHeightLayout'
  * here, so it would be dead code.
  */
 
-/** Every lazily-loaded route carries this, and only lazily-loaded routes do. */
-const EB = ChunkLoadErrorBoundary
+/**
+ * Every lazily-loaded route carries this, and only lazily-loaded routes do.
+ *
+ * ⚠️ CHANGED 2026-08-30, FROM `ChunkLoadErrorBoundary` — WHICH RENDERED NOTHING.
+ * That was a React class boundary, but React Router renders the `ErrorBoundary`
+ * route property IN PLACE OF the element rather than around it: no children, no
+ * error prop, and `useRouteError()` is how the error is read. The class
+ * therefore rendered `props.children` — `undefined` — so every route error
+ * produced a blank content area, and the chunk-reload in its `componentDidCatch`
+ * never ran at all. See `RouteErrorBoundary` for the measurement.
+ */
+const EB = RouteErrorBoundary
 
 export const routes: RouteObject[] = [
   {
@@ -96,11 +107,11 @@ export const routes: RouteObject[] = [
        * redirects only, and this is the redirect case. No `ErrorBoundary` — no
        * component means no chunk to fail, and a throw here bubbles to the root.
        */
-      { index: true, loader: () => redirect('/dashboard') },
+      { index: true, loader: redirectPreservingQuery('/dashboard') },
 
       {
         // No ErrorBoundary on any layout route: they are STATICALLY imported, so
-        // there is no chunk that can fail, and `ChunkLoadErrorBoundary` on one
+        // there is no chunk that can fail, and `RouteErrorBoundary` on one
         // would be dead code wearing an authoritative name. 07 corrected its own
         // earlier revision on exactly this point. It would also be actively
         // worse when it fired — a route's boundary replaces that route's own
@@ -273,7 +284,22 @@ export const routes: RouteObject[] = [
         // Third sibling. Admin screens attach HERE, never under DefaultLayout.
         Component: AdminLayout,
         children: [
-          { path: '/admin', lazy: () => import('@/features/admin/AdminScreen').then((m) => ({ Component: m.AdminScreen })), ErrorBoundary: EB },
+          {
+            path: '/admin',
+            /*
+             * GATED BEFORE THE SCREEN MOUNTS. `AdminScreen` also refuses to
+             * render for a non-admin, and that check stays as defence in depth —
+             * but it runs only after the component has mounted and its hooks have
+             * fired. The loader redirects first, so the route is never entered.
+             *
+             * It does NOT stop the chunk being fetched: React Router runs `lazy`
+             * in parallel with `loader`. Verified in a browser, and recorded in
+             * `@/app/capabilityGuard` rather than assumed either way.
+             */
+            ...requireCapability('admin'),
+            lazy: () => import('@/features/admin/AdminScreen').then((m) => ({ Component: m.AdminScreen })),
+            ErrorBoundary: EB,
+          },
         ],
       },
 
@@ -306,9 +332,9 @@ export const routes: RouteObject[] = [
        * created only to unmount itself. It is also the idiom this file already
        * uses (`redirect` was imported for it).
        */
-      { path: '/', loader: () => redirect('/dashboard') },
-      { path: '/overview', loader: () => redirect('/dashboard') },
-      { path: '/issue-management', loader: () => redirect('/issues') },
+      { path: '/', loader: redirectPreservingQuery('/dashboard') },
+      { path: '/overview', loader: redirectPreservingQuery('/dashboard') },
+      { path: '/issue-management', loader: redirectPreservingQuery('/issues') },
       {
         // The splat carries the rest of the path, so
         // `/issue-management/HV-260101/investigation` keeps its id AND section

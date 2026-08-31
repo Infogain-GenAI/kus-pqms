@@ -17,7 +17,7 @@ import { notificationTarget } from '@/data/notifications'
 import { NOTIFICATION_CATEGORIES } from '@/data/notificationCategory'
 import { NOTIFICATIONS } from '@/data/seed'
 import { routes } from '@/routes'
-import { bodyText, renderAt } from './support/dataRouter'
+import { bodyText, renderAt } from '../../support/dataRouter'
 
 describe('the routing table', () => {
   it('sends an issue notification to that issue', () => {
