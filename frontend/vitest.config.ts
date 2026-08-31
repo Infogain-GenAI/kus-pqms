@@ -72,7 +72,12 @@ export default defineConfig({
         // gate — it did not here, because these modules land with tests and
         // measure higher than the existing average. Floors re-seeded regardless.
         'apps/portal/src/shared/**',
-        'apps/portal/src/features/issues/IssueListScreen.tsx',
+        // The Issue List extraction (2026-08-31): its screen, every supporting
+        // module under issue-list/, and the reusable common/ components it and a
+        // future QIR screen share. Same named-exception pattern as the two lines
+        // below — re-seeded in the same change per this file's own instruction.
+        'apps/portal/src/features/issues/issue-list/**',
+        'apps/portal/src/features/common/**',
         'apps/portal/src/features/issues/IssueWorkspaceScreen.tsx',
         'apps/portal/src/features/issues/CreateIssueScreen.tsx',
         'packages/ui-library/src/**',

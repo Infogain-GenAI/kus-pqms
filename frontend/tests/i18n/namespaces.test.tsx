@@ -21,7 +21,7 @@ import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
-import { IssueListScreen } from '@/features/issues/IssueListScreen'
+import { IssueListScreen } from '@/features/issues/issue-list/IssueListScreen'
 import { i18n, DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@/i18n'
 import issueListMessages, { NS as ISSUE_LIST_NS } from '@/features/issues/issue-list/IssueListScreen.i18n'
 import issueEntryMessages, { NS as ISSUE_ENTRY_NS } from '@/features/issues/issue-entry/IssueEntry.i18n'
@@ -140,9 +140,9 @@ describe('the Issue List renders resolved text, not keys', () => {
     const boxes = screen.getAllByRole('checkbox')
     fireEvent.click(boxes[1])
 
-    fireEvent.click(await screen.findByText(issueListMessages.en.bulkAssignRole))
-    await waitFor(() => expect(document.body.textContent).toContain('1 selected issue to a role'))
-    expect(document.body.textContent).not.toContain('1 selected issues')
+    fireEvent.click(await screen.findByText(issueListMessages.en.bulkChangeStatus))
+    await waitFor(() => expect(document.body.textContent).toContain('will update 1 selected issue.'))
+    expect(document.body.textContent).not.toContain('selected issues.')
   })
 
   it('selects the PLURAL variant for two', async () => {
@@ -151,7 +151,7 @@ describe('the Issue List renders resolved text, not keys', () => {
     fireEvent.click(boxes[1])
     fireEvent.click(boxes[2])
 
-    fireEvent.click(await screen.findByText(issueListMessages.en.bulkAssignRole))
-    await waitFor(() => expect(document.body.textContent).toContain('2 selected issues to a role'))
+    fireEvent.click(await screen.findByText(issueListMessages.en.bulkChangeStatus))
+    await waitFor(() => expect(document.body.textContent).toContain('will update 2 selected issues.'))
   })
 })

@@ -18,7 +18,6 @@ import type {
   PartRequest,
   PartStatus,
   PartUrgency,
-  RoleKey,
 } from './types'
 import { reportDataSource } from '@/config/data-source'
 import { ACTIVITIES, AUDIT, CLASSIFICATION, COMMENTS, ISSUES, NOTIFICATIONS, PARTS, PRIORITIES } from './seed'
@@ -135,15 +134,6 @@ interface StoreValue {
   approveProposal: (id: string, remark: string, actor: Actor) => void
   rejectProposal: (id: string, remark: string, actor: Actor) => void
   bulkStatus: (ids: string[], status: StatusKey, reason: string, actor: Actor) => void
-  /**
-   * Reassign the owning ROLE on several issues at once — the list's bulk
-   * "Assign Role" action.
-   *
-   * It writes `assigneeRole`, NOT `ownerRole`: ownership records who raised the
-   * issue and is part of its history, while assignment is who is working it now.
-   * Bulk reassignment moves the second and must never rewrite the first.
-   */
-  bulkAssignRole: (ids: string[], role: RoleKey, actor: Actor) => void
   /**
    * Request a new classification node — the forms' "Request New System" flow.
    *
@@ -471,11 +461,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ids.forEach((id) => appendAudit(id, actor, 'Bulk status change', `→ ${status}: ${reason}`))
   }, [appendAudit])
 
-  const bulkAssignRole = useCallback<StoreValue['bulkAssignRole']>((ids, role, actor) => {
-    setIssues((list) => list.map((i) => (ids.includes(i.id) ? { ...i, assigneeRole: role, updatedAt: now() } : i)))
-    ids.forEach((id) => appendAudit(id, actor, 'Bulk role assignment', `assigned to ${role}`))
-  }, [appendAudit])
-
   const requestClassification = useCallback<StoreValue['requestClassification']>((input, actor) => {
     const node: ClassificationNode = {
       id: newId('cls'),
@@ -646,7 +631,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, correlations, partOptions, teamDirectory,
     priorityFor, priorityResult, savePriority,
     createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
-    bulkAssignRole, requestClassification, addComment, addActivity, addPart, setPartStatus,
+    requestClassification, addComment, addActivity, addPart, setPartStatus,
     addManualParts, addManualTeamMembers,
     requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,
   }
