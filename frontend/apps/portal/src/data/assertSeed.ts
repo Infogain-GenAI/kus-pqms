@@ -1,5 +1,5 @@
 import { NOW, type ClassLevel, type ClassificationNode, type Issue } from './types'
-import { CLASSIFICATION, ISSUES, NOTIFICATIONS } from './seed'
+import { ACTIVITIES, CLASSIFICATION, ISSUES, NOTIFICATIONS } from './seed'
 
 // Regression gate for the dataset's fixed "today" — the export's own _todayBase() is a
 // hardcoded new Date(2026,6,9) (Jul 9 2026), and every relative label in the UX resolves
@@ -97,9 +97,61 @@ function assertIssueGroups(): void {
   }
 }
 
+function failActivity(msg: string): never {
+  throw new Error(`seed activity invariant: ${msg}`)
+}
+
+/**
+ * Activity invariants.
+ *
+ * ⚠️ THE ORDER CHECK IS THE POINT. `store.activitiesFor()` does NOT sort — it
+ * filters in array order — and `ExistingIssueModal` renders
+ * `activities[0].summary` as the issue's "Investigation summary". So an editor
+ * who appends a new activity above an issue's existing block silently changes
+ * which text that panel shows, with nothing failing. This makes it fail.
+ */
+function assertActivities(): void {
+  const ids = new Set<string>()
+  const firstSeen = new Map<string, string>()
+
+  for (const a of ACTIVITIES) {
+    if (ids.has(a.id)) failActivity(`duplicate activity id ${a.id}`)
+    ids.add(a.id)
+
+    const issue = ISSUES.find((i) => i.id === a.issueId)
+    if (!issue) failActivity(`${a.id} targets ${a.issueId}, which is not a seeded issue`)
+    // An activity that predates its own issue reads as a data-entry error to
+    // anyone reading the timeline, and sorts wrongly the moment anything sorts.
+    if (a.createdAt < issue.createdAt) {
+      failActivity(`${a.id} is dated ${a.createdAt}, before its issue's ${issue.createdAt}`)
+    }
+    if (!a.summary.trim()) failActivity(`${a.id} has an empty summary`)
+
+    if (!firstSeen.has(a.issueId)) firstSeen.set(a.issueId, a.id)
+  }
+
+  // Each issue's FIRST activity must be its investigation entry — see above.
+  for (const [issueId, firstId] of firstSeen) {
+    if (!firstId.endsWith('-0')) {
+      failActivity(`${issueId}'s first activity is ${firstId}; the investigation entry (…-0) must come first`)
+    }
+  }
+
+  /*
+   * HV-260101 STAYS EMPTY — a recorded decision, not an omission. The prototype's
+   * hero issue opens with no parts, comms or activities, and `seed.ts` mirrors
+   * that deliberately. Pinned so a future "let's seed the main issue too" cannot
+   * quietly undo it.
+   */
+  if (ACTIVITIES.some((a) => a.issueId === 'HV-260101')) {
+    failActivity('HV-260101 must open with NO activities — see the note in seed.ts')
+  }
+}
+
 export function assertSeedAnchors(): void {
   assertIssueGroups()
   assertIssueClassification()
+  assertActivities()
   if (NOW !== '2026-07-09T09:00:00Z') fail(`NOW is ${NOW}, expected 2026-07-09T09:00:00Z`)
 
   // The rows the prototype dates relative to the anchor ('Today' / 'Yesterday' / '2h ago').

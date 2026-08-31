@@ -26,6 +26,7 @@ import { ISSUES } from '@/data/seed'
 import { relatedRank } from '@/data/relatedRank'
 import { routes } from '@/routes'
 import { bodyText, renderAt, waitForBody } from '../support/dataRouter'
+import detailMessages from '@/features/issues/workspace/IssueDetail.i18n'
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <RoleProvider>
@@ -153,6 +154,16 @@ describe('the Manage-Links modal shows them', () => {
   const openModal = async (issueId: string) => {
     const result = renderAt(routes, `/issues/${issueId}/detail`, { role: 'PQM' })
     await waitForBody(issueId, 'the Issue Detail route')
+    /*
+     * The id alone is satisfied by the NOT-FOUND screen, which renders
+     * "Issue <id> was not found." The `findByRole` below would fail loudly on
+     * that today, so this was not vacuous — but it was guarded only by
+     * accident, one incidental safety net away from being so. Same exclusion as
+     * `IssueWorkspaceScreen` and `issueLock`.
+     */
+    expect(bodyText(), 'the NOT-FOUND screen rendered').not.toContain(
+      detailMessages.en.shellNotFound.replace('{{issueId}}', issueId),
+    )
     const manage = await screen.findByRole('button', { name: /Manage Related Issues/i })
     fireEvent.click(manage)
     await screen.findByText(/Link Another Issue/i)

@@ -1,5 +1,6 @@
 import type { SourceKey, StatusKey } from '@pqms/ui-library'
 import type {
+  ActivityType,
   AppNotification,
   AuditEntry,
   ClassificationNode,
@@ -300,7 +301,120 @@ export const PARTS: PartRequest[] = []
 
 export const COMMENTS: Comment[] = []
 
-export const ACTIVITIES: InvestigationActivity[] = []
+/**
+ * Investigation activities.
+ *
+ * ─── ⚠️ HV-260101 STAYS EMPTY, AND THAT IS THE RECORDED DECISION ─────────────
+ *
+ * The note above this block says the prototype's hero issue "opens with EMPTY
+ * parts / comms / activities and an 8-entry creation history". That is still
+ * true and still mirrored: nothing below targets HV-260101. Seeding it would
+ * contradict the design, and the workspace's own opening state is what that
+ * decision protects.
+ *
+ * ─── WHY THE ARRAY IS NO LONGER EMPTY FOR EVERYONE ELSE ──────────────────────
+ *
+ * It was `[]`, so `activitiesFor()` returned nothing for every one of the 35
+ * issues — which meant `ExistingIssueModal`'s "Investigation summary" and
+ * "Actions taken" rendered their empty states ALWAYS, and the populated branch
+ * was dead code no test or screen could reach. A new test proved the history
+ * LIST was never exercised; this is the same gap one layer over.
+ *
+ * ─── EVERY STRING BELOW IS THE PROTOTYPE'S OWN ──────────────────────────────
+ *
+ * Taken verbatim from `_classifiedIssuesBase()`, whose records carry an
+ * `investigation` paragraph and an `actions[]` array. Only the seven issues that
+ * exist in BOTH that list and ours are seeded — no text is invented to fill the
+ * others, because a plausible-sounding fabrication in seed data is
+ * indistinguishable from real requirements once it is on screen.
+ *
+ * The two cohorts here are the same ones `assertIssueGroups` pins: EE-260023
+ * (+031, +044, +071) and EE-260100 (+105, +112).
+ *
+ * ⚠️ ORDER IS LOAD-BEARING. `activitiesFor()` does not sort — it filters in array
+ * order — and `ExistingIssueModal` reads `activities[0].summary` as the
+ * investigation summary. So each issue's investigation entry MUST come first.
+ * `assertActivities()` enforces that rather than leaving it to whoever edits
+ * this next.
+ */
+const ACT_AUTHOR: Record<string, string> = {
+  'EE-260023': 'Mia Chen',
+  'EE-260031': 'Mia Chen',
+  'EE-260044': 'Anil Rao',
+  'EE-260071': 'Anil Rao',
+  'EE-260100': 'Jisoo Han',
+  'EE-260105': 'Jisoo Han',
+  'EE-260112': 'Tom Reyes',
+}
+
+/** `investigation` first, then one entry per `actions[]` string. */
+const ACT_SOURCE: { issueId: string; investigation: string; actions: [string, ActivityType][] }[] = [
+  {
+    issueId: 'EE-260023',
+    investigation: 'Cohort review in progress; linked issues under the same group are being reviewed together.',
+    actions: [['Cohort export requested', 'Data Analysis']],
+  },
+  {
+    issueId: 'EE-260031',
+    investigation: 'Linked to EE-260023 for combined review.',
+    actions: [
+      ['Investigation activity added', 'Note'],
+      ['Linked to EE-260023', 'Note'],
+    ],
+  },
+  {
+    issueId: 'EE-260044',
+    investigation: 'Linked to EE-260023 for combined review.',
+    actions: [['Linked to EE-260023', 'Note']],
+  },
+  {
+    issueId: 'EE-260071',
+    investigation: 'Linked to EE-260023 for combined review.',
+    actions: [['Linked to EE-260023', 'Note']],
+  },
+  {
+    issueId: 'EE-260100',
+    investigation: 'Cohort review in progress; linked issues under the same group are being reviewed together.',
+    actions: [['Cohort export requested', 'Data Analysis']],
+  },
+  {
+    issueId: 'EE-260105',
+    investigation: 'Linked to EE-260100 for combined review.',
+    actions: [['Linked to EE-260100', 'Note']],
+  },
+  {
+    issueId: 'EE-260112',
+    investigation: 'Linked to EE-260100 for combined review.',
+    actions: [['Linked to EE-260100', 'Note']],
+  },
+]
+
+export const ACTIVITIES: InvestigationActivity[] = ACT_SOURCE.flatMap((src, gi) => {
+  const author = ACT_AUTHOR[src.issueId] ?? 'N-PQMS'
+  // Deterministic, and always AFTER the anchor date so an activity never
+  // predates the issue it belongs to — `assertActivities` checks that.
+  const at = (n: number) => `2026-08-0${gi + 1}T${String(9 + n).padStart(2, '0')}:15:00Z`
+  return [
+    {
+      id: `ia-${src.issueId}-0`,
+      issueId: src.issueId,
+      type: 'Data Analysis' as ActivityType,
+      summary: src.investigation,
+      author,
+      authorRole: 'SE',
+      createdAt: at(0),
+    },
+    ...src.actions.map(([summary, type], k) => ({
+      id: `ia-${src.issueId}-${k + 1}`,
+      issueId: src.issueId,
+      type,
+      summary,
+      author,
+      authorRole: 'SE',
+      createdAt: at(k + 1),
+    })),
+  ]
+})
 
 const HV = 'HV-260101'
 const T = (hm: string) => `2026-07-09T${hm}:00Z`
