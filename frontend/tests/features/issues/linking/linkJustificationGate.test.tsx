@@ -107,109 +107,116 @@ function renderManageLinks() {
 const justifyBoxFor = (id: string, kind: 'link' | 'unlink') =>
   screen.getByRole('textbox', { name: `Justification for ${kind === 'unlink' ? 'unlinking' : 'linking'} ${id}` })
 
-describe('Manage Links — Save cannot commit an unjustified change', () => {
-  it('offers no Save while a pending unlink has no justification', () => {
-    const { issue } = renderManageLinks()
-    const target = issue.linkedIssueIds![0]
+/*
+ * ─── ⚠️ THESE MOVED FROM SYMMETRIC LINKS TO GROUP MEMBERSHIP ────────────────
+ *
+ * `ManageLinksModal` used to edit `linkedIssueIds`; it is now the Parent/Child
+ * GROUP editor, which is what its copy always claimed. The governance claims are
+ * unchanged — Save refuses an unjustified change, the floor is 20 trimmed
+ * characters, a withdrawn change discards its reason — so the tests are retargeted
+ * rather than deleted. The anchor is a seeded GROUP, since an issue with no group
+ * now has nothing for this modal to edit.
+ */
+const GROUPED = 'EE-260023'
 
-    // Save starts disabled because nothing is dirty — establish that FIRST, so
-    // the assertion after the click is about the gate and not about dirtiness.
+function renderGroupModal() {
+  captured = null
+  const Harness = () => {
+    const store = useStore()
+    captured = store
+    const issue = store.getIssue(GROUPED)
+    if (!issue) return null
+    return <ManageLinksModal open issue={issue} onClose={() => {}} />
+  }
+  const view = render(<Harness />, { wrapper: Wrapped })
+  const members = captured!.groupMembers(GROUPED).filter((m) => m.id !== GROUPED)
+  expect(members.length, 'fixture must be a multi-member group').toBeGreaterThan(1)
+  return { view, members, store: () => captured! }
+}
+
+const unlinkNthMember = (n: number) =>
+  screen.getAllByRole('button', { name: exact(M.linksModalUnlink) })[n]
+
+describe('Manage Links — Save cannot commit an unjustified group change', () => {
+  it('offers no Save while a pending removal has no justification', () => {
+    renderGroupModal()
     expect(isDisabled(M.linksModalSave)).toBe(true)
     expect(body()).not.toContain(J.saveBlocked)
 
-    fireEvent.click(unlinkNth(0))
+    fireEvent.click(unlinkNthMember(0))
 
-    // Now dirty AND unjustified: still no Save, and the reason is stated rather
-    // than left to an unexplained disabled button.
     expect(isDisabled(M.linksModalSave)).toBe(true)
     expect(body()).toContain(J.saveBlocked)
   })
 
-  it('REFUSES a justification one character below the floor, and says so', () => {
-    const { issue } = renderManageLinks()
-    const target = issue.linkedIssueIds![0]
-    fireEvent.click(unlinkNth(0))
-
-    fireEvent.change(justifyBoxFor(target, 'unlink'), { target: { value: BELOW_FLOOR } })
+  it('REFUSES a justification one character below the floor', () => {
+    const { members } = renderGroupModal()
+    fireEvent.click(unlinkNthMember(0))
+    fireEvent.change(justifyBoxFor(members[0].id, 'unlink'), { target: { value: BELOW_FLOOR } })
     fireEvent.click(btn(J.apply))
 
-    // The error names the count, and the row is NOT applied.
     expect(body()).toContain(`${JUSTIFICATION_MIN - 1} entered.`)
     expect(isDisabled(M.linksModalSave)).toBe(true)
-    // Negative control: the applied summary must NOT have appeared.
     expect(body()).not.toContain(J.appliedUnlink)
   })
 
-  it('accepts it AT the floor — the same assertion in the other direction', () => {
-    const { issue } = renderManageLinks()
-    const target = issue.linkedIssueIds![0]
-    fireEvent.click(unlinkNth(0))
-
-    fireEvent.change(justifyBoxFor(target, 'unlink'), { target: { value: AT_FLOOR } })
+  it('accepts it AT the floor', () => {
+    const { members } = renderGroupModal()
+    fireEvent.click(unlinkNthMember(0))
+    fireEvent.change(justifyBoxFor(members[0].id, 'unlink'), { target: { value: AT_FLOOR } })
     fireEvent.click(btn(J.apply))
 
     expect(body()).toContain(J.appliedUnlink)
     expect(isDisabled(M.linksModalSave)).toBe(false)
-    // Negative control: no error text survives a valid apply.
     expect(body()).not.toContain('entered.')
   })
 
-  it('carries the reason into the audit trail on Save, against the right issue', () => {
-    const { issue, store } = renderManageLinks()
-    const target = issue.linkedIssueIds![0]
-    const REASON = 'Raised separately in error; these are unrelated defects entirely.'
+  it('removes the member from the GROUP on Save, with the reason audited', () => {
+    const { members, store } = renderGroupModal()
+    const target = members[0].id
+    const REASON = 'Investigated separately; no longer part of this cohort.'
 
-    fireEvent.click(unlinkNth(0))
+    fireEvent.click(unlinkNthMember(0))
     fireEvent.change(justifyBoxFor(target, 'unlink'), { target: { value: REASON } })
     fireEvent.click(btn(J.apply))
     fireEvent.click(btn(M.linksModalSave))
 
-    const entry = store().auditFor(ANCHOR).find((e) => e.action === 'Issue unlinked')
-    expect(entry, 'no audit row was written').toBeTruthy()
-    expect(entry!.detail).toContain(REASON)
-    expect(entry!.detail).toContain(target)
-    // The relationship actually changed — the gate must not block the real work.
-    expect(store().getIssue(ANCHOR)!.linkedIssueIds ?? []).not.toContain(target)
+    // ⚠️ GROUP membership changed — NOT the symmetric link array, which this
+    // modal no longer touches.
+    expect(store().getIssue(target)!.groupId, 'still in the group').toBeUndefined()
+    const rows = store().auditFor(target).filter((a) => a.action === 'Issue Unlinked')
+    expect(rows.length).toBe(1)
+    expect(rows[0].detail).toContain(REASON)
   })
 })
 
-describe('Manage Links — a pending unlink stays visible', () => {
-  /*
-   * THIS IS THE BUG THAT FORCED THE ROW REWRITE. Removing the id from `draft`
-   * made its row vanish, and a vanished row has nowhere to carry the
-   * justification its unlink now requires — so the change would commit
-   * unjustified while looking gated.
-   */
+describe('Manage Links — a pending removal stays visible', () => {
   it('keeps the row on screen, flagged Pending, instead of dropping it', () => {
-    const { issue } = renderManageLinks()
-    const target = issue.linkedIssueIds![0]
+    const { members } = renderGroupModal()
+    const target = members[0].id
 
-    expect(screen.getByText(target), 'row missing before the click').toBeTruthy()
+    expect(screen.getByText(target)).toBeTruthy()
     expect(body()).not.toContain(M.linksModalPendingUnlink)
 
-    fireEvent.click(unlinkNth(0))
+    fireEvent.click(unlinkNthMember(0))
 
-    // Still present, and now labelled — the two halves of the fix.
     expect(screen.queryByText(target), 'ROW VANISHED — its justification has nowhere to live').toBeTruthy()
     expect(body()).toContain(M.linksModalPendingUnlink)
     expect(queryBtn(M.linksModalUndo)).toBeTruthy()
   })
 
   it('discards the justification when the change is WITHDRAWN via Undo', () => {
-    // Our decision, not the design's: a reason typed for a change the user took
-    // back must not attach itself to a later re-application of that change.
-    const { issue } = renderManageLinks()
-    const target = issue.linkedIssueIds![0]
+    const { members } = renderGroupModal()
+    const target = members[0].id
 
-    fireEvent.click(unlinkNth(0))
+    fireEvent.click(unlinkNthMember(0))
     fireEvent.change(justifyBoxFor(target, 'unlink'), { target: { value: AT_FLOOR } })
-    // Negative control: prove the text was really there before withdrawal.
     expect(valueOf(justifyBoxFor(target, 'unlink'))).toBe(AT_FLOOR)
 
     fireEvent.click(btn(M.linksModalUndo))
     expect(body()).not.toContain(M.linksModalPendingUnlink)
 
-    fireEvent.click(unlinkNth(0))
+    fireEvent.click(unlinkNthMember(0))
     expect(valueOf(justifyBoxFor(target, 'unlink'))).toBe('')
   })
 })

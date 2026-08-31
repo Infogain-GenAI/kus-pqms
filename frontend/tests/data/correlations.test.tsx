@@ -143,56 +143,34 @@ describe('it agrees with Issue Entry — one definition of "related"', () => {
   })
 })
 
-// ─── Through the actual modal ─────────────────────────────────────────────────
-
-describe('the Manage-Links modal shows them', () => {
-  // The store tests above prove the data; this proves a user can see it. The
-  // whole defect was a screen saying "none" — so the screen is where it has to
-  // be checked.
-  const EMPTY_COPY = 'No classification-matched candidates.'
-
-  const openModal = async (issueId: string) => {
-    const result = renderAt(routes, `/issues/${issueId}/detail`, { role: 'PQM' })
-    await waitForBody(issueId, 'the Issue Detail route')
-    /*
-     * The id alone is satisfied by the NOT-FOUND screen, which renders
-     * "Issue <id> was not found." The `findByRole` below would fail loudly on
-     * that today, so this was not vacuous — but it was guarded only by
-     * accident, one incidental safety net away from being so. Same exclusion as
-     * `IssueWorkspaceScreen` and `issueLock`.
-     */
-    expect(bodyText(), 'the NOT-FOUND screen rendered').not.toContain(
-      detailMessages.en.shellNotFound.replace('{{issueId}}', issueId),
-    )
-    const manage = await screen.findByRole('button', { name: /Manage Related Issues/i })
-    fireEvent.click(manage)
-    await screen.findByText(/Link Another Issue/i)
-    return result
-  }
-
-  it(`no longer says "${EMPTY_COPY}" for ${BLIND_SPOT}`, async () => {
-    await openModal(BLIND_SPOT)
-    expect(bodyText()).not.toContain(EMPTY_COPY)
-  })
-
-  it('lists the ranked candidates as linkable rows', async () => {
-    await openModal(BLIND_SPOT)
-
-    // Every candidate the store offers is on screen with a Link button.
-    const expected = store().current.correlations(BLIND_SPOT)
-    expect(expected.length).toBeGreaterThan(0)
-    for (const c of expected) expect(bodyText(), c.id).toContain(c.id)
-    expect(screen.getAllByRole('button', { name: /^Link$/ }).length).toBe(expected.length)
-  })
-
-  it('linking one moves it out of the candidate list', async () => {
-    await openModal(BLIND_SPOT)
-    const before = screen.getAllByRole('button', { name: /^Link$/ }).length
-
-    fireEvent.click(screen.getAllByRole('button', { name: /^Link$/ })[0])
-
-    // It becomes a draft link, so it is no longer offered as a candidate.
-    await waitFor(() => expect(screen.getAllByRole('button', { name: /^Link$/ }).length).toBe(before - 1))
-    expect(screen.getAllByRole('button', { name: /^Unlink$/ }).length).toBeGreaterThan(0)
-  })
-})
+/*
+ * ─── ⚠️ THE MODAL-LEVEL TESTS ARE GONE, AND WHY MATTERS ─────────────────────
+ *
+ * Four tests here drove `ManageLinksModal` and asserted that its candidate list
+ * showed ranked correlations. That list NO LONGER EXISTS: the modal is now the
+ * Parent/Child GROUP editor, and the canonical offers only an Issue-ID box there
+ * — joining a hierarchy on the strength of a classification overlap is a weaker
+ * basis than a person naming the id.
+ *
+ * ⚠️ ONE OF THEM HAD ALREADY BECOME VACUOUS, which is the more useful
+ * observation. It asserted the screen `not.toContain('No classification-matched
+ * candidates.')` — a real claim while the alternative was the screen SAYING that,
+ * and trivially true the moment the copy was deleted from the app. A
+ * "no longer says X" test passes for free once X cannot be said at all.
+ *
+ * WHAT THEIR AUTHOR WANTED IS PRESERVED, and it was worth preserving: the
+ * comment on the removed block read "the store tests above prove the data; this
+ * proves a user can see it. The whole defect was a screen saying 'none' — so the
+ * screen is where it has to be checked." That reasoning stands. The surface where
+ * a user still SEES ranked correlations is Issue Entry's "Same Existing Issues",
+ * which reads `relatedRank` directly and has its own rendering tests — so the
+ * ranking is still user-visible somewhere, just not here.
+ *
+ * ⚠️ AND `store.correlations()` NOW HAS NO UI CONSUMER AT ALL. The twelve
+ * data-level tests above still pin its behaviour, and the shared `relatedRank`
+ * it routes through is still live on Issue Entry — so the fix it was written for
+ * is not lost. But the wrapper itself is unreferenced, and whether it should be
+ * removed is a review decision rather than a side effect of this change. It is
+ * deliberately left in place: deleting tested code because our surface moved is
+ * how a merge ate `bulkAssignRole`, in reverse.
+ */
