@@ -148,10 +148,80 @@ function assertActivities(): void {
   }
 }
 
+function failLink(msg: string): never {
+  throw new Error(`seed link invariant: ${msg}`)
+}
+
+/**
+ * Ids referenced by `linkedIssueIds` that are NOT seeded issues.
+ *
+ * ⚠️ THESE ARE UNPORTED DESIGN ISSUES, NOT TYPOS — which is the whole reason
+ * this list exists rather than a blanket "every link must resolve". They name
+ * records from the prototype's `_classifiedIssuesBase()` classification pool
+ * that we never brought into `ISSUES`. Repointing them at seeded issues would
+ * invent relationships the design never stated; seeding the ten missing issues
+ * would change every count in the fixture.
+ *
+ * So they are tolerated and enumerated. A NEW dangling id — a genuine typo, or a
+ * relink that misses — is not in this list and fails.
+ */
+const UNPORTED_LINK_TARGETS = new Set([
+  'EE-260019',
+  'EE-260020',
+  'EE-260021',
+  'CL-260022',
+  'CL-260023',
+  'CL-260029',
+  'PT-260026',
+  'BD-260027',
+  'IN-260024',
+  'IN-260025',
+  'BR-260028',
+])
+
+/**
+ * Link invariants.
+ *
+ * ⚠️ WHY THIS EXISTS: every `linkedIssueIds` entry in this fixture used to
+ * dangle, and nothing noticed because every consumer degraded quietly — the
+ * workspace rail navigated to a not-found screen, and the linked-issue popup
+ * rendered nothing at all. An entire relationship type was unreachable and
+ * untestable, and the state was an accident rather than anyone's decision.
+ */
+function assertLinks(): void {
+  const ids = new Set(ISSUES.map((i) => i.id))
+
+  for (const issue of ISSUES) {
+    for (const target of issue.linkedIssueIds ?? []) {
+      if (target === issue.id) failLink(`${issue.id} links to itself`)
+      if (ids.has(target)) {
+        /*
+         * RESOLVABLE LINKS MUST BE MUTUAL. `linkIssue()`/`unlinkIssue()` write
+         * both sides, so a one-sided link in the fixture is a state the app
+         * cannot produce — and it reads differently depending on which issue you
+         * opened, which is the bug reciprocity exists to prevent.
+         */
+        const back = ISSUES.find((i) => i.id === target)!.linkedIssueIds ?? []
+        if (!back.includes(issue.id)) {
+          failLink(`${issue.id} → ${target} is one-sided; resolvable links must be reciprocal`)
+        }
+      } else if (!UNPORTED_LINK_TARGETS.has(target)) {
+        failLink(`${issue.id} links to "${target}", which is neither a seeded issue nor a known unported design id`)
+      }
+    }
+  }
+
+  // At least one link must RESOLVE, or the linked-issue surfaces are unreachable
+  // and untestable again — the state this invariant was written after.
+  const resolvable = ISSUES.flatMap((i) => (i.linkedIssueIds ?? []).filter((l) => ids.has(l)))
+  if (resolvable.length === 0) failLink('no linkedIssueIds entry resolves; the linked-issue surfaces are unreachable')
+}
+
 export function assertSeedAnchors(): void {
   assertIssueGroups()
   assertIssueClassification()
   assertActivities()
+  assertLinks()
   if (NOW !== '2026-07-09T09:00:00Z') fail(`NOW is ${NOW}, expected 2026-07-09T09:00:00Z`)
 
   // The rows the prototype dates relative to the anchor ('Today' / 'Yesterday' / '2h ago').

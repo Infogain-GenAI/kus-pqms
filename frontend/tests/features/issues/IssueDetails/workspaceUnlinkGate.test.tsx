@@ -13,18 +13,23 @@
 // it must record why. A test that only proved the popup opens would miss the
 // whole governance claim.
 //
-// ⚠️ DRIVEN THROUGH THE MODAL, NOT THE ROUTE TREE, AND THE REASON IS A REAL
-// FINDING: not one `linkedIssueIds` entry in the entire seed names a seeded
-// issue. Every symmetric link is a dangling reference, so the workspace rail can
-// never resolve one and the popup cannot be reached from it with current data.
-// Rendering the modal directly tests the gate that exists; the row → popup
-// wiring is pinned separately below, in the only state the seed can produce.
+// ⚠️ TWO LEVELS, DELIBERATELY. The boundary cases drive the modal DIRECTLY,
+// because they are about the gate's arithmetic and a route-tree mount for each
+// would cost a lazy compile to prove nothing extra. The last block drives the
+// REAL ROUTE TREE, because the row → popup wiring is the part that was broken.
+//
+// That split only became possible with the seed: every `linkedIssueIds` entry in
+// this fixture used to dangle, so the rail could never resolve one and the popup
+// could not be reached at all. Design-sourced reciprocal links now exist and
+// `assertLinks` keeps at least one resolving.
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
+import { routes } from '@/routes'
+import { renderAt, waitForBody } from '../../../support/dataRouter'
 import { ExistingIssueModal } from '@/features/issues/ExistingIssueModal'
 import { LinkJustifyBox, applyJustification } from '@/features/issues/linking/LinkJustifyBox'
 import justifyMessages from '@/features/issues/linking/LinkJustify.i18n'
@@ -154,26 +159,46 @@ describe('⚠️ THE GATE REFUSES AND ACCEPTS AT THE BOUNDARY', () => {
   })
 })
 
-describe('⚠️ EVERY SEEDED SYMMETRIC LINK IS A DANGLING REFERENCE', () => {
+describe('⚠️ THROUGH THE REAL ROUTE TREE — the path that was unreachable', () => {
   /*
-   * Not a test of the gate — a test of the FIXTURE, pinned because a behaviour
-   * decision depends on it. The workspace rail falls back to navigation for an
-   * unresolvable id instead of opening the popup, because the popup renders
-   * nothing for a null issue and every row would otherwise be a dead click.
+   * This replaces a test that PINNED the opposite: that no seeded link resolved,
+   * so the row → popup path could not be exercised at all. Seeding reciprocal,
+   * design-sourced links inverted it, which is exactly what that test was for —
+   * it was written to fail the moment the data made this possible.
    *
-   * If seed data ever gains a resolvable link, this fails — and that is the
-   * signal to test the row → popup path through the route tree, which cannot be
-   * done today.
+   * EE-260023 carries three resolvable links, taken from the prototype's own
+   * activity text ("Linked to EE-260023").
    */
-  it('has no linkedIssueIds entry naming a seeded issue', () => {
-    const ids = new Set(ISSUES.map((i) => i.id))
-    const resolvable = ISSUES.flatMap((i) => (i.linkedIssueIds ?? []).filter((l) => ids.has(l)))
-    expect(resolvable, 'a seeded link now resolves — see the note above').toEqual([])
+  const ANCHOR = 'EE-260023'
+
+  it('opens the popup from the rail instead of navigating away', async () => {
+    renderAt(routes, `/issues/${ANCHOR}/detail`, { role: 'PQM' })
+    await waitForBody(ANCHOR, 'the workspace shell')
+
+    // A rail row for a RESOLVABLE link. Before the seed change every row was a
+    // dead click, because the popup renders nothing for a null issue.
+    const row = await screen.findByRole('button', { name: /EE-260031/ })
+    fireEvent.click(row)
+
+    const dialog = await screen.findByRole('dialog', { name: /Issue EE-260031/ })
+    expect(dialog).toBeTruthy()
+    // The workspace is still mounted behind it — nothing navigated.
+    expect(document.body.textContent).toContain(ANCHOR)
   })
 
-  it('and every issue that HAS links still lists them', () => {
-    // Guards the assertion above from passing because no issue has links at all.
-    const withLinks = ISSUES.filter((i) => (i.linkedIssueIds ?? []).length > 0)
-    expect(withLinks.length, 'no issue has links; the check above proved nothing').toBeGreaterThan(0)
+  it('gates the unlink from that popup, end to end', async () => {
+    renderAt(routes, `/issues/${ANCHOR}/detail`, { role: 'PQM' })
+    await waitForBody(ANCHOR, 'the workspace shell')
+    fireEvent.click(await screen.findByRole('button', { name: /EE-260031/ }))
+    await screen.findByRole('dialog', { name: /Issue EE-260031/ })
+
+    fireEvent.click(screen.getByRole('button', { name: /^Unlink issue$/ }))
+    const area = screen.getByRole('textbox', { name: /Justification for unlinking/i })
+
+    // Below the floor: refused, and the box stays open.
+    fireEvent.change(area, { target: { value: BELOW_FLOOR } })
+    fireEvent.click(screen.getByRole('button', { name: /^Confirm unlink$/ }))
+    expect(document.body.textContent).toContain(`${JUSTIFICATION_MIN - 1} entered.`)
+    expect(screen.getByRole('textbox', { name: /Justification for unlinking/i })).toBeTruthy()
   })
 })
