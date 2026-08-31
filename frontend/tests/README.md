@@ -12,7 +12,7 @@ tests/
   routes/                       ← apps/portal/src/routes.tsx
   features/
     issues/
-      IssueList/                ← features/issues/IssueListScreen + issue-list/
+      IssueList/                ← features/issues/issue-list/
       IssueEntry/               ← features/issues/CreateIssueScreen + issue-entry/
       IssueDetails/             ← features/issues/workspace/**
     notifications/              ← features/notifications/

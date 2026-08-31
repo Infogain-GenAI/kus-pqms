@@ -16,7 +16,7 @@ import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
-import { IssueListScreen } from '@/features/issues/IssueListScreen'
+import { IssueListScreen } from '@/features/issues/issue-list/IssueListScreen'
 import {
   EMPTY_ISSUE_FILTERS,
   ISSUE_LIST_VIEW_STORAGE_KEY,
