@@ -10,6 +10,7 @@ import { LinkJustifyBox } from './linking/LinkJustifyBox'
 import { LinkJustifyApplied } from './linking/LinkJustifyApplied'
 import { NS as LINK_JUSTIFY_NS } from './linking/LinkJustify.i18n'
 import { usePendingJustifications } from './linking/usePendingJustifications'
+import { linkChangeSet } from './linking/changeSet'
 import type { Issue } from '@/data/types'
 
 /** Fields whose match on another issue counts as a correlation signal, in display order.
@@ -57,10 +58,32 @@ export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; i
       .filter((c) => c.reasons.length > 0 || committed.includes(c.issue.id))
   }, [store.issues, issue, issueId, committed])
 
+  const { additions, removals, changedIds } = linkChangeSet(committed, draft)
+
+  /*
+   * ⚠️ `changedIds` IS PART OF THIS PREDICATE, AND LEAVING IT OUT WAS A DEFECT.
+   *
+   * A row is shown when it is currently linked, when it matches on a
+   * classification field, OR WHEN IT IS A PENDING CHANGE. That third clause was
+   * missing, and the gap was reachable: a committed link with no match-field
+   * overlap — entirely normal for something linked by hand — dropped out of
+   * `visible` the moment it was unchecked, because `draft` no longer held it and
+   * it had no match reasons.
+   *
+   * It was not a bypass; the gate held and Save stayed disabled. It was worse in
+   * a different way: the row took its checkbox AND its justification box with
+   * it, so the change could neither be completed nor withdrawn, and since
+   * `allApplied` is all-or-nothing it blocked every other pending change in the
+   * session. The only exit was closing the modal, which discarded the work.
+   *
+   * Manage Links already kept pending rows visible; this surface did not,
+   * because the two computed their change sets separately. They now share
+   * `linkChangeSet`, which is where that contract is written down.
+   */
   const visible = candidates
-    .filter((c) => draft.includes(c.issue.id) || c.reasons.length > 0)
+    .filter((c) => draft.includes(c.issue.id) || c.reasons.length > 0 || changedIds.includes(c.issue.id))
     .filter((c) => c.issue.id.toUpperCase().includes(filterQuery.trim().toUpperCase()))
-  const selectedToLink = draft.filter((id) => !committed.includes(id)).length
+  const selectedToLink = additions.length
 
   const toggle = (id: string) => setDraft((d) => (d.includes(id) ? d.filter((x) => x !== id) : [...d, id]))
 
@@ -74,9 +97,6 @@ export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; i
    * `usePendingJustifications`, which owns that decision and the reasoning. The
    * prototype's list is not a checkbox list, so it never had to answer this.
    */
-  const additions = draft.filter((id) => !committed.includes(id))
-  const removals = committed.filter((id) => !draft.includes(id))
-  const changedIds = [...removals, ...additions]
   const justify = usePendingJustifications(changedIds)
   useEffect(() => { if (open) justify.reset() }, [open])
 

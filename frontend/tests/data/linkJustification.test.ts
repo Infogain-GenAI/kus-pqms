@@ -20,6 +20,29 @@ import {
 
 const chars = (n: number) => 'x'.repeat(n)
 
+describe('the specified values, pinned as literals', () => {
+  /*
+   * ⚠️ THE ONLY PLACE A LITERAL BELONGS, AND IT WAS MISSING.
+   *
+   * Every other assertion in this file and in the UI gate suite derives its
+   * fixtures FROM these constants — `chars(JUSTIFICATION_MIN - 1)` and so on. So
+   * they prove the code enforces WHATEVER the constants say, and nothing proved
+   * the constants say what the design says.
+   *
+   * Found by mutation: changing the floor from 20 to 1 left all 11 UI gate tests
+   * and every test below GREEN. A governance control whose entire specification
+   * is "at least 20 characters" was free to become "at least 1" silently.
+   *
+   * 20 and 500 are the canonical prototype's own numbers — `mrApplyUnlink` tests
+   * `text.length < 20` and `mrUnlinkText` applies `.slice(0, 500)`. Changing
+   * either is a change to the specification, and should have to edit this line.
+   */
+  it('floor is 20 and cap is 500, per the prototype', () => {
+    expect(JUSTIFICATION_MIN).toBe(20)
+    expect(JUSTIFICATION_MAX).toBe(500)
+  })
+})
+
 describe('the governance floor', () => {
   it('rejects one character below the threshold and accepts it exactly', () => {
     // Asserted AT the boundary in both directions. A test at 5 and 50 passes for

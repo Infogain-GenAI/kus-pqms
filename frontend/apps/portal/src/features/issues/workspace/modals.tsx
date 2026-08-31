@@ -9,6 +9,7 @@ import { LinkJustifyBox } from '../linking/LinkJustifyBox'
 import { LinkJustifyApplied } from '../linking/LinkJustifyApplied'
 import { NS as LINK_JUSTIFY_NS } from '../linking/LinkJustify.i18n'
 import { usePendingJustifications } from '../linking/usePendingJustifications'
+import { linkChangeSet } from '../linking/changeSet'
 import type { DispositionOutcome, Issue } from '@/data/types'
 import { inputStyle } from './shared'
 import mlStyles from './manageLinks.module.css'
@@ -160,9 +161,7 @@ export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issu
    * reason covering "added 3, removed 2" is a weaker record, and its
    * `saveSameModal()` says each change gets its own audit entry.
    */
-  const additions = draft.filter((id) => !committed.includes(id))
-  const removals = committed.filter((id) => !draft.includes(id))
-  const changedIds = [...removals, ...additions]
+  const { additions, removals, changedIds } = linkChangeSet(committed, draft)
   const justify = usePendingJustifications(changedIds)
 
   /*
