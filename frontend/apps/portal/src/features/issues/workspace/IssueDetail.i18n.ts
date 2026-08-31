@@ -35,6 +35,33 @@ const messages: ComponentI18nMessages = {
      * and which reads as fragments in the source. Interpolation is what the
      * library is for.
      */
+    /*
+     * ─── History date filter ─────────────────────────────────────────────────
+     *
+     * The six quick-range labels live here rather than in the component, so the
+     * one place a translator looks for this screen's vocabulary holds all of it.
+     *
+     * ⚠️ THE KEYS ARE NOT THE LABELS. `historyRangeLast7` rather than
+     * `historyRangeLast7Days`: the preset's IDENTITY is "seven days back", and a
+     * key that encodes the English wording has to be renamed the moment a locale
+     * phrases it differently — which is the rename nobody makes, leaving a key
+     * that says one thing and a value that says another.
+     */
+    historyDateLabel: 'Date:',
+    historyQuickRanges: 'Quick ranges',
+    historyRangeAll: 'All time',
+    historyRangeLast7: 'Last 7 days',
+    historyRangeLast30: 'Last 30 days',
+    historyRangeLast90: 'Last 90 days',
+    historyRangeThisMonth: 'This month',
+    historyRangeLastMonth: 'Last month',
+    historyDateFrom: 'From',
+    historyDateTo: 'To',
+    historyDateHint: 'Select a start and end date',
+    historyDateClear: 'Clear',
+    historyDateApply: 'Apply',
+    historyDateRangeDialog: 'Date range',
+
     shellNotFound: 'Issue {{issueId}} was not found.',
     shellPriority: 'Priority {{letter}}',
     shellEwsFlagged: 'EWS flagged',

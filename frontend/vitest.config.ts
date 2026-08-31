@@ -90,6 +90,12 @@ export default defineConfig({
         'apps/portal/src/features/issues/issues.queries.ts',
         'apps/portal/src/features/notifications/notifications.queries.ts',
         'apps/portal/src/features/issues/issueDetail.queries.ts',
+        /*
+         * The History feed's pure logic and its date filter, ported from Vue.
+         * Both land with their own tests (`history.test.ts`,
+         * `historyDateFilter.test.ts`), so they raise the ratio.
+         */
+        'apps/portal/src/features/issues/workspace/history/**',
         'apps/portal/src/features/issues/IssueListScreen.tsx',
         'apps/portal/src/features/issues/IssueWorkspaceScreen.tsx',
         'apps/portal/src/features/issues/CreateIssueScreen.tsx',

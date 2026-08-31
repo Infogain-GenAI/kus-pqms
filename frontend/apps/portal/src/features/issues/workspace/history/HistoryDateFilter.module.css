@@ -1,0 +1,167 @@
+/*
+ * History date filter.
+ *
+ * ⚠️ A CSS MODULE, NOT INLINE STYLES, BECAUSE THIS COMPONENT NEEDS `:hover`,
+ * `:focus-visible` AND `:disabled` — none of which a style object can express.
+ * The surrounding section is inline-styled; that is not a reason to reproduce
+ * the limitation here.
+ *
+ * Every value is a design token. `lint:ds:values` and `lint:ds:numeric` do not
+ * scan CSS Modules, so nothing would have caught a raw hex or a magic pixel —
+ * which is exactly why they are worth avoiding by hand.
+ */
+
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  font: var(--fw-regular) var(--fs-body-sm) / 1 var(--font-body);
+}
+
+.trigger:hover {
+  border-color: var(--border-strong);
+}
+
+.trigger:focus-visible {
+  /*
+   * ⚠️ THE FOCUS RING IS `--shadow-focus`, NOT AN OUTLINE. The library's own
+   * controls use it (see `Button.module.css`), and matching it matters for more
+   * than tidiness: a ring drawn a different way on one control reads as a
+   * rendering glitch rather than as focus.
+   *
+   * An earlier version invented `--border-width-thick`, which does not exist.
+   * That is valid CSS — it compiles, ships, and renders NO ring at all, leaving
+   * this control silently unusable by keyboard. `check-css-vars.mjs` caught it;
+   * nothing else would have.
+   */
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.triggerLabel {
+  color: var(--text-muted);
+}
+
+.triggerValue {
+  font-weight: var(--fw-semibold);
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 60;
+  display: flex;
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.quick {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  border-right: var(--border-width) solid var(--border-subtle);
+  min-width: 11rem;
+}
+
+.quickHeading {
+  padding: var(--space-2) var(--space-3);
+  font: var(--fw-bold) var(--fs-caption) / 1 var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.quickItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  font: var(--fw-regular) var(--fs-body-sm) / 1.2 var(--font-body);
+}
+
+.quickItem:hover {
+  background: var(--neutral-100);
+}
+
+.quickItemActive {
+  background: var(--accent-50);
+  color: var(--accent-600);
+  font-weight: var(--fw-semibold);
+}
+
+.custom {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 17rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.fieldLabel {
+  font: var(--fw-semibold) var(--fs-caption) / 1 var(--font-body);
+  color: var(--text-muted);
+}
+
+.input {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: var(--fw-regular) var(--fs-body-sm) / 1.2 var(--font-body);
+}
+
+.input:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
+  padding-top: var(--space-3);
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--fw-regular) var(--fs-caption) / 1.3 var(--font-body);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
