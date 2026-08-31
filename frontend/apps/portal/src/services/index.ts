@@ -3,9 +3,25 @@ import * as issueFixtures from '@/api/issues'
 import * as notificationFixtures from '@/api/notifications'
 import * as issueApi from './issue.service'
 import * as notificationApi from './notification.service'
+import * as issueDetailFixtures from '@/api/issueDetail'
+import * as issueDetailApi from './issueDetail.service'
+import * as masterDataFixtures from '@/api/masterData'
+import * as masterDataApi from './masterData.service'
 import type { IssueListQuery, IssueListResult } from '@/api/issues'
 import type { NotificationListResult, NotificationQuery } from '@/api/notifications'
-import type { Issue } from '@/data/types'
+import type {
+  ActivityChangeRequest,
+  AuditEntry,
+  ClassLevel,
+  ClassificationNode,
+  Comment,
+  InvestigationActivity,
+  Issue,
+  IssuePriority,
+  PartRequest,
+  User,
+} from '@/data/types'
+import type { PartOption, TeamMember } from '@/data/investigation'
 
 /**
  * THE SWITCH. This is what makes `VITE_USE_FIXTURES` load-bearing.
@@ -71,8 +87,23 @@ export const notifications = {
     return isFixtureMode() ? notificationFixtures.fetchNotifications(query) : notificationApi.listNotifications(query)
   },
 
-  markRead(id: string): Promise<void> {
-    return isFixtureMode() ? notificationFixtures.markNotificationRead(id) : notificationApi.markRead(id)
+  /**
+   * ⚠️ `recipient` IS THE BACKEND'S OWNERSHIP CHECK ON THE REAL PATH, not a
+   * filter — see `notification.service.ts`. Optional in this signature only
+   * because the fixture path has no notion of ownership yet; once identity
+   * lands it should become required, and the call site already passes it.
+   */
+  markRead(id: string, recipient?: string): Promise<void> {
+    return isFixtureMode()
+      ? notificationFixtures.markNotificationRead(id)
+      : notificationApi.markRead(id, recipient)
+  },
+
+  /** The badge's own count. Never derived from a page — see the service. */
+  unreadCount(recipient?: string): Promise<number> {
+    return isFixtureMode()
+      ? notificationFixtures.fetchUnreadNotificationCount(recipient)
+      : notificationApi.unreadCount(recipient)
   },
 
   markAllRead(recipient?: string): Promise<void> {
@@ -82,11 +113,109 @@ export const notifications = {
   },
 }
 
+
+/**
+ * ─── ISSUE-DETAIL COLLECTIONS ────────────────────────────────────────────────
+ *
+ * Parts, comments, investigation activities, activity change requests and the
+ * audit trail — the five collections that hang off one issue.
+ *
+ * ⚠️ THE FIXTURE ARM READS THE SEED; THE STORE HOLDS A MUTATED COPY. A part
+ * added through `data/store.tsx` is not visible through here, so no screen has
+ * been moved onto these yet. That gap closes when MSW handlers are built from
+ * the fixture modules (26 F-07) and does NOT affect the real arm, where the
+ * backend is the only source.
+ */
+export const issueDetail = {
+  parts(issueId: string): Promise<PartRequest[]> {
+    return isFixtureMode()
+      ? issueDetailFixtures.fetchPartRequests(issueId)
+      : issueDetailApi.listPartRequests(issueId)
+  },
+
+  comments(issueId: string): Promise<Comment[]> {
+    return isFixtureMode()
+      ? issueDetailFixtures.fetchComments(issueId)
+      : issueDetailApi.listComments(issueId)
+  },
+
+  activities(issueId: string): Promise<InvestigationActivity[]> {
+    return isFixtureMode()
+      ? issueDetailFixtures.fetchActivities(issueId)
+      : issueDetailApi.listActivities(issueId)
+  },
+
+  changeRequests(activityId: string): Promise<ActivityChangeRequest[]> {
+    return isFixtureMode()
+      ? issueDetailFixtures.fetchActivityChangeRequests(activityId)
+      : issueDetailApi.listActivityChangeRequests(activityId)
+  },
+
+  audit(issueId: string): Promise<AuditEntry[]> {
+    return isFixtureMode()
+      ? issueDetailFixtures.fetchAuditTrail(issueId)
+      : issueDetailApi.listAuditTrail(issueId)
+  },
+}
+
+/**
+ * ─── REFERENCE DATA ──────────────────────────────────────────────────────────
+ *
+ * ⚠️ SERVER STATE, NOT STARTUP STATE. Fetched once and rarely changed, which
+ * makes it feel like something to load at boot and keep in a store. 04
+ * classifies by ownership rather than lifetime, so these are queries with a long
+ * `staleTime`. A store here would be a second cache with no invalidation path.
+ */
+export const masterData = {
+  classification(): Promise<ClassificationNode[]> {
+    return isFixtureMode()
+      ? masterDataFixtures.fetchClassification()
+      : masterDataApi.listClassification()
+  },
+
+  classificationLevel(level: ClassLevel, parentId?: string): Promise<ClassificationNode[]> {
+    return isFixtureMode()
+      ? masterDataFixtures.fetchClassificationLevel(level, parentId)
+      : masterDataApi.listClassificationLevel(level, parentId)
+  },
+
+  partOptions(): Promise<PartOption[]> {
+    return isFixtureMode() ? masterDataFixtures.fetchPartOptions() : masterDataApi.listPartOptions()
+  },
+
+  teamDirectory(): Promise<TeamMember[]> {
+    return isFixtureMode()
+      ? masterDataFixtures.fetchTeamDirectory()
+      : masterDataApi.listTeamDirectory()
+  },
+
+  users(): Promise<User[]> {
+    return isFixtureMode() ? masterDataFixtures.fetchUsers() : masterDataApi.listUsers()
+  },
+
+  priority(issueId: string): Promise<IssuePriority> {
+    return isFixtureMode()
+      ? masterDataFixtures.fetchIssuePriority(issueId)
+      : masterDataApi.getIssuePriority(issueId)
+  },
+
+  vinOptions(issueId: string): Promise<string[]> {
+    return isFixtureMode()
+      ? masterDataFixtures.fetchVinOptions(issueId)
+      : masterDataApi.listVinOptions(issueId)
+  },
+}
+
 /**
  * Every service, as one object.
  *
  * Exported so a test can assert the SET of services rather than each one — the
  * check that catches a service added to the folder and never wired in here,
  * which would otherwise be a module nobody can reach.
+ *
+ * ⚠️ DECLARED LAST, AFTER EVERY MEMBER. `const` is block-scoped and not hoisted,
+ * so referencing `issueDetail` above its declaration is a TypeScript error and
+ * would be a runtime TDZ throw at module load. Keep this at the bottom of the
+ * file and add new services above it.
  */
-export const services = { issues, notifications }
+export const services = { issues, notifications, issueDetail, masterData }

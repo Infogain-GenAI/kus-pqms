@@ -78,6 +78,27 @@ export default defineConfig({
         // below — re-seeded in the same change per this file's own instruction.
         'apps/portal/src/features/issues/issue-list/**',
         'apps/portal/src/features/common/**',
+        /*
+         * Widened 2026-08-31 for the Zustand + TanStack Query layer.
+         *
+         * ⚠️ WIDENING `include` NORMALLY DROPS THE PERCENTAGE AND FAILS THE GATE
+         * — that is the warning above, and it is why each addition is named
+         * rather than globbed loosely. These three land at 100% function
+         * coverage with their own tests (`tests/stores/`, `tests/queries/`), so
+         * they raise the ratio rather than lower it. Floors re-seeded regardless.
+         *
+         * They are included deliberately rather than left out: the auth store
+         * carries `switchRole()`'s production fuse, which 04 calls a security
+         * control — leaving it outside the gate would mean nothing notices if a
+         * later change stops testing it.
+         */
+        'apps/portal/src/stores/**',
+        'apps/portal/src/features/issues/issues.queries.ts',
+        'apps/portal/src/features/notifications/notifications.queries.ts',
+        'apps/portal/src/features/issues/issueDetail.queries.ts',
+        // NOT 'apps/portal/src/features/issues/IssueListScreen.tsx' — the Issue
+        // List extraction above moved that file to issue-list/IssueListScreen.tsx.
+        // The old path no longer exists; issue-list/** already covers the new one.
         'apps/portal/src/features/issues/IssueWorkspaceScreen.tsx',
         'apps/portal/src/features/issues/CreateIssueScreen.tsx',
         'packages/ui-library/src/**',
