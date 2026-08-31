@@ -13,6 +13,7 @@ import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider, useStore } from '@/data/store'
 import { CreateIssueScreen } from '@/features/issues/CreateIssueScreen'
+import entryMessages from '@/features/issues/issue-entry/IssueEntry.i18n'
 
 const Wrapped = ({ children }: { children: ReactNode }) => (
   <MemoryRouter>
@@ -545,6 +546,34 @@ describe('Clear form asks only when there is something to lose', () => {
     // `clearIssueForm(){ if(this._issueFormHasData()) … }` — no dialog, and no
     // message either. A silent no-op, not a disabled button.
     expect(body()).not.toMatch(CLEAR_PROMPT)
+  })
+
+  /*
+   * THE BUTTON TEXT ITSELF. A rename deleted `clearFormCancel`, repointed this
+   * button to `t('cancel')` and never declared `cancel`, so it rendered the
+   * lowercase key "cancel" — and the whole suite stayed green, because every
+   * assertion here matched case-insensitively or on the prompt copy instead.
+   *
+   * `tests/i18n/namespaces.test.tsx` now catches an undeclared key for the whole
+   * app at once, which is the stronger guard. This one covers what a source scan
+   * cannot: that the key is wired to THIS control and renders as its declared
+   * value. Asserted against the `en` value per 09/26, never a literal.
+   */
+  it('renders Cancel with its declared text, not the raw key', () => {
+    renderCreate()
+    fireEvent.change(screen.getByRole('textbox', { name: /issue title/i }), { target: { value: 'x' } })
+    fireEvent.click(btn(/^clear$/i))
+
+    // CASE-SENSITIVE AND ANCHORED, deliberately — /cancel/i matched the broken
+    // lowercase render perfectly, which is exactly why this shipped.
+    // No literal for the label itself — a reword should change ONE place, the
+    // `.i18n.ts`. Declaring it is the precondition; an absent key makes this
+    // undefined and the lookup below cannot match.
+    const label = entryMessages.en.cancel
+    expect(label, 'IssueEntry.cancel must be declared').toBeTruthy()
+    expect(screen.getByRole('button', { name: new RegExp(`^${label}$`) })).toBeTruthy()
+    // Negative control: the raw key name must not be rendered as the label.
+    expect(screen.queryByRole('button', { name: /^cancel$/ })).toBeNull()
   })
 
   it('asks when only the title has been typed', () => {

@@ -17,6 +17,9 @@
 // breaks one place.
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join, resolve, sep } from 'node:path'
 import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { RoleProvider } from '@/data/roles'
@@ -27,11 +30,38 @@ import issueListMessages, { NS as ISSUE_LIST_NS } from '@/features/issues/issue-
 import issueEntryMessages, { NS as ISSUE_ENTRY_NS } from '@/features/issues/issue-entry/IssueEntry.i18n'
 import issueDetailMessages, { NS as ISSUE_DETAIL_NS } from '@/features/issues/workspace/IssueDetail.i18n'
 
-const NAMESPACES = [
-  [ISSUE_LIST_NS, issueListMessages],
-  [ISSUE_ENTRY_NS, issueEntryMessages],
-  [ISSUE_DETAIL_NS, issueDetailMessages],
-] as const
+/*
+ * ENUMERATED, NOT LISTED. This was a hardcoded three-entry array, and it went
+ * stale the moment two more namespaces were added — which is the failure this
+ * file exists to prevent, reproduced in the file itself.
+ *
+ * ⚠️ A GLOB THAT MATCHES NOTHING REPORTS ZERO AND EVERY LOOP BELOW PASSES
+ * VACUOUSLY. That is the same dead-gate shape `ds-gate.mjs` warns about, so the
+ * count is cross-checked against a filesystem walk rather than trusted.
+ */
+const i18nModules = import.meta.glob('../../apps/portal/src/**/*.i18n.ts', { eager: true }) as Record<
+  string,
+  { NS: string; default: Record<string, Record<string, string>> }
+>
+const NAMESPACES = Object.values(i18nModules).map((m) => [m.NS, m.default] as const)
+
+const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '../../apps/portal/src')
+
+function walkSrc(dir: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry)
+    if (statSync(full).isDirectory()) {
+      if (entry !== 'node_modules' && entry !== 'dist') walkSrc(full, out)
+    } else if (entry.endsWith('.ts') || entry.endsWith('.tsx')) out.push(full)
+  }
+  return out
+}
+
+/** Comments quote `useTranslation('X')` in prose — `i18n/index.ts` most of all. */
+const stripComments = (src: string) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
+
+const posix = (p: string) => p.split(sep).join('/')
 
 describe('the instance', () => {
   it('runs in en with en as the fallback', () => {
@@ -50,8 +80,75 @@ describe('the instance', () => {
 })
 
 describe('every namespace is registered as a side effect of import', () => {
+  it('enumerated every .i18n.ts on disk — the glob is not silently empty', () => {
+    const onDisk = walkSrc(SRC).filter((f) => f.endsWith('.i18n.ts'))
+    expect(onDisk.length).toBeGreaterThan(0)
+    // The assertion that matters: the glob and the filesystem agree. If the glob
+    // pattern ever stops matching, this fails loudly instead of every loop in
+    // this file quietly iterating an empty array.
+    expect(NAMESPACES.length, `glob saw ${NAMESPACES.length}, disk has ${onDisk.length}`).toBe(onDisk.length)
+    // Namespaces are unique — two files exporting the same NS would have one
+    // bundle overwrite the other, with only the second file's keys resolving.
+    expect(new Set(NAMESPACES.map(([ns]) => ns)).size).toBe(NAMESPACES.length)
+  })
+
   it.each(NAMESPACES.map(([ns]) => ns))('%s has a bundle', (ns) => {
     expect(i18n.hasResourceBundle('en', ns)).toBe(true)
+  })
+
+  /*
+   * ─── THE INVERSE CHECK, AND WHY IT HAD TO BE ADDED ─────────────────────────
+   *
+   * Every other test here walks DECLARED keys and asks whether they resolve.
+   * That direction cannot see a key which is USED in a component but was never
+   * declared — and that shipped: a rename deleted `clearFormCancel`, repointed
+   * three call sites to `t('cancel')`, and never added `cancel`. All three
+   * buttons rendered the lowercase string "cancel", because
+   * `parseMissingKeyHandler` returns the key.
+   *
+   * Nothing else could have caught it. `t()` accepts any string, so tsc was
+   * happy; `lint:i18n` checks NAMESPACES, not keys; and no test asserted the
+   * exact button text. So this walks the source instead of the bundles.
+   */
+  it('every t(key) in the app is declared in the namespace it reads from', () => {
+    const byFile = new Map<string, string>()
+    for (const [ns, messages] of NAMESPACES) {
+      const src = Object.entries(i18nModules).find(([, m]) => m.NS === ns)?.[0]
+      if (src) byFile.set(posix(resolve(dirname(fileURLToPath(import.meta.url)), src)), ns)
+    }
+
+    const missing: string[] = []
+    let checked = 0
+
+    for (const file of walkSrc(SRC)) {
+      if (file.endsWith('.i18n.ts')) continue
+      const raw = readFileSync(file, 'utf8')
+      const src = stripComments(raw)
+      if (!src.includes('useTranslation(')) continue
+
+      // Which namespace does this file's `NS` import resolve to?
+      let ns: string | undefined
+      for (const m of src.matchAll(/import \{[^}]*\bNS\b[^}]*\} from '([^']+)'/g)) {
+        if (!m[1].startsWith('.')) continue
+        ns = byFile.get(posix(resolve(dirname(file), m[1])) + '.ts')
+      }
+      // A file may take its namespace from elsewhere; only assert what resolves.
+      if (!ns) continue
+
+      const declared = NAMESPACES.find(([name]) => name === ns)![1].en
+      for (const m of src.matchAll(/\bt\('([A-Za-z0-9_]+)'/g)) {
+        const key = m[1]
+        checked++
+        // An ICU plural is declared only as key_one / key_other and is never a
+        // bare key, so accept either form.
+        const ok = key in declared || `${key}_one` in declared || `${key}_other` in declared
+        if (!ok) missing.push(`${ns}.${key} used in ${posix(file).split('/apps/portal/src/')[1]}`)
+      }
+    }
+
+    // Guards the whole test against passing because the scan found nothing.
+    expect(checked, 'scanned no t() calls at all').toBeGreaterThan(50)
+    expect(missing, `undeclared keys:\n  ${missing.join('\n  ')}`).toEqual([])
   })
 
   it('resolves every declared key to its own English text', () => {

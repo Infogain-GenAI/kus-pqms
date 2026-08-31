@@ -19,6 +19,21 @@ const messages: ComponentI18nMessages = {
     clear: 'Clear',
     register: 'Register Issue',
 
+    /*
+     * SHARED BY ALL THREE Cancel buttons on this screen — the clear-form modal,
+     * the request-classification modal and the link confirmation.
+     *
+     * ⚠️ IT WAS `clearFormCancel`, AND RENAMING IT BROKE ALL THREE. The rename
+     * deleted the old key and repointed the call sites in one pass and never
+     * added the new one, so `parseMissingKeyHandler: (key) => key` rendered the
+     * literal string "cancel" — lowercase — on every one of them. Nothing
+     * failed: not the typecheck (t() takes any string), not lint:i18n (it
+     * checks NAMESPACES, not keys), not the suite (no test asserted the exact
+     * button text). See `tests/i18n/namespaces.test.tsx`, which now checks that
+     * every t('key') in the app resolves against the namespace it is read from.
+     */
+    cancel: 'Cancel',
+
     sectionVehicle: 'Vehicle Information',
     sectionClassification: 'System Classification',
     sectionIssue: 'Issue Information',
