@@ -53,7 +53,25 @@ import { USERS } from '@/data/seed'
  * Structurally identical to `data/types`'s `User` today, and aliased to it
  * rather than redeclared so the two cannot drift into "nearly the same".
  */
-export type AuthUser = User
+export type AuthUser = User & {
+  /**
+   * The identifier the notification backend knows this user by.
+   *
+   * ⚠️ IT IS NOT `id`, AND THAT IS NOT AN OVERSIGHT. Ported from the Vue auth
+   * store, which records the reason: there is no shared user space between this
+   * frontend's seeded ids (`u-se`) and the notification service's own seed
+   * rows, so the `receiver` parameter every notification endpoint requires
+   * needs its own value.
+   *
+   * Optional, and `receiverId()` below falls back to `id` when it is absent —
+   * so nothing breaks before identity lands, and the real path has somewhere to
+   * put the value the moment it does.
+   *
+   * ⚠️ REVISIT WHEN AUTH LANDS. A real Entra tenant supplies one identity and
+   * this field should disappear rather than be populated.
+   */
+  notificationReceiverId?: string
+}
 
 /**
  * ROLE → PERMISSIONS, FIXTURES ONLY.
@@ -258,3 +276,15 @@ export function hasPermission(permissions: ResolvedPermissions, action: PermActi
  * model the app actually has, and the 08 migration is raised separately rather
  * than smuggled in.
  */
+
+/**
+ * The identifier to send as `receiver` on every notification call.
+ *
+ * ⚠️ A FUNCTION RATHER THAN A FIELD, so there is exactly one place that decides
+ * the fallback. Two call sites each writing `user.notificationReceiverId ?? user.id`
+ * is two places for the rule to drift, and the symptom of drift is a 404 from an
+ * ownership check rather than anything that names the cause.
+ */
+export function notificationReceiverId(user: AuthUser): string {
+  return user.notificationReceiverId ?? user.id
+}

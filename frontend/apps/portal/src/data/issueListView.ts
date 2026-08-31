@@ -1,7 +1,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { useStore } from 'zustand'
 import type { DataTableSort } from '@pqms/ui-library'
-import { createIssueFiltersStore, type IssueFiltersStore } from '@/stores/issueFilters.store'
+import { createIssueFiltersStore, type IssueFiltersStore } from '@/stores/issue-management'
 
 /**
  * PERSISTED ISSUE-LIST VIEW STATE — search, filters, sort, page, page size and
@@ -259,7 +259,7 @@ export function clearIssueListView(): void {
  * ─── WHAT MOVED, AND WHAT DID NOT ────────────────────────────────────────────
  *
  * The state and its sessionStorage mirroring used to live here in `useState`
- * plus an effect. They now live in `stores/issueFilters.store.ts` under
+ * plus an effect. They now live in `stores/issue-management/issue-filters.store.ts` under
  * `persist`, per `04-state-management.md`'s "Issue-filters persistence".
  *
  * ⚠️ THE RETURNED SHAPE IS BYTE-FOR-BYTE THE SAME, and that is the point. Each

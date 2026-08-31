@@ -20,7 +20,8 @@ import {
   hasPermission,
   selectRole,
   selectScope,
-} from '@/stores/auth.store'
+  notificationReceiverId,
+} from '@/stores/auth'
 import type { PermAction, RoleKey } from '@/data/types'
 
 beforeEach(() => {
@@ -204,5 +205,34 @@ describe('scope', () => {
 
     useAuthStore.getState().setUser(userForRole('ADMIN'))
     expect(selectScope(useAuthStore.getState())).toBe('all')
+  })
+})
+
+describe('notificationReceiverId', () => {
+  /*
+   * ⚠️ IT IS NOT `id`, AND THAT IS NOT AN OVERSIGHT. There is no shared user
+   * space between this frontend's seeded ids (`u-se`) and the notification
+   * service's own seed rows, so the `receiver` parameter every notification
+   * endpoint requires needs its own value. Ported from the Vue auth store,
+   * which records the same reason.
+   */
+  it('prefers the notification identity when the user has one', () => {
+    const user = { ...userForRole('SE'), notificationReceiverId: 'qe_user_01@pqms.internal' }
+    expect(notificationReceiverId(user)).toBe('qe_user_01@pqms.internal')
+  })
+
+  // The fallback is what keeps every call site working before identity lands.
+  it('falls back to the id when it does not', () => {
+    const user = userForRole('SE')
+    expect(notificationReceiverId(user)).toBe(user.id)
+  })
+
+  /*
+   * A function rather than two call sites each writing `x.notificationReceiverId
+   * ?? x.id`. Two copies are two places for the rule to drift, and the symptom
+   * of drift is a 404 from the backend's ownership check — which names nothing.
+   */
+  it('is the single place the fallback is decided', () => {
+    expect(typeof notificationReceiverId).toBe('function')
   })
 })

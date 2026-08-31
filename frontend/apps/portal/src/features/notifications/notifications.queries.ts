@@ -80,15 +80,23 @@ export function useMarkNotificationRead() {
   const client = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => notifications.markRead(id),
+    /**
+     * ⚠️ `recipient` IS CARRIED THROUGH, not dropped. On the real path it is
+     * the backend's ownership check rather than a filter — a call without it
+     * 404s instead of mutating, and the optimistic update below then rolls back
+     * for a reason nothing on the client can explain. See
+     * `services/notification.service.ts`.
+     */
+    mutationFn: ({ id, recipient }: { id: string; recipient?: string }) =>
+      notifications.markRead(id, recipient),
 
-    async onMutate(id) {
+    async onMutate({ id }) {
       const key = queryKeys.notifications.all()
       await client.cancelQueries({ queryKey: key })
       const previous = client.getQueriesData({ queryKey: key })
 
       client.setQueriesData<Awaited<ReturnType<typeof notifications.list>>>(
-        { queryKey: key },
+        { queryKey: queryKeys.notifications.list() },
         (current) => {
           if (!current) return current
           const rows = current.rows.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -102,10 +110,24 @@ export function useMarkNotificationRead() {
         },
       )
 
+      /*
+       * The badge is a separate cache entry, so the list write above does not
+       * touch it. Decremented rather than recomputed here BECAUSE it counts the
+       * whole set while the cached list is only a page — recomputing from the
+       * page would drop the badge to the page's unread count and lose every
+       * unread row beyond it.
+       *
+       * Floored at zero: a double click fires this twice, and a negative badge
+       * is worse than a stale one.
+       */
+      client.setQueriesData<number>({ queryKey: queryKeys.notifications.unreadCountAll() }, (n) =>
+        typeof n === 'number' ? Math.max(0, n - 1) : n,
+      )
+
       return { previous }
     },
 
-    onError(_error, _id, context) {
+    onError(_error, _variables, context) {
       // Restore EVERY cached list we touched, not just one — `setQueriesData`
       // above wrote to all of them (the dropdown and the full page are separate
       // keys), so a single-entry rollback would leave the other one wrong.
@@ -133,11 +155,22 @@ export function useMarkAllNotificationsRead() {
       await client.cancelQueries({ queryKey: key })
       const previous = client.getQueriesData({ queryKey: key })
 
+      /*
+       * ⚠️ SCOPED TO THE LIST KEYS, NOT THE WHOLE `notifications` PREFIX. The
+       * prefix now also matches the unread-count entry, whose cached value is a
+       * NUMBER — writing this list shape over it would replace `4` with an
+       * object and the badge would render nothing at all. The cancel and the
+       * snapshot above still cover the whole prefix, which is what they should
+       * do; only the WRITE has to be narrow.
+       */
       client.setQueriesData<Awaited<ReturnType<typeof notifications.list>>>(
-        { queryKey: key },
+        { queryKey: queryKeys.notifications.list() },
         (current) =>
           current ? { rows: current.rows.map((n) => ({ ...n, read: true })), unreadCount: 0 } : current,
       )
+
+      // The badge is its own cache entry, so it needs its own optimistic write.
+      client.setQueriesData<number>({ queryKey: queryKeys.notifications.unreadCountAll() }, () => 0)
 
       return { previous }
     },
@@ -149,5 +182,26 @@ export function useMarkAllNotificationsRead() {
     onSettled() {
       void client.invalidateQueries({ queryKey: queryKeys.notifications.all() })
     },
+  })
+}
+
+/**
+ * The unread count behind the header badge.
+ *
+ * ⚠️ A SEPARATE QUERY, NOT A FIELD READ OFF `useNotifications()`. The list is a
+ * bounded page — the dropdown asks for six — so counting its unread rows caps
+ * the badge at the page size, and five unread looks identical to five hundred.
+ * The backend exposes a dedicated `unread-count` endpoint for exactly this, and
+ * it is cheap enough to poll.
+ *
+ * Same 60-second cadence and same fixtures-mode gate as the list, for the same
+ * reasons — see `useNotifications` above, which documents each line.
+ */
+export function useUnreadNotificationCount(recipient?: string) {
+  return useQuery({
+    queryKey: queryKeys.notifications.unreadCount(recipient),
+    queryFn: () => notifications.unreadCount(recipient),
+    refetchInterval: 60_000,
+    enabled: !isFixtureMode(),
   })
 }

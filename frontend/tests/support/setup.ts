@@ -16,7 +16,7 @@
 process.env.TZ = 'America/New_York'
 
 import { configure } from '@testing-library/dom'
-import { useAuthStore, userForRole } from '@/stores/auth.store'
+import { useAuthStore, userForRole } from '@/stores/auth'
 
 /**
  * Global test-environment configuration.
@@ -123,7 +123,7 @@ beforeEach(() => {
  * ⚠️ ADDED WITH THE ZUSTAND AUTH STORE, AND IT IS THE HAZARD THAT MIGRATION
  * INTRODUCES. `RoleProvider` used to hold the session in `useState`, so every
  * mount started from `initialRole` and unmounting genuinely discarded it. The
- * session now lives in a module singleton (`@/stores/auth.store`), and a module
+ * session now lives in a module singleton (`@/stores/auth`), and a module
  * singleton is created once per test FILE — so a test that renders as ADMIN
  * leaves the process logged in as ADMIN for everything that follows it.
  *

@@ -1,5 +1,5 @@
 import type { RoleKey, User } from './types'
-import { useAuthStore, userForRole } from '@/stores/auth.store'
+import { useAuthStore, userForRole } from '@/stores/auth'
 
 /** The default session role. Matches the store's own initial identity. */
 const DEFAULT_ROLE: RoleKey = 'SE'
@@ -85,7 +85,7 @@ export function capabilityOf(user: Pick<User, 'cap'>): Capability {
  * outside the React tree and so cannot call `useRole()`. That workaround existed
  * only because the session lived in React state.
  *
- * It now lives in `stores/auth.store.ts`, which is a module singleton reachable
+ * It now lives in `stores/auth/auth.store.ts`, which is a module singleton reachable
  * from anywhere — exactly the property `04-state-management.md` requires of it:
  * *"safe for `getState().permissions` to read from middleware, outside React."*
  * So this reads the store directly. There is one source of truth again, and the

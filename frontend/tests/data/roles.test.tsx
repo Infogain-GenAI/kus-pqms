@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import { Guard, RoleProvider, useRole } from '@/data/roles'
-import { useAuthStore, userForRole } from '@/stores/auth.store'
+import { useAuthStore, userForRole } from '@/stores/auth'
 
 beforeEach(() => {
   useAuthStore.getState().setUser(userForRole('SE'))

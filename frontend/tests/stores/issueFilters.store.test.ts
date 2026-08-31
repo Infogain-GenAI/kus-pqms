@@ -11,7 +11,7 @@
 // a rendered table — plus the two actions 04 names that no screen calls yet, and
 // the write guard the scope field made necessary.
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createIssueFiltersStore } from '@/stores/issueFilters.store'
+import { createIssueFiltersStore } from '@/stores/issue-management'
 import {
   EMPTY_ISSUE_FILTERS,
   ISSUE_LIST_VIEW_STORAGE_KEY,

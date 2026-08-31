@@ -1,9 +1,9 @@
 import { useMemo, type ReactNode } from 'react'
 import type { PermAction, RoleKey, User } from './types'
-import { useAuthStore, hasPermission, selectScope, userForRole } from '@/stores/auth.store'
+import { useAuthStore, hasPermission, selectScope, userForRole } from '@/stores/auth'
 
 /**
- * ROLE CONTEXT — NOW A THIN ADAPTER OVER `stores/auth.store.ts`.
+ * ROLE CONTEXT — NOW A THIN ADAPTER OVER `stores/auth/auth.store.ts`.
  *
  * ─── WHAT CHANGED, AND WHAT DELIBERATELY DID NOT ─────────────────────────────
  *

@@ -24,6 +24,19 @@ import { simulateLatency } from './fixture-latency'
 export interface NotificationQuery {
   /** How many to return. The panel asks for few; the page asks for all. */
   limit?: number
+  /**
+   * Which page, 0-BASED.
+   *
+   * ⚠️ ZERO-BASED BECAUSE THE BACKEND'S ENVELOPE IS SPRING'S, and the issue
+   * mappers carry the same note. A 1-based value here does not error — it
+   * silently skips the first page's worth of rows, which reads as missing data.
+   *
+   * The fixture path below ignores it: the seed is small enough that the panel
+   * and the full feed both fit in one page, and inventing paging over a
+   * thirty-row array would test the fixture rather than the app. It is accepted
+   * here so the real path can send it without the two query shapes diverging.
+   */
+  page?: number
   /** Reserved for when the seed carries a recipient. See the module note. */
   recipient?: string
 }
@@ -84,4 +97,21 @@ export async function markAllNotificationsRead(recipient?: string): Promise<void
     const owner = (n as AppNotification & { recipient?: string }).recipient
     if (!recipient || !owner || owner === recipient) n.read = true
   }
+}
+
+/**
+ * `GET /notifications/unread-count`.
+ *
+ * ⚠️ COMPUTED OVER THE WHOLE SCOPED SET, never over a page — that is the entire
+ * reason this is a separate endpoint rather than a field on the list response.
+ * A dropdown asking for six rows would otherwise cap the badge at six, and five
+ * unread would look identical to five hundred.
+ */
+export async function fetchUnreadNotificationCount(recipient?: string): Promise<number> {
+  await simulateLatency()
+
+  return NOTIFICATIONS.filter((n) => {
+    const owner = (n as AppNotification & { recipient?: string }).recipient
+    return (!recipient || !owner || owner === recipient) && !n.read
+  }).length
 }
