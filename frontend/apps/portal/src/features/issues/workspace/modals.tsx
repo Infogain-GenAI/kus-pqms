@@ -161,7 +161,7 @@ export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issu
    * reason covering "added 3, removed 2" is a weaker record, and its
    * `saveSameModal()` says each change gets its own audit entry.
    */
-  const { additions, removals, changedIds } = linkChangeSet(committed, draft)
+  const { additions, removals, changedIds, mustRenderIds } = linkChangeSet(committed, draft)
   const justify = usePendingJustifications(changedIds)
 
   /*
@@ -173,10 +173,10 @@ export function ManageLinksModal({ open, issue, onClose }: { open: boolean; issu
    * keeps it in place instead, flagged (`_mrUnlink[p.id]` drives a Pending state
    * with an Undo), so the change stays visible and reversible until Save.
    */
-  const rows: { id: string; state: 'linked' | 'pendingLink' | 'pendingUnlink' }[] = [
-    ...committed.map((id) => ({ id, state: (draft.includes(id) ? 'linked' : 'pendingUnlink') as 'linked' | 'pendingUnlink' })),
-    ...additions.map((id) => ({ id, state: 'pendingLink' as const })),
-  ]
+  const rows: { id: string; state: 'linked' | 'pendingLink' | 'pendingUnlink' }[] = mustRenderIds.map((id) => ({
+    id,
+    state: !committed.includes(id) ? 'pendingLink' : draft.includes(id) ? 'linked' : 'pendingUnlink',
+  }))
   useEffect(() => { if (open) justify.reset() }, [open])
 
   const save = () => {

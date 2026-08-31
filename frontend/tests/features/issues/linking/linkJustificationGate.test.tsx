@@ -265,9 +265,16 @@ describe('Issue-list modal — a pending unlink with NO match overlap', () => {
    *
    * ⚠️ THE SEED CANNOT REACH THIS ON ITS OWN. Checked: zero of its committed
    * links have empty overlap, which is exactly why the defect survived review of
-   * the seeded paths. The condition is created here the way a user creates it —
-   * by linking two unrelated issues — because the product allows any id to be
-   * linked from the search box.
+   * the seeded paths.
+   *
+   * SO THE ARRANGE STEP CALLS `store.linkIssue()` DIRECTLY. Stated precisely,
+   * because an earlier note claimed this was done "the way a user does it": it
+   * is NOT driven through the search UI. It calls the same store method a user's
+   * link action calls, reaching an identical committed state, and the ASSERT
+   * phase then exercises the real checkbox / justify / Save UI. That is sound
+   * for what this test is about — row visibility for a zero-overlap committed
+   * link — but it does not cover the search box that would create such a link,
+   * and describing it as a user journey overstated it.
    */
   const ZERO_OVERLAP = 'ST-260002'
   const WHY = 'Linked by hand during triage; no classification overlap at all.'

@@ -31,10 +31,39 @@ export interface LinkChangeSet {
   removals: string[]
   /** Every id whose relationship state differs between `committed` and `draft`. */
   changedIds: string[]
+  /**
+   * Every id a surface MUST keep on screen — `committed` ∪ `draft`.
+   *
+   * ⚠️ THE OBLIGATION IS NOW DERIVED FROM ONE PLACE, WHICH IT WAS NOT BEFORE.
+   * Previously each surface proved the property in its own shape: Manage Links
+   * built rows from `committed.map` plus `additions.map`, the issue-list modal
+   * ORed `changedIds.includes(...)` into a filter. Both were correct, and both
+   * had to be independently correct — so an edit to either render function could
+   * drop the contract without touching this file, which is exactly how the
+   * original vanishing-row defect got past review.
+   *
+   * A surface may show MORE than this (the issue-list modal also shows unlinked
+   * classification matches as suggestions). It may never show less.
+   *
+   * ⚠️ STILL A CONVENTION AT THE POINT OF USE, said plainly rather than implied:
+   * nothing forces a render function to consult this. It removes the second
+   * derivation, not the need to honour it. Two surfaces with different row
+   * shapes cannot share a row BUILDER without contortion, so this is as
+   * structural as it gets cheaply — and an unenforced contract described as
+   * enforced is how the defect survived, so the limit is written down.
+   */
+  mustRenderIds: string[]
 }
 
 export function linkChangeSet(committed: readonly string[], draft: readonly string[]): LinkChangeSet {
   const additions = draft.filter((id) => !committed.includes(id))
   const removals = committed.filter((id) => !draft.includes(id))
-  return { additions, removals, changedIds: [...removals, ...additions] }
+  return {
+    additions,
+    removals,
+    changedIds: [...removals, ...additions],
+    // `committed` first so a batch reads in the order the design's list does:
+    // existing relationships, then arrivals.
+    mustRenderIds: [...committed, ...additions],
+  }
 }

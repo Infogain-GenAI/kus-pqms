@@ -13,6 +13,7 @@ import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider, useStore } from '@/data/store'
 import { CreateIssueScreen } from '@/features/issues/CreateIssueScreen'
+import { renderWithStore } from '../../../support/storeHarness'
 import entryMessages from '@/features/issues/issue-entry/IssueEntry.i18n'
 
 const Wrapped = ({ children }: { children: ReactNode }) => (
@@ -105,15 +106,34 @@ describe('the form is a draft until Register Issue', () => {
   })
 
   it('typing does not create an issue — only Register Issue does', () => {
-    const { result } = renderHook(() => useStore(), { wrapper: Wrapped })
-    const before = result.current.issues.length
+    /*
+     * ⚠️ THIS TEST WAS VACUOUS, AND THE SHAPE IS WORTH LEARNING.
+     *
+     * It used to call `renderHook(() => useStore(), { wrapper: Wrapped })` and
+     * `renderCreate()` separately. The same `wrapper` REFERENCE still mounts two
+     * INDEPENDENT `StoreProvider`s — so `result.current` read a store the screen
+     * never touched, and `expect(...).toBe(before)` passed unconditionally. It
+     * would have passed identically if typing DID write to the store.
+     *
+     * It survived because the assertion is NEGATIVE. A negative assertion
+     * against the wrong object is indistinguishable from the behaviour it claims
+     * to prove, which is why this needs one provider AND a mutation check: an
+     * assertion nobody has seen fail is not yet a test.
+     */
+    // `renderWithStore` returns the store the component ACTUALLY uses — see the
+    // helper for why the two-provider version of this could never fail.
+    const { store } = renderWithStore(<CreateIssueScreen />, { wrapper: Wrapped })
 
-    renderCreate()
+    const before = store().issues.length
     const boxes = screen.getAllByRole('textbox')
-    if (boxes[0]) fireEvent.change(boxes[0], { target: { value: 'a draft title' } })
+    // Asserted, not guarded: `if (boxes[0])` let the test pass having done
+    // nothing at all if the field ever stopped rendering.
+    expect(boxes[0], 'no text field to type into').toBeTruthy()
+    fireEvent.change(boxes[0], { target: { value: 'a draft title' } })
 
-    // The screen holds its own state; the store is untouched until commit.
-    expect(result.current.issues.length).toBe(before)
+    // The screen holds its own state; the store it actually uses is untouched
+    // until commit.
+    expect(store().issues.length).toBe(before)
   })
 })
 

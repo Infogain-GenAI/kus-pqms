@@ -58,7 +58,7 @@ export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; i
       .filter((c) => c.reasons.length > 0 || committed.includes(c.issue.id))
   }, [store.issues, issue, issueId, committed])
 
-  const { additions, removals, changedIds } = linkChangeSet(committed, draft)
+  const { additions, removals, changedIds, mustRenderIds } = linkChangeSet(committed, draft)
 
   /*
    * ⚠️ `changedIds` IS PART OF THIS PREDICATE, AND LEAVING IT OUT WAS A DEFECT.
@@ -81,7 +81,7 @@ export function LinkedIssuesModal({ open, issueId, onClose }: { open: boolean; i
    * `linkChangeSet`, which is where that contract is written down.
    */
   const visible = candidates
-    .filter((c) => draft.includes(c.issue.id) || c.reasons.length > 0 || changedIds.includes(c.issue.id))
+    .filter((c) => mustRenderIds.includes(c.issue.id) || c.reasons.length > 0)
     .filter((c) => c.issue.id.toUpperCase().includes(filterQuery.trim().toUpperCase()))
   const selectedToLink = additions.length
 
