@@ -33,6 +33,14 @@ const messages: ComponentI18nMessages = {
     bulkChangeStatus: 'Change Status',
     bulkExport: 'Export',
     bulkAssignRole: 'Assign Role',
+    /*
+     * ICU variants replacing `selected.length === 1 ? 'Issue Selected' : 'Issues
+     * Selected'` — a hand-rolled plural 00-core-rules.md bans by name, and it
+     * was hardcoded copy besides. 09's reason outlives tidiness: Korean's plural
+     * rules do not map onto English's binary split.
+     */
+    bulkSelected_one: '{{count}} Issue Selected',
+    bulkSelected_other: '{{count}} Issues Selected',
     bulkHint: 'Select rows to change status, assign a role, or export',
 
     /* ─── BULK ASSIGN ROLE ────────────────────────────────────────── */

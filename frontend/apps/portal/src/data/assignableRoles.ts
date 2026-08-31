@@ -36,6 +36,13 @@ export const ASSIGNABLE_ROLES = [
 
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number]['code']
 
-/** The label for a code, or the code itself if it is not one we know. */
-export const assignableRoleLabel = (code: string): string =>
-  ASSIGNABLE_ROLES.find((r) => r.code === code)?.label ?? code
+/*
+ * ⚠️ THERE WAS AN `assignableRoleLabel(code)` HELPER HERE AND IT IS DELETED.
+ *
+ * Nothing called it — it was written on spec alongside the vocabulary, and the
+ * only consumer reads `label` off the entries directly. The coverage gate found
+ * it as an uncovered function, and the honest fix for an unused export is to
+ * remove it, not to write a test that exercises it so the number moves. If a
+ * surface later needs to render a code as its full title, add it back with that
+ * caller.
+ */

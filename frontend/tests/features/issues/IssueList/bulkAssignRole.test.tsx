@@ -41,6 +41,26 @@ describe('the bulk bar offers role assignment', () => {
     expect(screen.getByRole('button', { name: L.bulkAssignRole })).toBeTruthy()
   })
 
+  it('LABELS THE SELECTION WITH AN ICU VARIANT, resolved live', () => {
+    /*
+     * This was `selected.length === 1 ? 'Issue Selected' : 'Issues Selected'` —
+     * a hand-rolled plural 00 bans by name, and hardcoded copy besides.
+     *
+     * ⚠️ ASSERTED THROUGH THE RENDERED BAR, not by reading the keys back out of
+     * the bundle. Declaring `bulkSelected_one/_other` proves nothing about
+     * whether the screen passes `count`, and a missing count silently selects
+     * the `_other` variant for every quantity.
+     */
+    renderWithStore(<IssueListScreen />)
+    selectRows(1)
+    expect(document.body.textContent).toContain('1 Issue Selected')
+    // Case-sensitive and singular-specific: the plural form must NOT be showing.
+    expect(document.body.textContent).not.toContain('1 Issues Selected')
+
+    fireEvent.click(screen.getAllByRole('checkbox')[2])
+    expect(document.body.textContent).toContain('2 Issues Selected')
+  })
+
   it('offers all FIVE canonical roles, not the three our old port allowed', () => {
     // The previous version typed the role as `RoleKey` and so could only offer
     // the session roles minus ADMIN. The canonical's menu has five.

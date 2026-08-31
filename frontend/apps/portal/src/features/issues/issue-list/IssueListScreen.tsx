@@ -279,7 +279,7 @@ export function IssueListScreen() {
       {/* Bulk-action bar */}
       <BulkActionBar
         count={selected.length}
-        label={selected.length === 1 ? 'Issue Selected' : 'Issues Selected'}
+        label={t('bulkSelected', { count: selected.length })}
         actions={[
           { key: 'status', label: t('bulkChangeStatus'), icon: RefreshCw, onClick: () => setBulkModalOpen(true) },
           { key: 'assign', label: t('bulkAssignRole'), icon: UserRoundCog, onClick: () => setAssignOpen(true) },
