@@ -4,7 +4,9 @@ import {
   FilePlus,
   FilePlus2,
   Flag,
+  GitBranch,
   GitCompareArrows,
+  GitMerge,
   Hash,
   Link2,
   Link2Off,
@@ -12,9 +14,9 @@ import {
   Package,
   SquarePen,
   Tags,
+  type LucideIcon,
   UserRoundCheck,
   UserRoundCog,
-  type LucideIcon,
 } from 'lucide-react'
 
 /**
@@ -94,6 +96,26 @@ export const HISTORY_CATALOGUE: Record<string, HistoryEventPresentation> = {
   'Issue linked': { label: 'Issue linked', segment: 'lifecycle', icon: Link2, tint: 'blue' },
   'Issues linked': { label: 'Issues linked', segment: 'lifecycle', icon: Link2, tint: 'blue' },
   'Issue unlinked': { label: 'Issue unlinked', segment: 'lifecycle', icon: Link2Off, tint: 'neutral' },
+
+  /*
+   * ─── ISSUE-GROUP FORMATION, all three outcomes ────────────────────────────
+   *
+   * Written at registration by `createIssue` via `formIssueGroup`. The three are
+   * distinguished ONLY here and in the audit trail — on screen a group looks the
+   * same however it came about, so losing the distinction loses the only record
+   * that a merge was a merge.
+   *
+   * ⚠️ ADDED WITH the write path, not after it. This file previously held
+   * `'Bulk role assignment'` for a feature a merge had deleted — an entry
+   * pointing at an action nothing could produce. The inverse (an action with no
+   * entry) renders a timeline row with no icon or label, which is why these land
+   * in the same change as the code that emits them.
+   */
+  'Issue Group created': { label: 'Issue group created', segment: 'lifecycle', icon: GitBranch, tint: 'blue' },
+  'Issue linked to Issue Group': { label: 'Joined an issue group', segment: 'lifecycle', icon: GitBranch, tint: 'blue' },
+  // Purple, unlike its siblings: a merge folds two groups into one and is the
+  // largest of the three events. The tint is the only at-a-glance difference.
+  'Issue Groups merged': { label: 'Issue groups merged', segment: 'lifecycle', icon: GitMerge, tint: 'purple' },
 
   // ── Activity / audit log ──
   'Issue record created': { label: 'Issue record created', segment: 'audit', icon: FilePlus, tint: 'neutral' },

@@ -25,6 +25,7 @@ import { assertSeedAnchors } from './assertSeed'
 import { newId } from './util'
 import { ELIGIBLE_PARTS, TEAM_DIRECTORY, type PartOption, type TeamMember } from './investigation'
 import type { AssignableRole } from './assignableRoles'
+import { formIssueGroup } from './issueGroups'
 import { findPriorityItem, priorityLetter, priorityTotal, type PriorityLetter } from './priorityMatrix'
 
 // Fail fast (dev server, preview build and every fidelity capture) if the dataset's
@@ -474,17 +475,77 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updatedAt: now(),
     }
     const links = input.linkedIssueIds ?? []
+
+    /*
+     * ─── ISSUE-GROUP FORMATION HAPPENS HERE, AT REGISTRATION, AND NOWHERE ELSE ─
+     *
+     * The design resolves group membership only at this moment, from whatever
+     * ended up in the link set — see `formIssueGroup`, which owns every rule.
+     * Registering ONE issue can therefore rewrite SEVERAL others: pulling in a
+     * group transitively, or merging two groups, changes their members' `groupId`
+     * and writes history to each of them.
+     *
+     * ⚠️ THIS WAS MISSING UNTIL NOW, and the reason it went unnoticed is worth
+     * keeping: the read side (group cards, Parent/Child badges, the expander)
+     * shipped first and renders SEEDED groups correctly, so the screen looked
+     * complete. A read-only port over seeded data is indistinguishable from a
+     * finished one by inspection.
+     */
+    const formation = formIssueGroup({
+      newIssueId: issue.id,
+      newIssueCreatedAt: issue.createdAt,
+      linkedIds: links,
+      pool: issues,
+    })
+
+    /*
+     * The chronology guard refusing. UNREACHABLE BY CONSTRUCTION: `CreateIssueScreen`
+     * checks the same formation before calling this and declines with the design's
+     * own message, so this is a backstop for a second caller — and it throws rather
+     * than silently forming an inverted hierarchy, which is the outcome the guard
+     * exists to prevent. See `formIssueGroup` for why it never fires on this seed.
+     */
+    if (formation.blockedReason) throw new Error(`createIssue refused: ${formation.blockedReason}`)
+
+    const grouped = formation.groupId
+    const rewrite = new Set(formation.rewriteIds)
+
     setIssues((list) => [
-      issue,
-      // Mirror the link onto each counterpart so the relationship reads the same from
-      // either side — the same invariant linkIssue()/unlinkIssue() maintain.
-      ...list.map((i) => (links.includes(i.id) ? { ...i, linkedIssueIds: Array.from(new Set([...(i.linkedIssueIds ?? []), issue.id])), updatedAt: now() } : i)),
+      grouped ? { ...issue, groupId: grouped } : issue,
+      ...list.map((i) => {
+        // Mirror the link onto each counterpart so the relationship reads the same from
+        // either side — the same invariant linkIssue()/unlinkIssue() maintain.
+        const linked = links.includes(i.id)
+          ? { ...i, linkedIssueIds: Array.from(new Set([...(i.linkedIssueIds ?? []), issue.id])), updatedAt: now() }
+          : i
+        // THE FAN-OUT: a merge, or absorbing a standalone, moves other issues
+        // into this group. Only those whose group actually changes are touched.
+        return rewrite.has(i.id) ? { ...linked, groupId: grouped ?? undefined, updatedAt: now() } : linked
+      }),
     ])
+
     appendAudit(issue.id, actor, input.submit ? 'Submitted' : 'Draft saved', input.submit ? 'Draft → Open' : undefined)
     if (links.length) appendAudit(issue.id, actor, 'Issues linked', links.join(', '))
     for (const log of input.linkJustifications ?? []) {
       appendAudit(issue.id, actor, 'Linked issue(s) added', `${log.ids.join(', ')} — ${log.justification}`)
     }
+
+    if (formation.action && grouped) {
+      /*
+       * ONE REASON, REUSED — no new justification is captured for the group.
+       * The design embeds the link justification the confirmation modal already
+       * collected into the group log, so the governance requirement is met by
+       * data we were already carrying. Only the WRITING is new.
+       */
+      const why = (input.linkJustifications ?? []).map((l) => l.justification).join(' | ')
+      const detail = `${[...formation.memberIds, issue.id].join(', ')}. Parent Issue: ${formation.parentId}.${why ? ` Justification: "${why}".` : ''}`
+      appendAudit(issue.id, actor, formation.action, detail)
+      // MIRRORED to every existing member: the group changed for them too, and an
+      // audit trail that records it on only the new issue leaves the others with
+      // no explanation for why their parent or membership moved.
+      for (const id of formation.memberIds) appendAudit(id, actor, formation.action, detail)
+    }
+
     return issue
   }, [issues, appendAudit])
 

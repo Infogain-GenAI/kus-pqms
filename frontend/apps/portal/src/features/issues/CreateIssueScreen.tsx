@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronDown, ChevronUp, CornerDownRight, CopyCheck, Crown, Eye, GitBranch, History, Link, Link2, RotateCcw, Search, SearchX, Send, Sparkles, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, CopyCheck, CornerDownRight, Crown, Eye, GitBranch, History, Link, Link2, RotateCcw, Search, SearchX, Send, Sparkles, TriangleAlert, X } from 'lucide-react'
 // `SOURCE`, `SOURCE_KEYS` and `SourceKey` went with the source selector, and
 // `SourceBadge` has now followed them: the suggestion card rendered one for the
 // issues it suggests, but the design's card has no source badge at all.
@@ -22,6 +22,7 @@ import { ExistingIssueModal } from './ExistingIssueModal'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { relatedRank } from '@/data/relatedRank'
+import { formIssueGroup } from '@/data/issueGroups'
 import {
   clampJustification,
   isJustificationValid,
@@ -336,9 +337,35 @@ export function CreateIssueScreen() {
     setAttempted(false)
   }
 
+  const [groupBlocked, setGroupBlocked] = useState('')
+
   const register = () => {
     setAttempted(true)
     if (errors.length > 0) return
+
+    /*
+     * ─── THE CHRONOLOGY GUARD, CHECKED BEFORE COMMITTING ──────────────────────
+     *
+     * Group parentage is derived from registration order, so a linked issue dated
+     * in the FUTURE would sort ahead of nothing and silently promote this
+     * brand-new issue to Parent. The design refuses to register at all rather
+     * than produce an inverted hierarchy, with this message.
+     *
+     * Checked here as well as in the store because only the screen can tell the
+     * user. `createIssue` throws on the same condition as a backstop for any
+     * other caller. See `formIssueGroup` for why neither fires on today's seed.
+     */
+    const formation = formIssueGroup({
+      newIssueId: 'pending',
+      newIssueCreatedAt: new Date().toISOString(),
+      linkedIds: linkedIds,
+      pool: store.issues,
+    })
+    if (formation.blockedReason) {
+      setGroupBlocked(formation.blockedReason)
+      return
+    }
+    setGroupBlocked('')
     const created = store.createIssue(
       {
         title: title.trim(),
@@ -472,6 +499,19 @@ export function CreateIssueScreen() {
             while they scroll to them — inside the scroll port it would scroll
             away exactly when it is being acted on. */}
         <ValidationBanner errors={shown} />
+
+        {/*
+          The chronology refusal. Rendered beside the validation banner rather
+          than inside it: that banner counts FIELD errors, and this is not a field
+          — nothing the user can correct in the form, only by changing which
+          issues are linked.
+        */}
+        {groupBlocked && (
+          <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', padding: 'var(--space-3)', border: 'var(--border-width) solid var(--danger-500)', borderRadius: 'var(--radius-md)', background: 'var(--danger-50)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-primary)' }}>
+            <Icon icon={TriangleAlert} size={15} style={{ color: 'var(--danger-500)', flex: 'none' }} />
+            {groupBlocked}
+          </div>
+        )}
       </PageContainer>
 
       {/*
