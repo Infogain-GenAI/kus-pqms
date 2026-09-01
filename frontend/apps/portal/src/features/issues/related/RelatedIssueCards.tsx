@@ -282,8 +282,13 @@ export function GroupCard({
    * says what it does rather than just "Unlink".
    *
    * Immediate, so there is no Save to gate: the justification is mandatory at
-   * the point of action. `LinkJustifyBox` in the same immediate mode
-   * `LinkIssuesSection` uses; the draft/commit hook is deliberately not involved.
+   * the point of action. `LinkJustifyBox` in immediate mode; the draft/commit
+   * hook is deliberately not involved.
+   *
+   * (This used to cite `LinkIssuesSection` as the other user of that mode. That
+   * component has since been deleted — search folded into the Same Existing
+   * Issues section — so the citation is gone rather than left pointing at
+   * nothing.)
    */
   const [removing, setRemoving] = useState<string | null>(null)
   const [removeText, setRemoveText] = useState('')
