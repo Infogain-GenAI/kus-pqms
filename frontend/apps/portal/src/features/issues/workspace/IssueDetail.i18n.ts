@@ -70,6 +70,31 @@ const messages: ComponentI18nMessages = {
     shellChangeStatus: 'Change status',
     shellCreateQir: 'Create QIR',
 
+    /*
+     * ─── Issue Lifecycle stepper ─────────────────────────────────────────────
+     *
+     * THE FIVE STAGE NAMES ARE NOT HERE, and that is deliberate. They come from
+     * the ui-library's `STATUS` map, which is the one definition of what a
+     * status is called; copying them into this namespace would create a second
+     * set of words for the same thing that only one surface uses.
+     *
+     * The three state words are the prototype's own (`statusLabel` in its
+     * lifecycle tracker) and are read by screen readers only — the visual card
+     * carries the same information in colour, fill and glyph.
+     */
+    lifecycleTitle: 'Issue Lifecycle',
+    lifecycleCurrent: 'Current stage:',
+    lifecycleStateCompleted: 'Completed',
+    lifecycleStateCurrent: 'Current stage',
+    lifecycleStateUpcoming: 'Not yet reached',
+    /*
+     * The prototype invents a date and an author for a stage its log does not
+     * cover. This app shows real issues, so it says this instead — see the
+     * "WHAT THIS DOES NOT INVENT" note in `IssueDetails/issue-detail/lifecycle.ts`.
+     */
+    lifecycleNoRecord: 'The issue passed through this stage, but no transition is recorded in the audit trail.',
+    lifecycleClose: 'Close stage details',
+
     statusModalTitle: 'Change issue status',
     statusModalSubtitle: 'A valid reason is required for every status change.',
     statusModalCancel: 'Cancel',
@@ -135,6 +160,44 @@ const messages: ComponentI18nMessages = {
     linksModalUndo: 'Undo',
 
     linksModalFootnote: 'Links notify both owners; unlink is a soft delete recorded in the audit trail.',
+
+    /*
+     * ─── The prototype's own vocabulary for this modal ───────────────────────
+     *
+     * Every string below is lifted verbatim from the "MANAGE RELATED ISSUES
+     * MODAL (Issue Workspace)" block in `docs/ux-prototype/PQMS-2.html`.
+     *
+     * ⚠️ THE IMPACT SENTENCES ARE NOT HERE. They live in
+     * `features/issues/linking/relatedIssues.ts`, because CHOOSING between them
+     * is a three-way branch over two counts — logic, not copy. A component that
+     * merely picks a key would leave that decision spread over two files.
+     */
+    linksModalClose: 'Close',
+    linksModalGroupPill: 'Issue Group · {{group}}',
+    linksModalGroupCount_one: '{{count}} Issue',
+    linksModalGroupCount_other: '{{count}} Issues',
+    linksModalGroupNote:
+      'These issues are currently linked as one issue group. Changes made below will update the group when you save.',
+    linksModalRemove: 'Remove',
+    linksModalUnlinkJustification: 'Unlink justification',
+    linksModalLinkJustification: 'Link justification',
+    linksModalJustifyPlaceholder: 'Enter justification...',
+
+    linksModalSearchToggle: 'Search & Link Another Issue',
+    linksModalSearchPanelTitle: 'Search & link existing issue',
+    linksModalSearchClose: 'Close search',
+    linksModalSearchBoxPlaceholder: 'Search by Issue ID, title or keyword…',
+    linksModalSearchIdle: 'Search by Issue ID, title or keyword to find and link an existing issue.',
+    linksModalSearchNone: 'No issues match “{{query}}”. Try a different Issue ID, title or keyword.',
+    linksModalResultsHeading: 'Search results',
+    linksModalResultCount_one: '{{count}} issue',
+    linksModalResultCount_other: '{{count}} issues',
+    linksModalResultMeta: 'Model: {{model}}  ·  Classification: {{classification}}',
+    linksModalViewHistory: 'View History',
+
+    linksModalParentWarnTitle: 'Parent issue will change',
+    linksModalParentWarnBody:
+      '{{next}} will become the new Parent because it has the earliest Issue Date ({{date}}). The current Parent, {{current}}, will become a Child.',
 
     editFormTitle: 'Edit Issue',
     editFormCancel: 'Cancel',
