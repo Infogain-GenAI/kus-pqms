@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { IconChip } from '@/app/chrome'
 
@@ -8,13 +9,37 @@ export interface StatCardProps {
   tone?: string
   tint?: string
   pct?: string
+  /** True when this card's own filter is the one currently applied — draws an
+   * accent border so the active KPI stays visually distinguishable from the rest. */
+  selected?: boolean
   onClick?: () => void
 }
 
-/** KPI card: icon chip + optional pct badge, then count + uppercase label. Used as a strip of stat cards atop a list screen. */
-export function Card({ label, count, icon, tone = 'var(--text-primary)', tint = 'var(--accent-50)', pct, onClick }: StatCardProps) {
+/** KPI card: icon chip + optional pct badge, then count + uppercase label. Used as a strip of stat cards atop a list screen.
+ * Hover is JS-driven (inline styles have no `:hover`) — same pattern as IssueCard and Pagination's PageBtn: raises the
+ * shadow from xs to md and lifts the card 2px so it reads as elevated, matching the rest of the app's clickable-card
+ * affordance. Border stays fixed width — only shadow/transform change on hover; `selected` is a separate, hover-independent
+ * color swap on that same border, the same "same width, swap color" pattern Pagination's PageBtn uses for its active state.
+ * The .16s timing is a deliberate one-off — it doesn't match any of --dur-fast/base/slow (120/180/240ms). */
+export function Card({ label, count, icon, tone = 'var(--text-primary)', tint = 'var(--accent-50)', pct, selected = false, onClick }: StatCardProps) {
+  const [hover, setHover] = useState(false)
   return (
-    <button onClick={onClick} style={{ textAlign: 'left', background: 'var(--surface-card)', border: 'var(--border-width) solid var(--border-subtle)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-xs)', padding: 'var(--space-4)', cursor: onClick ? 'pointer' : 'default' }}>
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        textAlign: 'left',
+        background: 'var(--surface-card)',
+        border: `var(--border-width) solid ${selected ? 'var(--accent-500)' : 'var(--border-subtle)'}`,
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: hover ? 'var(--shadow-md)' : 'var(--shadow-xs)',
+        transform: hover ? 'translateY(-2px)' : 'translateY(0)',
+        padding: 'var(--space-4)',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'box-shadow .16s ease, transform .16s ease',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
         <IconChip icon={icon} tint={tint} color={tone === 'var(--text-primary)' ? 'var(--accent-600)' : tone} size={36} iconSize={17} />
         {pct && (

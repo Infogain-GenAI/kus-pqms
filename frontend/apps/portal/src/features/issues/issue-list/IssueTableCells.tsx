@@ -25,12 +25,3 @@ export function CountPill({ children }: { children: ReactNode }) {
     </span>
   )
 }
-
-/** Small "+N" badge appended next to a primary value that has additional hidden values. */
-export function MorePill({ n }: { n: number }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 6px', borderRadius: 'var(--radius-pill)', background: 'var(--neutral-100)', color: 'var(--text-secondary)', font: 'var(--fw-semibold) 11px/1 var(--font-body)' }}>
-      +{n}
-    </span>
-  )
-}

@@ -35,6 +35,7 @@ import { BulkAssignRoleModal } from './BulkAssignRoleModal'
 import { PageHeading } from '@/features/common/PageHeading'
 import { Card } from '@/features/common/Card'
 import { Tabs } from '@/features/common/Tabs'
+import { CountBadge } from '@/features/common/CountBadge'
 import { DataTable } from '@/features/common/DataTable'
 import { Footer } from '@/features/common/Footer'
 import { FilterDrawer } from '@/features/common/FilterDrawer'
@@ -67,7 +68,7 @@ export function IssueListScreen() {
   const { t } = useTranslation(NS)
   const nav = useNavigate()
   const { user, scope } = useRole()
-  const { issues, bulkStatus, bulkAssignRole, priorityResult } = useStore()
+  const { issues, bulkStatus, bulkAssignRole } = useStore()
 
   /*
    * ─── THE PERSISTED VIEW ─────────────────────────────────────────────────────
@@ -134,7 +135,11 @@ export function IssueListScreen() {
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
   const [assignOpen, setAssignOpen] = useState(false)
 
-  const myIssues = useMemo(() => issues.filter((i) => i.assignee === user.name || i.owner === user.name), [issues, user.name])
+  // "My Issues" = currently ASSIGNED to me, not "ever owned by me" — an issue
+  // Arpita reported but handed off to Park Soo-jin no longer belongs in her
+  // queue. Matches the Owner column's own display precedence (`assignee ?? owner`)
+  // and api/issues.ts's `scope: 'own'` semantics, kept in sync deliberately.
+  const myIssues = useMemo(() => issues.filter((i) => i.assignee === user.name), [issues, user.name])
   const scoped = tab === 'my' ? myIssues : issues
 
   // Option lists for the Filters drawer, derived from the dataset.
@@ -210,14 +215,20 @@ export function IssueListScreen() {
   const pct = (n: number) => (scoped.length ? `${Math.round((n / scoped.length) * 100)}%` : '0%')
   const setStatusFilter = (s: string) => setFlt((f) => ({ ...f, status: s }))
   // KPI strip per the prototype's kpiDefs: My/All Issues · Open · Investigating · QIR · Top Issue · Closed.
+  // `selected` mirrors whether THIS card's own filter is the one currently applied, so the
+  // KPI strip stays in visual sync with `flt.status` regardless of how it was set (a card
+  // click, or the Filter drawer).
   const kpiStatus = (k: StatusKey, icon: LucideIcon) => {
     const n = scoped.filter((i) => i.status === k).length
-    return { label: STATUS[k].label, count: n, tone: STATUS[k].color, tint: STATUS[k].tint, icon, pct: pct(n), apply: () => setStatusFilter(k) }
+    return { label: STATUS[k].label, count: n, tone: STATUS[k].color, tint: STATUS[k].tint, icon, pct: pct(n), selected: flt.status === k, apply: () => setStatusFilter(k) }
   }
-  const kpiDefs: { label: string; count: number; tone: string; tint: string; icon: LucideIcon; pct?: string; apply: () => void }[] = [
+  const kpiDefs: { label: string; count: number; tone: string; tint: string; icon: LucideIcon; pct?: string; selected: boolean; apply: () => void }[] = [
     // Clears any active status filter and stays on whichever tab (My/All) is already
     // selected — this card represents "everything in the current section," not a tab switch.
-    { label: tab === 'my' ? 'My Issues' : 'All Issues', count: scoped.length, tone: 'var(--text-primary)', tint: 'var(--accent-50)', icon: Layers, apply: () => setStatusFilter('') },
+    // Never `selected`: it is a CLEAR action, not a filter — highlighting it whenever no
+    // status filter is applied (its own resting state, immediately after being clicked)
+    // reads as "a filter is active" when the opposite is true.
+    { label: tab === 'my' ? 'My Issues' : 'All Issues', count: scoped.length, tone: 'var(--text-primary)', tint: 'var(--accent-50)', icon: Layers, selected: false, apply: () => setStatusFilter('') },
     kpiStatus('open', FolderOpen),
     kpiStatus('review', Search),
     kpiStatus('escalated', TriangleAlert),
@@ -225,7 +236,12 @@ export function IssueListScreen() {
     kpiStatus('closed', CircleCheck),
   ]
 
-  const columns = buildIssueColumns({ cols, nav: (path) => nav(path), priorityResult, onOpenLinked: setLinkedModalFor })
+  // How many filter fields are currently applied — shown as a badge on the
+  // Filter button so the toolbar itself signals when the list is narrowed,
+  // without having to open the drawer to find out.
+  const activeFilterCount = Object.values(flt).filter(Boolean).length
+
+  const columns = buildIssueColumns({ cols, nav: (path) => nav(path), onOpenLinked: setLinkedModalFor })
 
   const onToggleAll = (e: ChangeEvent<HTMLInputElement>) => setSelected(e.target.checked ? pageRows.map((r) => r.id) : [])
   const onToggleRow = (id: string | number) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
@@ -257,7 +273,7 @@ export function IssueListScreen() {
       {/* KPI strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
         {kpiDefs.map((k) => (
-          <Card key={k.label} label={k.label} count={k.count} icon={k.icon} tone={k.tone} tint={k.tint} pct={k.pct} onClick={k.apply} />
+          <Card key={k.label} label={k.label} count={k.count} icon={k.icon} tone={k.tone} tint={k.tint} pct={k.pct} selected={k.selected} onClick={k.apply} />
         ))}
       </div>
 
@@ -272,7 +288,14 @@ export function IssueListScreen() {
         <div style={{ width: 300 }}>
           <SearchField value={q} onChange={(e) => setQ(e.target.value)} onClear={() => setQ('')} placeholder="Search by keyword..." />
         </div>
-        <Button variant="secondary" iconLeft={<Icon icon={SlidersHorizontal} size={15} />} onClick={() => { setDraft(flt); setDrawer('filter') }}>{t('filter')}</Button>
+        <Button
+          variant="secondary"
+          iconLeft={<Icon icon={SlidersHorizontal} size={15} />}
+          iconRight={activeFilterCount > 0 ? <CountBadge>{activeFilterCount}</CountBadge> : undefined}
+          onClick={() => { setDraft(flt); setDrawer('filter') }}
+        >
+          {t('filter')}
+        </Button>
         <Button variant="secondary" iconLeft={<Icon icon={Columns3} size={15} />} onClick={() => { setColsDraft(cols); setDrawer('cols') }}>{t('columns')}</Button>
       </div>
 

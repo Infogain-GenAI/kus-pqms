@@ -48,7 +48,7 @@ describe('default scope is role-driven', () => {
     fireEvent.click(tab(/^All Issues/i))
     const all = total()
 
-    expect(mine).toBe(7)
+    expect(mine).toBe(5)
     expect(all).toBe(35)
     expect(all).toBeGreaterThan(mine)
   })
@@ -60,7 +60,7 @@ describe('the draft/committed filter idiom', () => {
     fireEvent.click(tab(/^All Issues/i))
     const before = total()
 
-    fireEvent.click(screen.getByRole('button', { name: /^Filter$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/i }))
     const selects = screen.getAllByRole('combobox')
     const target = selects.find((s) => s.querySelectorAll('option').length > 1)
     expect(target).toBeTruthy()
@@ -76,7 +76,7 @@ describe('the draft/committed filter idiom', () => {
     fireEvent.click(tab(/^All Issues/i))
     const before = total()
 
-    fireEvent.click(screen.getByRole('button', { name: /^Filter$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/i }))
     const selects = screen.getAllByRole('combobox')
     const target = selects.find((s) => s.querySelectorAll('option').length > 1)!
     const opt = target.querySelectorAll('option')[1] as HTMLOptionElement

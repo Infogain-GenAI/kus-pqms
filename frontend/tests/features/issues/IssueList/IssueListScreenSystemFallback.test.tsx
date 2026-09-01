@@ -48,7 +48,7 @@ describe('the filtered memo — the classification guard real seed data cannot r
     // Both `(i.system ?? '')` occurrences — the options-list derivation and the
     // row-filter comparison — only run this row's fallback when a system filter
     // is actually applied.
-    fireEvent.click(screen.getByRole('button', { name: /^Filter$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/i }))
     const select = screen.getByRole('combobox', { name: 'System' }) as HTMLSelectElement
     fireEvent.change(select, { target: { value: select.options[1].value } })
     fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }))

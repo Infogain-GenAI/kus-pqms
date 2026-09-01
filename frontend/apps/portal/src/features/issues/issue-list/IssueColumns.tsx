@@ -9,15 +9,12 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from '@pqms/ui-library'
-import { TagChip } from '@/app/chrome'
-import { daysOpen, fmtMDY, modelCodeLabel } from '@/data/util'
-import { PRIORITY_BANDS } from '@/data/priorityMatrix'
-import type { useStore } from '@/data/store'
+import { combinedSources, daysOpen, fmtMDY, modelCodeLabel } from '@/data/util'
 import type { Issue } from '@/data/types'
-import { CountPill, ListTooltipBody, MorePill } from './IssueTableCells'
+import { CountPill, ListTooltipBody } from './IssueTableCells'
 
 // Column model per the Columns drawer: Issue ID / Issue Title are REQUIRED,
-// five default columns are toggleable, nine optional columns.
+// five default columns are toggleable, seven optional columns.
 export const DEFAULT_COLS = [
   { key: 'modelCode', label: 'Model Code' },
   { key: 'classification', label: 'Classification' },
@@ -26,15 +23,13 @@ export const DEFAULT_COLS = [
   { key: 'linked', label: 'Linked' },
 ] as const
 export const OPTIONAL_COLS = [
-  { key: 'source', label: 'Source' },
   { key: 'model', label: 'Model' },
-  { key: 'modelYear', label: 'Model Year' },
-  { key: 'severity', label: 'Severity' },
-  { key: 'days', label: 'Days open' },
-  { key: 'owner', label: 'Owner' },
+  { key: 'source', label: 'Source' },
   { key: 'component', label: 'Component' },
   { key: 'symptom', label: 'Symptom' },
-  { key: 'dtc', label: 'DTC' },
+  { key: 'dtc', label: 'DTC / Trouble Code' },
+  { key: 'owner', label: 'Owner' },
+  { key: 'days', label: 'Days' },
 ] as const
 export const DEFAULT_VISIBLE = DEFAULT_COLS.map((c) => c.key as string)
 
@@ -52,9 +47,9 @@ export const ALL_COLUMN_KEYS: readonly string[] = [
 ]
 
 // Shared "light" tooltip bubble (white card, hairline border) used across the table's
-// multi-value cells (Issue Title, Model Code, Source, Model, Model Year) — the
-// design-system Tooltip defaults to a dark bubble, which reads as a different
-// component; overriding its style keeps every cell tooltip visually consistent.
+// multi-value cells (Issue Title, Model Code, Source, Model) — the design-system
+// Tooltip defaults to a dark bubble, which reads as a different component;
+// overriding its style keeps every cell tooltip visually consistent.
 export const lightTooltipStyle = {
   background: 'var(--surface-card)',
   color: 'var(--text-primary)',
@@ -68,30 +63,26 @@ export interface BuildIssueColumnsOptions {
   /** Visible optional/default column keys, in the order to render them. */
   cols: string[]
   nav: (path: string) => void
-  priorityResult: ReturnType<typeof useStore>['priorityResult']
   onOpenLinked: (id: string) => void
 }
 
 /** Builds the full column list (frozen Issue ID + Issue Title, then whichever toggleable columns are visible). */
-export function buildIssueColumns({ cols, nav, priorityResult, onOpenLinked }: BuildIssueColumnsOptions): DataTableColumn<Issue>[] {
+export function buildIssueColumns({ cols, nav, onOpenLinked }: BuildIssueColumnsOptions): DataTableColumn<Issue>[] {
   // Toggleable columns, keyed for lookup. Rendered in `cols` order (below) rather
   // than this declaration order, so a newly-checked column lands at the end of
   // the visible set instead of snapping back into a fixed schema position.
   const toggleableColumns: Record<string, DataTableColumn<Issue>> = {
     source: {
       key: 'source', header: 'Source', width: 150, render: (r: Issue) => {
-        const extra = (r.sources ?? []).filter((s) => s !== r.source)
-        const badge = (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <SourceBadge source={r.source} size="sm" />
-            {extra.length > 0 && <MorePill n={extra.length} />}
-          </span>
-        )
-        return extra.length > 0 ? (
-          <Tooltip label={<ListTooltipBody label="Sources" items={extra.map((s) => SOURCE[s].label)} />} placement="bottom" style={lightTooltipStyle}>
-            {badge}
-          </Tooltip>
-        ) : badge
+        const all = combinedSources(r)
+        if (all.length > 1) {
+          return (
+            <Tooltip label={<ListTooltipBody label="Sources" items={all.map((s) => SOURCE[s].label)} />} placement="bottom" style={lightTooltipStyle}>
+              <CountPill>{`${all.length} Sources`}</CountPill>
+            </Tooltip>
+          )
+        }
+        return <SourceBadge source={r.source} size="sm" />
       },
     },
     modelCode: {
@@ -141,26 +132,13 @@ export function buildIssueColumns({ cols, nav, priorityResult, onOpenLinked }: B
         )
       },
     },
-    days: { key: 'days', header: 'Days open', width: 100, sortable: true, render: (r: Issue) => <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>{daysOpen(r.reportedDate, r.closedAt)}</span> },
+    days: { key: 'days', header: 'Days', width: 100, sortable: true, render: (r: Issue) => <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)' }}>{daysOpen(r.reportedDate, r.closedAt)}d</span> },
     model: {
       key: 'model', header: 'Model', width: 140, render: (r: Issue) => (
         <Tooltip label={r.model} placement="bottom" style={lightTooltipStyle}>
           <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{r.model}</span>
         </Tooltip>
       ),
-    },
-    modelYear: {
-      key: 'modelYear', header: 'Model Year', width: 110, sortable: true, render: (r: Issue) => (
-        <Tooltip label={String(r.modelYear)} placement="bottom" style={lightTooltipStyle}>
-          <span style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1 var(--font-body)', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{r.modelYear}</span>
-        </Tooltip>
-      ),
-    },
-    severity: {
-      key: 'severity', header: 'Severity', width: 110, render: (r: Issue) => {
-        const p = priorityResult(r.id)
-        return p.scored ? <TagChip tint={PRIORITY_BANDS[p.final].tint} color={PRIORITY_BANDS[p.final].color}>{p.final}</TagChip> : <span style={{ color: 'var(--text-disabled)' }}>—</span>
-      },
     },
     linked: {
       key: 'linked', header: 'Linked', width: 110, render: (r: Issue) => (

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ListTooltipBody, CountPill, MorePill } from '@/features/issues/issue-list/IssueTableCells'
+import { ListTooltipBody, CountPill } from '@/features/issues/issue-list/IssueTableCells'
 
 describe('IssueTableCells', () => {
   it('ListTooltipBody renders the label and every item', () => {
@@ -13,10 +13,5 @@ describe('IssueTableCells', () => {
   it('CountPill renders its children', () => {
     render(<CountPill>2 Models</CountPill>)
     expect(screen.getByText('2 Models')).toBeTruthy()
-  })
-
-  it('MorePill renders +N', () => {
-    render(<MorePill n={3} />)
-    expect(screen.getByText('+3')).toBeTruthy()
   })
 })
