@@ -78,10 +78,10 @@ const CHECKS = [
   { name: 'typecheck', cmd: process.execPath, args: [js('typescript/bin/tsc'), '--noEmit', '-p', 'apps/portal/tsconfig.json'] },
   { name: 'typecheck:ui-library', cmd: process.execPath, args: [js('typescript/bin/tsc'), '--noEmit', '-p', 'packages/ui-library/tsconfig.json'] },
   { name: 'typecheck:design-tokens', cmd: process.execPath, args: [js('typescript/bin/tsc'), '--noEmit', '-p', 'packages/design-tokens/tsconfig.json'] },
-  { name: 'lint:ds:values', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'values'] },
-  { name: 'lint:ds:numeric', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'numeric'] },
-  { name: 'lint:ds:imports', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'imports'] },
-  { name: 'lint:ds:copy', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'copy'] },
+  { name: 'lint:ds:values', lane: 'ds', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'values'] },
+  { name: 'lint:ds:numeric', lane: 'ds', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'numeric'] },
+  { name: 'lint:ds:imports', lane: 'ds', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'imports'] },
+  { name: 'lint:ds:copy', lane: 'ds', cmd: process.execPath, args: ['scripts/ds-gate.mjs', 'copy'] },
   { name: 'lint:ds:selftest', cmd: process.execPath, args: ['scripts/check-import-rule.mjs'] },
   { name: 'css-vars', cmd: process.execPath, args: ['scripts/check-css-vars.mjs'] },
   // Hard zero, not a ratchet — see the script's header for why it is not a
@@ -110,18 +110,59 @@ const run = (cmd, args) =>
     child.on('close', (code) => resolve({ code: code ?? 1, out }))
   })
 
+/**
+ * One check, including its ordered `then` if it has one.
+ */
+const runCheck = async (c) => {
+  const t0 = Date.now()
+  let r = await run(c.cmd, c.args)
+  if (r.code === 0 && c.then) {
+    const r2 = await run(c.then.cmd, c.then.args)
+    r = { code: r2.code, out: r.out + r2.out }
+  }
+  return { ...c, ...r, ms: Date.now() - t0 }
+}
+
+/*
+ * ─── ⚠️ LANES: PARALLEL BETWEEN, SEQUENTIAL WITHIN ──────────────────────────
+ *
+ * Everything used to run through one `Promise.all`, which meant THIRTEEN
+ * concurrent checks. On an 8-core machine that is oversubscription, and it was
+ * measurably costing us: six tests that take 2.4-4.4s alone took 20-31s under the
+ * gate and blew a 20s timeout, and a first-paint budget was missed by ONE PERCENT
+ * (15154ms against 15000ms) purely because the machine was thrashing.
+ *
+ * The four ds families are the peak: each runs a FULL ESLint pass over the whole
+ * tree, so four of them at once is four simultaneous whole-tree traversals. They
+ * now share a lane and run one after another.
+ *
+ * ⚠️ THIS IS FREE, AND THAT IS WHY IT IS THE RIGHT KNOB. The gate's wall-clock is
+ * bounded by the test suite (~530s); the four ds families total well under that
+ * even end to end, so serialising them does not extend the critical path. It
+ * lowers peak concurrency without lowering throughput.
+ *
+ * ⚠️ AND IT IS NOT A BUDGET CHANGE. No timeout moved, no ceiling moved, no test
+ * changed. Raising the timeouts was rejected: 31s against a 20s budget fails
+ * again at 40s on the next contention increase.
+ *
+ * A check with no `lane` runs in a lane of its own, so adding one needs no
+ * thought about grouping.
+ */
 const started = Date.now()
-const results = await Promise.all(
-  CHECKS.map(async (c) => {
-    const t0 = Date.now()
-    let r = await run(c.cmd, c.args)
-    if (r.code === 0 && c.then) {
-      const r2 = await run(c.then.cmd, c.then.args)
-      r = { code: r2.code, out: r.out + r2.out }
-    }
-    return { ...c, ...r, ms: Date.now() - t0 }
+const lanes = new Map()
+for (const c of CHECKS) {
+  const key = c.lane ?? `solo:${c.name}`
+  if (!lanes.has(key)) lanes.set(key, [])
+  lanes.get(key).push(c)
+}
+const laneResults = await Promise.all(
+  [...lanes.values()].map(async (group) => {
+    const out = []
+    for (const c of group) out.push(await runCheck(c))
+    return out
   }),
 )
+const results = laneResults.flat()
 const elapsed = Date.now() - started
 
 let failed = 0

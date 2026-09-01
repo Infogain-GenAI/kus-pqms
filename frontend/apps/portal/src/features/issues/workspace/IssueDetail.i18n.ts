@@ -208,11 +208,60 @@ const messages: ComponentI18nMessages = {
     editFormYearRequired_other: 'Select at least one model year for {{codes}}.',
     editFormClassification: 'System Classification',
     editFormSameExisting: 'Same existing issues',
+
+    /*
+     * ─── SAME EXISTING ISSUES, the RANKED half ───────────────────
+     *
+     * The section headed `editFormSameExisting` used to contain only
+     * the SEARCH block, so the heading promised suggestions the
+     * screen never made. These belong to the ranked half.
+     *
+     * Every one of these labels sits on a PERSISTED mutation: on this
+     * surface the issue exists, so a link or unlink is audited and
+     * carries a mandatory reason.
+     */
+    /*
+     * ⚠️ FOUR KEYS RETIRED HERE — sameLink, sameLinkGroup, sameGroupOf and
+     * sameRemoveMember. They labelled bespoke compact rows this section used to
+     * render. It now renders `related/RelatedIssueCards`, the same components
+     * Issue Entry uses, because the canonical renders this section identically on
+     * both screens — so those labels come from the shared card and its own
+     * bundle, and duplicates here would drift.
+     *
+     * The keys below are the ones this section still owns: its heading, its empty
+     * state, and the justification copy for the link it gates itself.
+     */
+    sameSuggestTitle: 'Same existing issues',
+    /*
+     * The folded-in search panel. Its heading, idle and result copy come from
+     * Issue Entry's bundle — the shared cards already read that bundle and the
+     * design's copy is identical on both screens, so duplicating it here would
+     * only create two strings to drift apart. These four are the ones this
+     * surface genuinely owns.
+     */
+    sameSearchLabel: 'Search issues to link',
+    sameSearchPlaceholder: 'Search by Issue ID, title, model or symptom…',
+    sameSearchClose: 'Close search',
+    sameSearchNoMatch: 'No unlinked issue matches “{{query}}”.',
+    /*
+     * ⚠️ NAMES WHAT THE DESIGN DROPS SILENTLY. A linked id with no issue behind
+     * it is skipped by the prototype's own injection; this fixture has such ids,
+     * and showing fewer linked issues than the count claims is the failure the
+     * link invariants exist to catch.
+     */
+    sameDangling: 'Linked to {{ids}}, which is not in this register.',
+    sameSuggestSubtitle:
+      'Ranked against the classification as you edit it. Linking and unlinking here are recorded immediately.',
+    sameSuggestEmpty: 'No similar issues match the current classification.',
+    sameConfirmLink: 'Confirm link',
+    sameConfirmUnlink: 'Confirm removal',
+    sameJustifyLink: 'Justification for linking',
+    sameJustifyUnlink: 'Justification for removing',
+
     editFormIssueInformation: 'Issue Information',
     editFormIssueTitle: 'Issue title *',
     editFormDescription: 'Description *',
     editFormDtc: 'DTC / trouble codes',
-    editFormDtcHint: 'Comma-separated. P·Powertrain B·Body C·Chassis U·Network.',
     editFormIssueSource: 'Issue Source',
   },
 }

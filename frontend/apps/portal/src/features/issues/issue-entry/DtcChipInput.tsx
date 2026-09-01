@@ -77,12 +77,52 @@ export function DtcChipInput({
   const rowRef = useRef<HTMLDivElement>(null)
   const [openUpward, setOpenUpward] = useState(false)
 
-  /** Uppercased, de-duplicated, and never the empty string. */
+  /**
+   * Commit whatever is pending — SPLITTING ON COMMAS, uppercased, de-duplicated,
+   * and never the empty string.
+   *
+   * ─── ⚠️ WHY THE SPLIT LIVES HERE AND NOT IN AN `onPaste` ────────────────────
+   *
+   * This used to commit `raw` as ONE token, and the comma COMMIT is a keydown
+   * handler — so it fires only for a comma the user types. A paste arrives as a
+   * single change event with no keydown, and the next Enter or blur committed the
+   * whole string as one code: `"P0301,P0302,P0420"`.
+   *
+   * That was not a cosmetic bug. `dtcCategory` infers the category from the first
+   * character, so the fused value rendered as a confident "Powertrain" chip with
+   * nothing on screen suggesting it was wrong, and it became the issue's
+   * `dtcCodes` entry. The component's own help text invites exactly that input:
+   * "enter your own separated by commas".
+   *
+   * An `onPaste` handler would have covered ONE route. The real defect is that
+   * commit assumed its input was a single token, so the fix belongs where the
+   * assumption was: every route that can land a comma-bearing string — paste,
+   * autofill, a programmatic set, a suggestion press — arrives here.
+   *
+   * ⚠️ ONE ROUTE IT DOES NOT COVER, and it is the caller's job rather than a gap
+   * here: the `codes` PROP itself. A screen holding DTCs as a comma-separated
+   * string must split before passing them in, because this function never sees
+   * the initial value.
+   *
+   * De-duplication is against the ACCUMULATING list, not the original `codes`, so
+   * a paste containing the same code twice yields one chip rather than two.
+   */
   const commit = (raw: string) => {
-    const next = raw.trim().toUpperCase()
     setDraft('')
-    if (!next || codes.includes(next)) return
-    onChange([...codes, next])
+    // `filter(Boolean)` after the split absorbs a trailing comma, a doubled
+    // comma, and a string that is nothing but separators.
+    const tokens = raw
+      .split(',')
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean)
+    if (tokens.length === 0) return
+
+    const next = [...codes]
+    for (const token of tokens) if (!next.includes(token)) next.push(token)
+    // Nothing new: leave the value alone rather than emitting an identical array,
+    // which would be a pointless re-render and, for a controlled parent, a
+    // spurious "changed" signal.
+    if (next.length !== codes.length) onChange(next)
   }
 
   const remove = (code: string) => onChange(codes.filter((c) => c !== code))

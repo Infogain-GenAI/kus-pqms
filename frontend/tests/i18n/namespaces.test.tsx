@@ -140,10 +140,30 @@ describe('every namespace is registered as a side effect of import', () => {
        * — a key present in the wrong one of two would pass — but a guard that
        * cries wolf on correct code is the one that gets deleted.
        */
+      /*
+       * ⚠️ IT ONLY RESOLVED RELATIVE IMPORTS, AND THAT SILENTLY SHRANK ITS SCOPE.
+       *
+       * A file importing its namespace as `@/features/.../X.i18n` was skipped
+       * ENTIRELY: no namespace resolved, so the `continue` below fired and none of
+       * its `t()` calls were ever checked. Found when extracting the Same Existing
+       * Issues cards into `related/RelatedIssueCards` — the new file used `@/`
+       * specifiers, which removed 300+ lines of translate calls from this guard
+       * without failing anything. The guard did not get weaker in a way anyone
+       * could see; it just stopped looking at a file.
+       *
+       * Both forms resolve now. `@/` maps to `apps/portal/src`, matching the
+       * tsconfig path alias.
+       */
       const namespaces: string[] = []
       for (const m of src.matchAll(/import \{[^}]*\bNS\b[^}]*\} from '([^']+)'/g)) {
-        if (!m[1].startsWith('.')) continue
-        const found = byFile.get(posix(resolve(dirname(file), m[1])) + '.ts')
+        const spec = m[1]
+        const abs = spec.startsWith('@/')
+          ? posix(resolve(SRC, spec.slice(2)))
+          : spec.startsWith('.')
+            ? posix(resolve(dirname(file), spec))
+            : null
+        if (!abs) continue
+        const found = byFile.get(abs + '.ts')
         if (found && !namespaces.includes(found)) namespaces.push(found)
       }
       // A file may take its namespace from elsewhere; only assert what resolves.

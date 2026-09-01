@@ -24,7 +24,7 @@
 // ─── ⚠️ WHAT THIS CANNOT SEE. READ BEFORE TRUSTING A CLEAN RUN ───────────────
 //
 // A clean run means "no DECLARED IDENTIFIER vanished". It does not mean nothing
-// was lost. Four gaps, in rough order of how likely they are to bite:
+// was lost. Five gaps, in rough order of how likely they are to bite:
 //
 //   1. A FEATURE GUTTED WHILE KEEPING ITS NAME. The function survives, nothing
 //      calls it; the export survives, no screen renders it. This compares
@@ -46,10 +46,30 @@
 //      an unrelated `interface parseRow` member elsewhere. Rarer, still possible,
 //      still silent.
 //
-//   4. BARE RE-EXPORTS. `export { X } from './y'` matches no declaration keyword,
-//      so `X` is never entered into evidence at the base ref at all — it cannot
-//      be reported lost because it was never seen. Zero uses in this tree today;
-//      adopting that style would create a blind spot without warning.
+//   4. RE-EXPORTS, IN BOTH DIRECTIONS. `export { X } from './y'` — and its
+//      aliasing form `export { Y as X } from './y'` — match no declaration
+//      keyword, so this scan does not see them as declarations. That misreads a
+//      symbol's presence in two opposite ways, and which one you get depends on
+//      WHICH REF the re-export sits in:
+//
+//        · re-export at the BASE  → a FALSE NEGATIVE. `X` was never entered into
+//          evidence, so it cannot be reported lost even if HEAD really did drop
+//          it. Silent.
+//        · re-export at HEAD      → a FALSE POSITIVE. `X` was a declaration at
+//          the base and is not one at HEAD, so it is listed as no longer
+//          declared while being perfectly alive.
+//
+//      ⚠️ NO LONGER HYPOTHETICAL — this said "zero uses in this tree today" and
+//      that stopped being true when main replaced the group editor. `modals.tsx`
+//      now ends with `export { ManageRelatedIssuesModal as ManageLinksModal }`,
+//      kept as a compatibility alias because the shell and two test files import
+//      the old name. The very next run listed `ManageLinksModal` as no longer
+//      declared, and reading that as an API break — which it is not — was one
+//      escalation away from wasting someone's afternoon.
+//
+//      The tell is in the output already: this prints "(no longer DECLARED, but
+//      still mentioned at HEAD)" for exactly this case. Treat that suffix as
+//      "look for a re-export or an alias before believing the loss".
 //
 //   5. NON-IDENTIFIER CONTENT: copy strings, CSS rules, seed rows, taxonomy
 //      entries, and any name under 6 characters.
@@ -60,7 +80,8 @@
 // feature alive and well. Identifiers caught it; strings would not have.
 //
 // So: use it on every merge, and do not read a clean result as an all-clear.
-// Limits 1 and 2 are the ones that will bite; 3 and 4 are latent in this tree.
+// Limits 1 and 2 are the ones that will bite. Limit 4 is now LIVE rather than
+// latent, and has already produced one false positive; 3 remains latent.
 //
 // ─── IT IS A REVIEW LIST, NOT A GATE ─────────────────────────────────────────
 //

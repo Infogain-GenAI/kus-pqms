@@ -5,7 +5,8 @@ import { ULabel } from '@/app/chrome'
 import { useStore } from '@/data/store'
 import type { SourceChannel } from '@/data/sourceChannels'
 import type { Issue } from '@/data/types'
-import { LinkIssuesSection } from '../../../LinkIssuesSection'
+import { SameExistingIssuesSection } from './SameExistingIssuesSection'
+import { DtcChipInput } from '@/features/issues/issue-entry/DtcChipInput'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../../IssueDetail.i18n'
 import { ModelCodeYearPicker, type ModelCodeSelection } from '../../../ModelCodeYearPicker'
@@ -24,10 +25,11 @@ import styles from './IssueEditForm.module.css'
  * form is five sections and would be unusable in a dialog — which is exactly why
  * the Vue implementation moved it out of one.
  *
- * REUSES, RATHER THAN FORKS, THE PICKERS. `ModelCodeYearPicker` and
- * `LinkIssuesSection` already exist here and their own doc comments say they are
- * shared with "Issue Detail's in-tab edit mode" — this is that consumer finally
- * arriving. The Vue file records the same lesson learned the hard way: its
+ * REUSES, RATHER THAN FORKS, THE PICKERS. `ModelCodeYearPicker` already exists
+ * here and its doc comment says it is shared with "Issue Detail's in-tab edit
+ * mode" — this is that consumer finally arriving. `SameExistingIssuesSection`
+ * likewise renders the cards Issue Entry renders, because the canonical draws
+ * that section identically on both screens. The Vue file records the same lesson learned the hard way: its
  * sections were once hand-rolled markup that drifted from Issue Entry's, and two
  * of its panels were suppressed on the false assumption that this form had its
  * own working versions. It did not, and the clicks silently did nothing.
@@ -96,20 +98,57 @@ export function IssueEditForm({
   // GATED NOW, IN BOTH DIRECTIONS. This note used to say the Vue form's
   // justification prompt was not reproduced because "this app has no
   // justification capture anywhere" — true when it was written, and no longer.
-  // `LinkIssuesSection` captures the reason inline and does not call through
-  // until it clears the shared rule, so both callbacks below receive one.
+  // `SameExistingIssuesSection` captures the reason inline and does not call
+  // through until it clears the shared rule, so the callbacks below receive one.
   const linked = issue.linkedIssueIds ?? []
+
+  /*
+   * ─── ⚠️ THE LITERAL ACTOR IS DELIBERATE, AND IT EXPIRES ─────────────────────
+   *
+   * Every store call on this screen passes this literal rather than reading the
+   * session.
+   * That is CORRECT today: RBAC is not implemented and SE is the only role in
+   * use, so a hardcoded SE reports reality instead of inventing an attribution.
+   *
+   * ⚠️ IT BECOMES WRONG THE DAY RBAC LANDS, and it is close to unfindable then:
+   * it compiles, nothing tests it, and the symptom — every audit row on this
+   * screen attributed to "You" — reads as a UI copy choice rather than a bug. So
+   * the note lives at the call site, where someone changing the auth model has to
+   * pass through it, rather than in a document nobody re-reads.
+   *
+   * WHEN RBAC ARRIVES: replace this with `useRole()` and pass the real actor.
+   *
+   * ⚠️ THERE IS NOW EXACTLY ONE CALL SITE, and this comment used to say three.
+   * The other two belonged to `LinkIssuesSection`, the separate search card this
+   * form no longer renders — so the consolidation that used to be "the first step
+   * of the RBAC change" happened as a side effect of superseding that component.
+   * Recorded because a stale count in a comment is exactly the kind of claim that
+   * outlives its subject.
+   */
+  const EDIT_ACTOR = { name: 'You', role: 'SE' }
 
   // ── 4 · Issue information ─────────────────────────────────────────────────
   const [title, setTitle] = useState(issue.title)
   const [description, setDescription] = useState(issue.description)
-  const [dtc, setDtc] = useState((issue.dtcCodes ?? []).join(', '))
+  /*
+   * ─── TOKENS, NOT A COMMA-SEPARATED STRING ───────────────────────────────────
+   *
+   * This was a `string` holding `dtcCodes.join(', ')`, edited through a plain
+   * `<Input>`. It is now the same `DtcChipInput` Issue Entry uses, so the state
+   * is the array the rest of the form already wanted: `onSave` has always taken
+   * `dtcCodes: string[]`, and the string existed only as an input representation.
+   *
+   * The change is confined to the field. The save payload's shape is unchanged,
+   * DTC has no validation to adjust, and stored values round-trip — an array
+   * arrives as chips and leaves as the same array.
+   */
+  const [dtcCodes, setDtcCodes] = useState<string[]>(issue.dtcCodes ?? [])
 
   // ── Dirty tracking ────────────────────────────────────────────────────────
   const dirty =
     title !== issue.title ||
     description !== issue.description ||
-    dtc !== (issue.dtcCodes ?? []).join(', ') ||
+    dtcCodes.join(', ') !== (issue.dtcCodes ?? []).join(', ') ||
     JSON.stringify(vehicle) !== JSON.stringify(initialVehicle) ||
     JSON.stringify(classification) !== JSON.stringify(initialClass)
 
@@ -124,7 +163,9 @@ export function IssueEditForm({
     onSave({
       title: title.trim(),
       description: description.trim(),
-      dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : [],
+      // No parsing left to do: the control hands over tokens already trimmed,
+      // uppercased and de-duplicated.
+      dtcCodes,
       modelCodes: vehicle.codes,
       modelYear: years.length ? Math.max(...years) : issue.modelYear,
       system: classification.system,
@@ -179,11 +220,37 @@ export function IssueEditForm({
       {/* 3 — Same existing issues */}
       <div className={styles.section} data-section="same-existing-issues">
         <h3 className={styles.sectionTitle}>{t('editFormSameExisting')}</h3>
-        <LinkIssuesSection
+        {/*
+          ONE BLOCK NOW. This section holds the ranked suggestions AND the search
+          panel, folded in behind its own header toggle, because the canonical
+          renders them as one section — the same one it renders on Issue Entry.
+          `LinkIssuesSection`, the separate search card that used to sit beside
+          this, is superseded and deleted; its behaviour was pinned first and its
+          tests target this panel.
+        */}
+        <SameExistingIssuesSection
+          issue={issue}
+          /* LIVE — the form's current values, so editing the classification
+             re-ranks. The design's own view-model computes its matches from form
+             state unconditionally, and its edit mode repopulates that state. */
+          subject={{
+            system: classification.system,
+            subSystem: classification.subSystem,
+            component: classification.component,
+            symptom: classification.symptom,
+            title,
+            description,
+            dtcCodes,
+            modelCode: vehicle.codes[0],
+          }}
           linkedIds={linked}
-          excludeId={issue.id}
-          onLink={(id, why) => store.linkIssue(issue.id, id, why, { name: 'You', role: 'SE' })}
-          onUnlink={(id, why) => store.unlinkIssue(issue.id, id, why, { name: 'You', role: 'SE' })}
+          disabled={disabled}
+          onLink={(ids, why) => {
+            // One reason, audited against each link it justified. A group card
+            // links every member, and each of those links is a real mutation.
+            for (const id of ids) store.linkIssue(issue.id, id, why, EDIT_ACTOR)
+          }}
+          onUnlink={(id, why) => store.removeRelated(issue.id, id, why, EDIT_ACTOR)}
         />
       </div>
 
@@ -212,15 +279,18 @@ export function IssueEditForm({
         </div>
         <div>
           <ULabel>{t('editFormDtc')}</ULabel>
-          <Input
-            value={dtc}
+          {/*
+            The hint that used to sit here is gone with the plain input, not
+            lost: `DtcChipInput` renders its own help text, which carries the
+            same P/B/C/U legend PLUS the fact that free entry is allowed
+            alongside search. Keeping both printed the legend twice on one field.
+          */}
+          <DtcChipInput
+            codes={dtcCodes}
+            onChange={setDtcCodes}
             disabled={disabled}
-            placeholder="e.g. P0A0F, C1234, B1020"
-            onChange={(e) => setDtc(e.target.value)}
+            aria-label={t('editFormDtc')}
           />
-          <p className={styles.hint}>
-            {t('editFormDtcHint')}
-          </p>
         </div>
       </div>
 
