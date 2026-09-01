@@ -1,5 +1,6 @@
 import type { SourceKey, StatusKey } from '@pqms/ui-library'
 import type {
+  ActivityType,
   AppNotification,
   AuditEntry,
   ClassificationNode,
@@ -251,13 +252,13 @@ export const ISSUES: Issue[] = [
   mk({ id: 'BD-260011', title: 'Sunroof drain clog causing headliner stain', description: 'A blocked sunroof drain channel has led to water backing up and staining the headliner on a small number of units. Drain routing and debris ingress are being reviewed.', source: 'warranty', status: 'open', model: 'K9', modelYear: 2025, system: 'Body / Closures', subSystem: 'Sunroof Assembly', component: 'Drain Tube', symptom: 'Water ingress', owner: 'Tom Reyes', ownerRole: 'SE', assignee: 'Tom Reyes', assigneeRole: 'SE', date: '2026-06-18' }),
   mk({ id: 'BD-260012', title: 'Wiper blade streak in heavy rain', description: 'GQIS reports intermittent streaking from the driver-side wiper blade during heavy rain. Isolated to a specific blade supplier lot; monitored as a trend rather than an active investigation.', source: 'gqis', status: 'outofscope', model: 'Sorento', modelCodes: ['VG', 'NQ'], modelYear: 2025, system: 'Body / Closures', subSystem: 'Wiper System', component: 'Wiper Blade', symptom: 'Streaking', owner: 'Arpita Chavda', ownerRole: 'SE', assignee: 'Arpita Chavda', assigneeRole: 'SE', date: '2026-04-15', extra: { dispositionOutcome: 'No Action', closedAt: '2026-05-02T10:00:00Z' } }),
   // ---- Parent/child cohort demo (grouped by shared symptom in the source) ----
-  mk({ id: 'EE-260023', title: 'Engine vibration during idle', description: 'Customers report a noticeable vibration through the cabin while the engine idles, most apparent at stoplights. Engine mount stiffness and idle-speed calibration are both being examined.', source: 'warranty', status: 'review', model: 'K5', modelYear: 2026, system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', owner: 'Mia Chen', ownerRole: 'SE', assignee: 'Mia Chen', assigneeRole: 'SE', date: '2026-07-10', groupId: 'EE-260023' }),
-  mk({ id: 'EE-260031', title: 'Engine vibration after warm-up', description: 'Vibration complaint similar to EE-260023 but reported specifically once the engine reaches operating temperature. Grouped with the related idle-vibration cohort for a shared root-cause review.', source: 'warranty', status: 'review', model: 'K5', modelYear: 2026, system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', owner: 'Mia Chen', ownerRole: 'SE', assignee: 'Mia Chen', assigneeRole: 'SE', date: '2026-07-14', groupId: 'EE-260023' }),
-  mk({ id: 'EE-260044', title: 'Engine vibration during acceleration', description: 'Vibration reported under moderate acceleration rather than at idle. Part of the same engine-vibration cohort; under investigation alongside the idle and warm-up variants.', source: 'warranty', status: 'open', model: 'K5', modelYear: 2026, system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', owner: 'Anil Rao', ownerRole: 'SE', assignee: 'Anil Rao', assigneeRole: 'SE', date: '2026-07-19', groupId: 'EE-260023' }),
-  mk({ id: 'EE-260071', title: 'Dealer-reported engine vibration', description: 'Dealer service department flagged a customer vehicle exhibiting the same engine vibration pattern seen in the linked cohort. Inspection requested to confirm mount condition.', source: 'warranty', status: 'open', model: 'K5', modelYear: 2026, system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', owner: 'Anil Rao', ownerRole: 'SE', assignee: 'Anil Rao', assigneeRole: 'SE', date: '2026-07-28', groupId: 'EE-260023' }),
-  mk({ id: 'EE-260100', title: 'Steering rack noise on lock-to-lock turns', description: 'A clicking noise from the steering rack is reported during full lock-to-lock turns, such as parking maneuvers. Rack-bushing clearance is suspected.', source: 'warranty', status: 'review', model: 'Telluride', modelYear: 2026, system: 'Steering', subSystem: 'Rack', component: 'Rack Housing', symptom: 'Steering noise', owner: 'Jisoo Han', ownerRole: 'SE', assignee: 'Jisoo Han', assigneeRole: 'SE', date: '2026-07-05', groupId: 'EE-260100' }),
-  mk({ id: 'EE-260105', title: 'Steering noise on parking maneuvers', description: 'Related steering-rack noise complaint reported specifically during low-speed parking maneuvers. Grouped with the lock-to-lock noise cohort for shared investigation.', source: 'warranty', status: 'review', model: 'Telluride', modelYear: 2026, system: 'Steering', subSystem: 'Rack', component: 'Rack Housing', symptom: 'Steering noise', owner: 'Jisoo Han', ownerRole: 'SE', assignee: 'Jisoo Han', assigneeRole: 'SE', date: '2026-07-12', groupId: 'EE-260100' }),
-  mk({ id: 'EE-260112', title: 'Dealer-reported steering rack noise', description: 'Dealer-reported instance of the steering rack noise seen across this cohort. Awaiting dealer inspection findings.', source: 'warranty', status: 'open', model: 'Telluride', modelYear: 2026, system: 'Steering', subSystem: 'Rack', component: 'Rack Housing', symptom: 'Steering noise', owner: 'Tom Reyes', ownerRole: 'SE', assignee: 'Tom Reyes', assigneeRole: 'SE', date: '2026-07-21', groupId: 'EE-260100' }),
+  mk({ id: 'EE-260023', title: 'Engine vibration during idle', description: 'Customers report a noticeable vibration through the cabin while the engine idles, most apparent at stoplights. Engine mount stiffness and idle-speed calibration are both being examined.', source: 'warranty', status: 'review', model: 'K5', modelYear: 2026, system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', owner: 'Mia Chen', ownerRole: 'SE', assignee: 'Mia Chen', assigneeRole: 'SE', date: '2026-07-10', groupId: 'EE-260023', linkedIssueIds: ['EE-260031', 'EE-260044', 'EE-260071'] }),
+  mk({ id: 'EE-260031', title: 'Engine vibration after warm-up', description: 'Vibration complaint similar to EE-260023 but reported specifically once the engine reaches operating temperature. Grouped with the related idle-vibration cohort for a shared root-cause review.', source: 'warranty', status: 'review', model: 'K5', modelYear: 2026, system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', owner: 'Mia Chen', ownerRole: 'SE', assignee: 'Mia Chen', assigneeRole: 'SE', date: '2026-07-14', groupId: 'EE-260023', linkedIssueIds: ['EE-260023'] }),
+  mk({ id: 'EE-260044', title: 'Engine vibration during acceleration', description: 'Vibration reported under moderate acceleration rather than at idle. Part of the same engine-vibration cohort; under investigation alongside the idle and warm-up variants.', source: 'warranty', status: 'open', model: 'K5', modelYear: 2026, system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', owner: 'Anil Rao', ownerRole: 'SE', assignee: 'Anil Rao', assigneeRole: 'SE', date: '2026-07-19', groupId: 'EE-260023', linkedIssueIds: ['EE-260023'] }),
+  mk({ id: 'EE-260071', title: 'Dealer-reported engine vibration', description: 'Dealer service department flagged a customer vehicle exhibiting the same engine vibration pattern seen in the linked cohort. Inspection requested to confirm mount condition.', source: 'warranty', status: 'open', model: 'K5', modelYear: 2026, system: 'Engine', subSystem: 'Fuel System', component: 'Fuel Injector', symptom: 'Engine vibration', owner: 'Anil Rao', ownerRole: 'SE', assignee: 'Anil Rao', assigneeRole: 'SE', date: '2026-07-28', groupId: 'EE-260023', linkedIssueIds: ['EE-260023'] }),
+  mk({ id: 'EE-260100', title: 'Steering rack noise on lock-to-lock turns', description: 'A clicking noise from the steering rack is reported during full lock-to-lock turns, such as parking maneuvers. Rack-bushing clearance is suspected.', source: 'warranty', status: 'review', model: 'Telluride', modelYear: 2026, system: 'Steering', subSystem: 'Rack', component: 'Rack Housing', symptom: 'Steering noise', owner: 'Jisoo Han', ownerRole: 'SE', assignee: 'Jisoo Han', assigneeRole: 'SE', date: '2026-07-05', groupId: 'EE-260100', linkedIssueIds: ['EE-260105', 'EE-260112'] }),
+  mk({ id: 'EE-260105', title: 'Steering noise on parking maneuvers', description: 'Related steering-rack noise complaint reported specifically during low-speed parking maneuvers. Grouped with the lock-to-lock noise cohort for shared investigation.', source: 'warranty', status: 'review', model: 'Telluride', modelYear: 2026, system: 'Steering', subSystem: 'Rack', component: 'Rack Housing', symptom: 'Steering noise', owner: 'Jisoo Han', ownerRole: 'SE', assignee: 'Jisoo Han', assigneeRole: 'SE', date: '2026-07-12', groupId: 'EE-260100', linkedIssueIds: ['EE-260100'] }),
+  mk({ id: 'EE-260112', title: 'Dealer-reported steering rack noise', description: 'Dealer-reported instance of the steering rack noise seen across this cohort. Awaiting dealer inspection findings.', source: 'warranty', status: 'open', model: 'Telluride', modelYear: 2026, system: 'Steering', subSystem: 'Rack', component: 'Rack Housing', symptom: 'Steering noise', owner: 'Tom Reyes', ownerRole: 'SE', assignee: 'Tom Reyes', assigneeRole: 'SE', date: '2026-07-21', groupId: 'EE-260100', linkedIssueIds: ['EE-260100'] }),
   mk({ id: 'EE-260090', title: 'Steering noise', description: 'Customer describes an intermittent steering noise; details are limited pending a more thorough dealer inspection.', source: 'warranty', status: 'open', model: 'Tucson', modelYear: 2026, system: 'Steering', subSystem: 'Rack', component: 'Rack Housing', symptom: 'Steering noise', owner: 'Tom Reyes', ownerRole: 'SE', assignee: 'Tom Reyes', assigneeRole: 'SE', date: '2026-07-28' }),
   mk({ id: 'EE-260118', title: 'Head unit reboots when CarPlay connects', description: 'The centre display restarts as a phone completes its CarPlay handshake, returning to the home screen after roughly twenty seconds. Display-module firmware and USB power delivery are both being examined.', source: 'techline', status: 'monitoring', model: 'Sportage', modelYear: 2026, system: 'Infotainment', subSystem: 'Head Unit', component: 'Main Display Module', symptom: 'System reboot on CarPlay connect', owner: 'Mia Chen', ownerRole: 'SE', assignee: 'Mia Chen', assigneeRole: 'SE', date: '2026-08-02', extra: { dispositionOutcome: 'Monitoring', monitoringNextReview: '2026-09-02' } }),
   // ---- Lifecycle demo rows (Recently Accessed) ----
@@ -300,7 +301,120 @@ export const PARTS: PartRequest[] = []
 
 export const COMMENTS: Comment[] = []
 
-export const ACTIVITIES: InvestigationActivity[] = []
+/**
+ * Investigation activities.
+ *
+ * ─── ⚠️ HV-260101 STAYS EMPTY, AND THAT IS THE RECORDED DECISION ─────────────
+ *
+ * The note above this block says the prototype's hero issue "opens with EMPTY
+ * parts / comms / activities and an 8-entry creation history". That is still
+ * true and still mirrored: nothing below targets HV-260101. Seeding it would
+ * contradict the design, and the workspace's own opening state is what that
+ * decision protects.
+ *
+ * ─── WHY THE ARRAY IS NO LONGER EMPTY FOR EVERYONE ELSE ──────────────────────
+ *
+ * It was `[]`, so `activitiesFor()` returned nothing for every one of the 35
+ * issues — which meant `ExistingIssueModal`'s "Investigation summary" and
+ * "Actions taken" rendered their empty states ALWAYS, and the populated branch
+ * was dead code no test or screen could reach. A new test proved the history
+ * LIST was never exercised; this is the same gap one layer over.
+ *
+ * ─── EVERY STRING BELOW IS THE PROTOTYPE'S OWN ──────────────────────────────
+ *
+ * Taken verbatim from `_classifiedIssuesBase()`, whose records carry an
+ * `investigation` paragraph and an `actions[]` array. Only the seven issues that
+ * exist in BOTH that list and ours are seeded — no text is invented to fill the
+ * others, because a plausible-sounding fabrication in seed data is
+ * indistinguishable from real requirements once it is on screen.
+ *
+ * The two cohorts here are the same ones `assertIssueGroups` pins: EE-260023
+ * (+031, +044, +071) and EE-260100 (+105, +112).
+ *
+ * ⚠️ ORDER IS LOAD-BEARING. `activitiesFor()` does not sort — it filters in array
+ * order — and `ExistingIssueModal` reads `activities[0].summary` as the
+ * investigation summary. So each issue's investigation entry MUST come first.
+ * `assertActivities()` enforces that rather than leaving it to whoever edits
+ * this next.
+ */
+const ACT_AUTHOR: Record<string, string> = {
+  'EE-260023': 'Mia Chen',
+  'EE-260031': 'Mia Chen',
+  'EE-260044': 'Anil Rao',
+  'EE-260071': 'Anil Rao',
+  'EE-260100': 'Jisoo Han',
+  'EE-260105': 'Jisoo Han',
+  'EE-260112': 'Tom Reyes',
+}
+
+/** `investigation` first, then one entry per `actions[]` string. */
+const ACT_SOURCE: { issueId: string; investigation: string; actions: [string, ActivityType][] }[] = [
+  {
+    issueId: 'EE-260023',
+    investigation: 'Cohort review in progress; linked issues under the same group are being reviewed together.',
+    actions: [['Cohort export requested', 'Data Analysis']],
+  },
+  {
+    issueId: 'EE-260031',
+    investigation: 'Linked to EE-260023 for combined review.',
+    actions: [
+      ['Investigation activity added', 'Note'],
+      ['Linked to EE-260023', 'Note'],
+    ],
+  },
+  {
+    issueId: 'EE-260044',
+    investigation: 'Linked to EE-260023 for combined review.',
+    actions: [['Linked to EE-260023', 'Note']],
+  },
+  {
+    issueId: 'EE-260071',
+    investigation: 'Linked to EE-260023 for combined review.',
+    actions: [['Linked to EE-260023', 'Note']],
+  },
+  {
+    issueId: 'EE-260100',
+    investigation: 'Cohort review in progress; linked issues under the same group are being reviewed together.',
+    actions: [['Cohort export requested', 'Data Analysis']],
+  },
+  {
+    issueId: 'EE-260105',
+    investigation: 'Linked to EE-260100 for combined review.',
+    actions: [['Linked to EE-260100', 'Note']],
+  },
+  {
+    issueId: 'EE-260112',
+    investigation: 'Linked to EE-260100 for combined review.',
+    actions: [['Linked to EE-260100', 'Note']],
+  },
+]
+
+export const ACTIVITIES: InvestigationActivity[] = ACT_SOURCE.flatMap((src, gi) => {
+  const author = ACT_AUTHOR[src.issueId] ?? 'N-PQMS'
+  // Deterministic, and always AFTER the anchor date so an activity never
+  // predates the issue it belongs to — `assertActivities` checks that.
+  const at = (n: number) => `2026-08-0${gi + 1}T${String(9 + n).padStart(2, '0')}:15:00Z`
+  return [
+    {
+      id: `ia-${src.issueId}-0`,
+      issueId: src.issueId,
+      type: 'Data Analysis' as ActivityType,
+      summary: src.investigation,
+      author,
+      authorRole: 'SE',
+      createdAt: at(0),
+    },
+    ...src.actions.map(([summary, type], k) => ({
+      id: `ia-${src.issueId}-${k + 1}`,
+      issueId: src.issueId,
+      type,
+      summary,
+      author,
+      authorRole: 'SE',
+      createdAt: at(k + 1),
+    })),
+  ]
+})
 
 const HV = 'HV-260101'
 const T = (hm: string) => `2026-07-09T${hm}:00Z`

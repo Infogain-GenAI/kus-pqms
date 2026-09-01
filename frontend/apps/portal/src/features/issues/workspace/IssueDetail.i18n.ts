@@ -102,8 +102,34 @@ const messages: ComponentI18nMessages = {
     linksModalEmpty: 'This issue has no related Parent/Child issues.',
     linksModalUnlink: 'Unlink',
     linksModalCandidatesHeading: 'Link Another Issue',
-    linksModalNoCandidates: 'No classification-matched candidates.',
     linksModalLink: 'Link',
+
+    /*
+     * ─── PARENT/CHILD ROLES ────────────────────────────────────────────────────
+     * Derived from registration order, never assigned — see `store.relKind`.
+     */
+    linksModalParent: 'Parent',
+    linksModalChild: 'Child',
+
+    /*
+     * ─── LINKING BY ISSUE ID ───────────────────────────────────────────────────
+     *
+     * ⚠️ THERE IS NO CANDIDATE LIST, AND THAT IS THE DESIGN'S CHOICE. This modal
+     * used to offer `store.correlations()` suggestions; the canonical offers only
+     * an Issue-ID box (`mlQueryWs` / `mlLink(ws)`). A suggested candidate list
+     * invites adding issues to a Parent/Child group on the strength of a
+     * classification overlap, which is a weaker basis than a person naming the id.
+     *
+     * Every message below is the canonical's own wording.
+     */
+    linksModalSearchLabel: 'Issue ID',
+    linksModalSearchPlaceholder: 'e.g. CL-260045',
+    linksModalErrEmpty: 'Enter an Issue ID to link.',
+    linksModalErrInvalid: 'Enter a valid Issue ID (e.g. CL-260045).',
+    linksModalErrNotFound: 'No issue found with ID “{{id}}”.',
+    linksModalErrSelf: 'You cannot link an issue to itself.',
+    linksModalErrAlready: '{{id}} is already related to this issue.',
+    linksModalErrPending: '{{id}} is already pending link.',
     linksModalPendingLink: 'Pending link',
     linksModalPendingUnlink: 'Pending unlink',
     linksModalUndo: 'Undo',

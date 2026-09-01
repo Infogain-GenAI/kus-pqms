@@ -126,17 +126,57 @@ describe('every namespace is registered as a side effect of import', () => {
       const src = stripComments(raw)
       if (!src.includes('useTranslation(')) continue
 
-      // Which namespace does this file's `NS` import resolve to?
-      let ns: string | undefined
+      /*
+       * ⚠️ ALL the namespaces this file imports, not just one.
+       *
+       * The first version kept a single `ns`, so this loop OVERWROTE it and every
+       * key was checked against whichever namespace happened to be imported
+       * last. That is a false positive waiting to happen, and it fired the moment
+       * a file legitimately read two: `DetailSection` renders a control inside
+       * `ExistingIssueModal`'s footer, so it reads that namespace AND the
+       * justification one, and `t('unlink')` was checked against the wrong half.
+       *
+       * A key now passes if ANY imported namespace declares it. Slightly weaker
+       * — a key present in the wrong one of two would pass — but a guard that
+       * cries wolf on correct code is the one that gets deleted.
+       */
+      const namespaces: string[] = []
       for (const m of src.matchAll(/import \{[^}]*\bNS\b[^}]*\} from '([^']+)'/g)) {
         if (!m[1].startsWith('.')) continue
-        ns = byFile.get(posix(resolve(dirname(file), m[1])) + '.ts')
+        const found = byFile.get(posix(resolve(dirname(file), m[1])) + '.ts')
+        if (found && !namespaces.includes(found)) namespaces.push(found)
       }
       // A file may take its namespace from elsewhere; only assert what resolves.
-      if (!ns) continue
+      if (!namespaces.length) continue
 
-      const declared = NAMESPACES.find(([name]) => name === ns)![1].en
-      for (const m of src.matchAll(/\bt\('([A-Za-z0-9_]+)'/g)) {
+      const ns = namespaces.join('|')
+      const declared = Object.assign(
+        {},
+        ...namespaces.map((n) => NAMESPACES.find(([name]) => name === n)![1].en),
+      ) as Record<string, string>
+
+      /*
+       * ⚠️ ALIASED TRANSLATE FUNCTIONS WERE INVISIBLE, and that blind spot was
+       * found by mutation, not by reading.
+       *
+       * A file reading two namespaces has to rename one of them:
+       *     const { t } = useTranslation(A)
+       *     const { t: tj } = useTranslation(B)
+       * The scan looked only for `t(`, so every `tj('key')` went unchecked.
+       * Deleting a key that only `tj` used left this test GREEN — the guard was
+       * giving false confidence on precisely the newest code.
+       *
+       * Aliases are now derived from the destructuring itself rather than
+       * guessed, because a pattern loose enough to catch `tj(` by shape would
+       * also match `test(`, `toBe(` and every other call ending in t.
+       */
+      const aliases = new Set<string>()
+      for (const m of src.matchAll(/\{\s*t\s*(?::\s*([A-Za-z_$][\w$]*))?\s*[,}][^=]*=\s*useTranslation\(/g)) {
+        aliases.add(m[1] ?? 't')
+      }
+      if (!aliases.size) aliases.add('t')
+      const keyCalls = new RegExp(`\\b(?:${[...aliases].join('|')})\\('([A-Za-z0-9_]+)'`, 'g')
+      for (const m of src.matchAll(keyCalls)) {
         const key = m[1]
         checked++
         // An ICU plural is declared only as key_one / key_other and is never a

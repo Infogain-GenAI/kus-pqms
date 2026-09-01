@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronDown, ChevronUp, CornerDownRight, CopyCheck, Crown, Eye, GitBranch, History, Link, Link2, RotateCcw, Search, SearchX, Send, Sparkles, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, CopyCheck, CornerDownRight, Crown, Eye, GitBranch, History, Link, Link2, Link2Off, RotateCcw, Search, SearchX, Send, Sparkles, TriangleAlert, X } from 'lucide-react'
 // `SOURCE`, `SOURCE_KEYS` and `SourceKey` went with the source selector, and
 // `SourceBadge` has now followed them: the suggestion card rendered one for the
 // issues it suggests, but the design's card has no source badge at all.
@@ -22,6 +22,9 @@ import { ExistingIssueModal } from './ExistingIssueModal'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { relatedRank } from '@/data/relatedRank'
+import { formIssueGroup } from '@/data/issueGroups'
+import { LinkJustifyBox, applyJustification } from './linking/LinkJustifyBox'
+import { NS as LINK_JUSTIFY_NS } from './linking/LinkJustify.i18n'
 import {
   clampJustification,
   isJustificationValid,
@@ -336,9 +339,35 @@ export function CreateIssueScreen() {
     setAttempted(false)
   }
 
+  const [groupBlocked, setGroupBlocked] = useState('')
+
   const register = () => {
     setAttempted(true)
     if (errors.length > 0) return
+
+    /*
+     * ─── THE CHRONOLOGY GUARD, CHECKED BEFORE COMMITTING ──────────────────────
+     *
+     * Group parentage is derived from registration order, so a linked issue dated
+     * in the FUTURE would sort ahead of nothing and silently promote this
+     * brand-new issue to Parent. The design refuses to register at all rather
+     * than produce an inverted hierarchy, with this message.
+     *
+     * Checked here as well as in the store because only the screen can tell the
+     * user. `createIssue` throws on the same condition as a backstop for any
+     * other caller. See `formIssueGroup` for why neither fires on today's seed.
+     */
+    const formation = formIssueGroup({
+      newIssueId: 'pending',
+      newIssueCreatedAt: new Date().toISOString(),
+      linkedIds: linkedIds,
+      pool: store.issues,
+    })
+    if (formation.blockedReason) {
+      setGroupBlocked(formation.blockedReason)
+      return
+    }
+    setGroupBlocked('')
     const created = store.createIssue(
       {
         title: title.trim(),
@@ -472,6 +501,19 @@ export function CreateIssueScreen() {
             while they scroll to them — inside the scroll port it would scroll
             away exactly when it is being acted on. */}
         <ValidationBanner errors={shown} />
+
+        {/*
+          The chronology refusal. Rendered beside the validation banner rather
+          than inside it: that banner counts FIELD errors, and this is not a field
+          — nothing the user can correct in the form, only by changing which
+          issues are linked.
+        */}
+        {groupBlocked && (
+          <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', padding: 'var(--space-3)', border: 'var(--border-width) solid var(--danger-500)', borderRadius: 'var(--radius-md)', background: 'var(--danger-50)', font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-primary)' }}>
+            <Icon icon={TriangleAlert} size={15} style={{ color: 'var(--danger-500)', flex: 'none' }} />
+            {groupBlocked}
+          </div>
+        )}
       </PageContainer>
 
       {/*
@@ -699,6 +741,15 @@ export function CreateIssueScreen() {
                             onLink={() => askToLink([e.group!.parent.id, ...e.group!.children.map((c) => c.id)], `${e.group!.parent.id} + ${e.group!.children.length} child issue(s)`)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.group!.parent.id && !e.group!.children.some((c) => c.id === x)))}
                             onViewHistory={() => setHistoryFor(e.group!.parent.id)}
+                            /*
+                              Removes ONE member from the group, immediately.
+                              `removeRelated` picks group removal or symmetric
+                              unlink by inspecting what the target actually is —
+                              the branch the design makes in
+                              `openGroupUnlinkModal`. The parent is the context
+                              issue, which matters only to the fallback.
+                            */
+                            onRemoveMember={(id, why) => store.removeRelated(e.group!.parent.id, id, why, { name: user.name, role: user.role })}
                           />
                         ) : (
                           <SuggestionCard
@@ -761,6 +812,15 @@ export function CreateIssueScreen() {
                             onLink={() => askToLink([e.group!.parent.id, ...e.group!.children.map((c) => c.id)], `${e.group!.parent.id} + ${e.group!.children.length} child issue(s)`)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.group!.parent.id && !e.group!.children.some((c) => c.id === x)))}
                             onViewHistory={() => setHistoryFor(e.group!.parent.id)}
+                            /*
+                              Removes ONE member from the group, immediately.
+                              `removeRelated` picks group removal or symmetric
+                              unlink by inspecting what the target actually is —
+                              the branch the design makes in
+                              `openGroupUnlinkModal`. The parent is the context
+                              issue, which matters only to the fallback.
+                            */
+                            onRemoveMember={(id, why) => store.removeRelated(e.group!.parent.id, id, why, { name: user.name, role: user.role })}
                           />
                         ) : (
                           <SuggestionCard
@@ -1095,6 +1155,7 @@ function GroupCard({
   onLink,
   onUnlink,
   onViewHistory,
+  onRemoveMember,
 }: {
   parent: Issue
   children: Issue[]
@@ -1104,11 +1165,61 @@ function GroupCard({
   onLink: () => void
   onUnlink: () => void
   onViewHistory: () => void
+  /** Removes ONE member from the group. Absent where the card is read-only. */
+  onRemoveMember?: (id: string, justification: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const count = children.length + 1
   const suggestReasons = reasons ?? []
   const { t } = useTranslation(NS)
+  const { t: tj } = useTranslation(LINK_JUSTIFY_NS)
+
+  /*
+   * ─── PER-MEMBER GROUP REMOVAL, IMMEDIATE AND JUSTIFIED ────────────────────
+   *
+   * Distinct from the card's own link button, which is a SYMMETRIC bulk link
+   * over the whole group. These remove ONE member FROM the group — a different
+   * relationship type behind a control that sits inches away, which is why each
+   * says what it does rather than just "Unlink".
+   *
+   * Immediate, so there is no Save to gate: the justification is mandatory at
+   * the point of action. `LinkJustifyBox` in the same immediate mode
+   * `LinkIssuesSection` uses; the draft/commit hook is deliberately not involved.
+   */
+  const [removing, setRemoving] = useState<string | null>(null)
+  const [removeText, setRemoveText] = useState('')
+  const [removeErr, setRemoveErr] = useState('')
+
+  const removalBox = (id: string) =>
+    removing === id ? (
+      <LinkJustifyBox
+        text={removeText}
+        error={removeErr}
+        onText={(next) => { setRemoveText(next); setRemoveErr('') }}
+        onApply={() => {
+          const problem = applyJustification(removeText)
+          if (problem) { setRemoveErr(problem); return }
+          onRemoveMember?.(id, removeText.trim())
+          setRemoving(null)
+        }}
+        onCancel={() => setRemoving(null)}
+        applyLabel={tj('confirmUnlink')}
+        label={`${t('groupRemoveLabel')} ${id}`}
+        inputLabel={`${t('groupRemoveLabel')} ${id}`}
+      />
+    ) : null
+
+  const removalTrigger = (id: string) => (
+    <button
+      type="button"
+      className={entryStyles.cardHistoryBtn}
+      aria-label={`${t('groupRemoveMember')} ${id}`}
+      onClick={() => { setRemoving(id); setRemoveText(''); setRemoveErr('') }}
+    >
+      <Icon icon={Link2Off} size={13} />
+      {t('groupRemoveMember')}
+    </button>
+  )
 
   return (
     <div className={entryStyles.card}>
@@ -1157,9 +1268,13 @@ function GroupCard({
               style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
             />
             <span className={entryStyles.badgeParent}>{t('badgeParent')}</span>
+            {onRemoveMember && <span style={{ marginLeft: 'auto' }}>{removalTrigger(parent.id)}</span>}
           </div>
           <div className={entryStyles.groupTitle}>{parent.title}</div>
           <div className={entryStyles.groupMeta}>{metaLineFor(parent)}</div>
+          {/* Removing the PARENT promotes the next-earliest member and logs a
+              separate system entry — see `planGroupEdits`. */}
+          {removalBox(parent.id)}
         </div>
       </div>
 
@@ -1184,9 +1299,11 @@ function GroupCard({
                     style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
                   />
                   <span className={entryStyles.badgeChild}>{t('badgeChild')}</span>
+                  {onRemoveMember && <span style={{ marginLeft: 'auto' }}>{removalTrigger(c.id)}</span>}
                 </div>
                 <div className={entryStyles.childTitle}>{c.title}</div>
                 <div className={entryStyles.childMeta}>{metaLineFor(c)}</div>
+                {removalBox(c.id)}
               </div>
             </div>
           ))}

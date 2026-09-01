@@ -32,7 +32,36 @@ const messages: ComponentI18nMessages = {
     // pre-i18n code rather than silently corrected — this pass moves copy.
     bulkChangeStatus: 'Change Status',
     bulkExport: 'Export',
-    bulkHint: 'Select rows to change status or export',
+    bulkAssignRole: 'Assign Role',
+    /*
+     * ICU variants replacing `selected.length === 1 ? 'Issue Selected' : 'Issues
+     * Selected'` — a hand-rolled plural 00-core-rules.md bans by name, and it
+     * was hardcoded copy besides. 09's reason outlives tidiness: Korean's plural
+     * rules do not map onto English's binary split.
+     */
+    bulkSelected_one: '{{count}} Issue Selected',
+    bulkSelected_other: '{{count}} Issues Selected',
+    bulkHint: 'Select rows to change status, assign a role, or export',
+
+    /* ─── BULK ASSIGN ROLE ────────────────────────────────────────── */
+    assignRoleTitle: 'Assign role',
+    assignRoleCancel: 'Cancel',
+    /*
+     * ICU plural variants, never a hand-rolled `n === 1 ? '' : 's'`.
+     * 00-core-rules.md bans the hand-rolled form by name, and 09 gives the reason
+     * that outlives tidiness: Korean's plural rules do not map onto English's
+     * binary split, so a hand-rolled pair would need locale-specific branching
+     * that variant selection handles for free.
+     *
+     * `<b>` IS PART OF THE MESSAGE, rendered through `<Trans>`. The count was
+     * bolded before this copy moved into i18n and still is; putting the tag in
+     * the string lets a translator move the emphasis with the words rather than
+     * having the sentence reassembled from three JSX fragments.
+     */
+    assignRoleBody_one:
+      'Reassign <b>{{count}}</b> selected issue to a role. This changes who the issue is assigned to — the original owner is unchanged.',
+    assignRoleBody_other:
+      'Reassign <b>{{count}}</b> selected issues to a role. This changes who the issue is assigned to — the original owner is unchanged.',
 
     bulkStatusTitle: 'Change status',
     /*

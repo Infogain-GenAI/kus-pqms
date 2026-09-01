@@ -1,5 +1,5 @@
 import { NOW, type ClassLevel, type ClassificationNode, type Issue } from './types'
-import { CLASSIFICATION, ISSUES, NOTIFICATIONS } from './seed'
+import { ACTIVITIES, CLASSIFICATION, ISSUES, NOTIFICATIONS } from './seed'
 
 // Regression gate for the dataset's fixed "today" — the export's own _todayBase() is a
 // hardcoded new Date(2026,6,9) (Jul 9 2026), and every relative label in the UX resolves
@@ -97,9 +97,159 @@ function assertIssueGroups(): void {
   }
 }
 
+function failActivity(msg: string): never {
+  throw new Error(`seed activity invariant: ${msg}`)
+}
+
+/**
+ * Activity invariants.
+ *
+ * ⚠️ THE ORDER CHECK IS THE POINT. `store.activitiesFor()` does NOT sort — it
+ * filters in array order — and `ExistingIssueModal` renders
+ * `activities[0].summary` as the issue's "Investigation summary". So an editor
+ * who appends a new activity above an issue's existing block silently changes
+ * which text that panel shows, with nothing failing. This makes it fail.
+ */
+function assertActivities(): void {
+  const ids = new Set<string>()
+  const firstSeen = new Map<string, string>()
+
+  for (const a of ACTIVITIES) {
+    if (ids.has(a.id)) failActivity(`duplicate activity id ${a.id}`)
+    ids.add(a.id)
+
+    const issue = ISSUES.find((i) => i.id === a.issueId)
+    if (!issue) failActivity(`${a.id} targets ${a.issueId}, which is not a seeded issue`)
+    // An activity that predates its own issue reads as a data-entry error to
+    // anyone reading the timeline, and sorts wrongly the moment anything sorts.
+    if (a.createdAt < issue.createdAt) {
+      failActivity(`${a.id} is dated ${a.createdAt}, before its issue's ${issue.createdAt}`)
+    }
+    if (!a.summary.trim()) failActivity(`${a.id} has an empty summary`)
+
+    if (!firstSeen.has(a.issueId)) firstSeen.set(a.issueId, a.id)
+  }
+
+  // Each issue's FIRST activity must be its investigation entry — see above.
+  for (const [issueId, firstId] of firstSeen) {
+    if (!firstId.endsWith('-0')) {
+      failActivity(`${issueId}'s first activity is ${firstId}; the investigation entry (…-0) must come first`)
+    }
+  }
+
+  /*
+   * HV-260101 STAYS EMPTY — a recorded decision, not an omission. The prototype's
+   * hero issue opens with no parts, comms or activities, and `seed.ts` mirrors
+   * that deliberately. Pinned so a future "let's seed the main issue too" cannot
+   * quietly undo it.
+   */
+  if (ACTIVITIES.some((a) => a.issueId === 'HV-260101')) {
+    failActivity('HV-260101 must open with NO activities — see the note in seed.ts')
+  }
+}
+
+function failLink(msg: string): never {
+  throw new Error(`seed link invariant: ${msg}`)
+}
+
+/**
+ * Ids referenced by `linkedIssueIds` that are NOT seeded issues.
+ *
+ * ⚠️ THESE ARE UNPORTED DESIGN ISSUES, NOT TYPOS — which is the whole reason
+ * this list exists rather than a blanket "every link must resolve". They name
+ * records from the prototype's `_classifiedIssuesBase()` classification pool
+ * that we never brought into `ISSUES`. Repointing them at seeded issues would
+ * invent relationships the design never stated; seeding the ten missing issues
+ * would change every count in the fixture.
+ *
+ * So they are tolerated and enumerated. A NEW dangling id — a genuine typo, or a
+ * relink that misses — is not in this list and fails.
+ */
+/*
+ * ⚠️ AN ALLOWLIST STOPS CHECKING THE THING IT NAMES, and that is the cost of
+ * this one. Each id here is a link target that exists in the design's issue pool
+ * but was never ported into this fixture, so a link to it is recorded as
+ * deliberate rather than dangling.
+ *
+ * The failure mode is the day one of these is seeded for real: it becomes a
+ * genuine issue, and a MISSING reciprocal link on it would then be waved through
+ * by its own entry here instead of being reported. That is inherent to
+ * allowlists — so rather than leaving it as a caveat nobody re-reads,
+ * `assertLinks` fails if an allowlisted id is ever seeded, forcing the entry to
+ * be removed in the same change that seeds it.
+ */
+const UNPORTED_LINK_TARGETS = new Set([
+  'EE-260019',
+  'EE-260020',
+  'EE-260021',
+  'CL-260022',
+  'CL-260023',
+  'CL-260029',
+  'PT-260026',
+  'BD-260027',
+  'IN-260024',
+  'IN-260025',
+  'BR-260028',
+])
+
+/**
+ * Link invariants.
+ *
+ * ⚠️ WHY THIS EXISTS: every `linkedIssueIds` entry in this fixture used to
+ * dangle, and nothing noticed because every consumer degraded quietly — the
+ * workspace rail navigated to a not-found screen, and the linked-issue popup
+ * rendered nothing at all. An entire relationship type was unreachable and
+ * untestable, and the state was an accident rather than anyone's decision.
+ */
+function assertLinks(): void {
+  const ids = new Set(ISSUES.map((i) => i.id))
+
+  for (const issue of ISSUES) {
+    for (const target of issue.linkedIssueIds ?? []) {
+      if (target === issue.id) failLink(`${issue.id} links to itself`)
+      if (ids.has(target)) {
+        /*
+         * RESOLVABLE LINKS MUST BE MUTUAL. `linkIssue()`/`unlinkIssue()` write
+         * both sides, so a one-sided link in the fixture is a state the app
+         * cannot produce — and it reads differently depending on which issue you
+         * opened, which is the bug reciprocity exists to prevent.
+         */
+        const back = ISSUES.find((i) => i.id === target)!.linkedIssueIds ?? []
+        if (!back.includes(issue.id)) {
+          failLink(`${issue.id} → ${target} is one-sided; resolvable links must be reciprocal`)
+        }
+      } else if (!UNPORTED_LINK_TARGETS.has(target)) {
+        failLink(`${issue.id} links to "${target}", which is neither a seeded issue nor a known unported design id`)
+      }
+    }
+  }
+
+  /*
+   * The allowlist must not outlive its reason. An id that is now a real seeded
+   * issue is no longer "unported", and leaving it listed would exempt it from
+   * the reciprocity check above — silently, and for as long as nobody re-read
+   * the list.
+   */
+  for (const allowed of UNPORTED_LINK_TARGETS) {
+    if (ids.has(allowed)) {
+      failLink(
+        `"${allowed}" is in UNPORTED_LINK_TARGETS but is now a seeded issue; ` +
+          'remove its entry so its links are reciprocity-checked like every other issue',
+      )
+    }
+  }
+
+  // At least one link must RESOLVE, or the linked-issue surfaces are unreachable
+  // and untestable again — the state this invariant was written after.
+  const resolvable = ISSUES.flatMap((i) => (i.linkedIssueIds ?? []).filter((l) => ids.has(l)))
+  if (resolvable.length === 0) failLink('no linkedIssueIds entry resolves; the linked-issue surfaces are unreachable')
+}
+
 export function assertSeedAnchors(): void {
   assertIssueGroups()
   assertIssueClassification()
+  assertActivities()
+  assertLinks()
   if (NOW !== '2026-07-09T09:00:00Z') fail(`NOW is ${NOW}, expected 2026-07-09T09:00:00Z`)
 
   // The rows the prototype dates relative to the anchor ('Today' / 'Yesterday' / '2h ago').

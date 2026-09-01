@@ -24,6 +24,9 @@ import { ACTIVITIES, AUDIT, CLASSIFICATION, COMMENTS, ISSUES, NOTIFICATIONS, PAR
 import { assertSeedAnchors } from './assertSeed'
 import { newId } from './util'
 import { ELIGIBLE_PARTS, TEAM_DIRECTORY, type PartOption, type TeamMember } from './investigation'
+import type { AssignableRole } from './assignableRoles'
+import { formIssueGroup } from './issueGroups'
+import { planGroupEdits, type GroupEditRequest } from './groupEdits'
 import { findPriorityItem, priorityLetter, priorityTotal, type PriorityLetter } from './priorityMatrix'
 
 // Fail fast (dev server, preview build and every fidelity capture) if the dataset's
@@ -168,6 +171,69 @@ interface StoreValue {
   approveProposal: (id: string, remark: string, actor: Actor) => void
   rejectProposal: (id: string, remark: string, actor: Actor) => void
   bulkStatus: (ids: string[], status: StatusKey, reason: string, actor: Actor) => void
+  /**
+   * Reassign the ASSIGNEE role on several issues at once.
+   *
+   * ⚠️ IT WRITES `assigneeRole`, NEVER `ownerRole`, and that distinction is the
+   * whole point. Ownership records who raised the issue and is part of its
+   * history; assignment is who is working it now. Bulk reassignment moves the
+   * second and must never rewrite the first.
+   *
+   * ⚠️ THIS WAS SILENTLY DELETED BY A MERGE and restored afterwards. Main's Issue
+   * List rewrite won at that file's path and took the function, its control, its
+   * i18n and a dedicated test suite with it. Nothing conflicted and no gate
+   * failed — `scripts/check-merge-loss.mjs` exists because of this.
+   *
+   * ⚠️ THE ROLE IS `AssignableRole`, NOT `RoleKey` — see `assignableRoles.ts`.
+   * Typing it as the session vocabulary is what limited this to three options
+   * when the design offers five.
+   *
+   * NOTE ON FIDELITY: the canonical's `bulkAssign(role)` PERSISTS NOTHING — it
+   * clears the selection and raises a notification, unlike its `bulkStatus`
+   * which does map the issues. Writing `assigneeRole` is therefore ours, not the
+   * design's, and deliberately so: a bulk action that changes no data is
+   * theatre. Recorded rather than presented as a faithful port.
+   */
+  bulkAssignRole: (ids: string[], role: AssignableRole, actor: Actor) => void
+  /**
+   * Commit a batch of group-membership changes — the workspace's Manage Related
+   * Issues Save.
+   *
+   * ⚠️ NOT EXPRESSIBLE AS REPEATED TWO-PARTY CALLS, which is why it is its own
+   * function rather than a loop over `linkIssue`. One Save can:
+   *   · rewrite several issues' `groupId`;
+   *   · DISSOLVE a group when a removal leaves exactly one member;
+   *   · promote a new parent and log a SYSTEM-GENERATED entry that carries no
+   *     user reason;
+   *   · chain, so the second removal sees the first one's result.
+   * `planGroupEdits` owns all of it and is tested directly; this applies the plan.
+   *
+   * EVERY REMOVAL AND ADDITION CARRIES ITS OWN JUSTIFICATION — one per change,
+   * not one per Save. The design keys its pending map by member id with a
+   * separate reason on each, and `saveSameModal` states that each change gets
+   * its own audit entry.
+   */
+  saveGroupEdits: (request: GroupEditRequest, actor: Actor) => void
+  /**
+   * Remove ONE related issue, immediately — the group cards' per-member control.
+   *
+   * ⚠️ IT BRANCHES, AND THE BRANCH IS THE POINT. The design's
+   * `openGroupUnlinkModal(id)` inspects `groupMembers(id)` first:
+   *   · a genuine 2+ group  → GROUP removal, with the dissolve cascade and the
+   *     parent-promotion entry, all of which `planGroupEdits` owns;
+   *   · anything else       → plain SYMMETRIC unlink.
+   * Two different relationship types behind one control, chosen by what the
+   * target actually is. Calling the wrong one silently edits the wrong
+   * relationship, which is the defect this whole model change exists to fix.
+   *
+   * IMMEDIATE, not draft/commit — there is no Save here, so the justification is
+   * mandatory at the point of action rather than per pending row.
+   *
+   * `activeId` is the issue the user is looking at. It matters ONLY to the
+   * symmetric fallback, which needs two parties; a group removal is defined
+   * entirely by its target.
+   */
+  removeRelated: (activeId: string, targetId: string, justification: string, actor: Actor) => void
   /**
    * Request a new classification node — the forms' "Request New System" flow.
    *
@@ -449,17 +515,90 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updatedAt: now(),
     }
     const links = input.linkedIssueIds ?? []
+
+    /*
+     * ─── ISSUE-GROUP FORMATION HAPPENS HERE, AT REGISTRATION, AND NOWHERE ELSE ─
+     *
+     * The design resolves group membership only at this moment, from whatever
+     * ended up in the link set — see `formIssueGroup`, which owns every rule.
+     * Registering ONE issue can therefore rewrite SEVERAL others: pulling in a
+     * group transitively, or merging two groups, changes their members' `groupId`
+     * and writes history to each of them.
+     *
+     * ⚠️ THIS WAS MISSING UNTIL NOW, and the reason it went unnoticed is worth
+     * keeping: the read side (group cards, Parent/Child badges, the expander)
+     * shipped first and renders SEEDED groups correctly, so the screen looked
+     * complete. A read-only port over seeded data is indistinguishable from a
+     * finished one by inspection.
+     */
+    const formation = formIssueGroup({
+      newIssueId: issue.id,
+      newIssueCreatedAt: issue.createdAt,
+      linkedIds: links,
+      pool: issues,
+    })
+
+    /*
+     * The chronology guard refusing. UNREACHABLE BY CONSTRUCTION: `CreateIssueScreen`
+     * checks the same formation before calling this and declines with the design's
+     * own message, so this is a backstop for a second caller — and it throws rather
+     * than silently forming an inverted hierarchy, which is the outcome the guard
+     * exists to prevent. See `formIssueGroup` for why it never fires on this seed.
+     */
+    if (formation.blockedReason) throw new Error(`createIssue refused: ${formation.blockedReason}`)
+
+    const grouped = formation.groupId
+    const rewrite = new Set(formation.rewriteIds)
+
     setIssues((list) => [
-      issue,
-      // Mirror the link onto each counterpart so the relationship reads the same from
-      // either side — the same invariant linkIssue()/unlinkIssue() maintain.
-      ...list.map((i) => (links.includes(i.id) ? { ...i, linkedIssueIds: Array.from(new Set([...(i.linkedIssueIds ?? []), issue.id])), updatedAt: now() } : i)),
+      grouped ? { ...issue, groupId: grouped } : issue,
+      ...list.map((i) => {
+        // Mirror the link onto each counterpart so the relationship reads the same from
+        // either side — the same invariant linkIssue()/unlinkIssue() maintain.
+        const linked = links.includes(i.id)
+          ? { ...i, linkedIssueIds: Array.from(new Set([...(i.linkedIssueIds ?? []), issue.id])), updatedAt: now() }
+          : i
+        // THE FAN-OUT: a merge, or absorbing a standalone, moves other issues
+        // into this group. Only those whose group actually changes are touched.
+        return rewrite.has(i.id) ? { ...linked, groupId: grouped ?? undefined, updatedAt: now() } : linked
+      }),
     ])
+
     appendAudit(issue.id, actor, input.submit ? 'Submitted' : 'Draft saved', input.submit ? 'Draft → Open' : undefined)
     if (links.length) appendAudit(issue.id, actor, 'Issues linked', links.join(', '))
     for (const log of input.linkJustifications ?? []) {
       appendAudit(issue.id, actor, 'Linked issue(s) added', `${log.ids.join(', ')} — ${log.justification}`)
     }
+
+    if (formation.action && grouped) {
+      /*
+       * ONE REASON, REUSED — no new justification is captured for the group.
+       * The design embeds the link justification the confirmation modal already
+       * collected into the group log, so the governance requirement is met by
+       * data we were already carrying. Only the WRITING is new.
+       */
+      const why = (input.linkJustifications ?? []).map((l) => l.justification).join(' | ')
+      const detail = `${[...formation.memberIds, issue.id].join(', ')}. Parent Issue: ${formation.parentId}.${why ? ` Justification: "${why}".` : ''}`
+      appendAudit(issue.id, actor, formation.action, detail)
+      /*
+       * MIRRORED to every existing member: the group changed for them too, and an
+       * audit trail that records it on only the new issue leaves the others with
+       * no explanation for why their parent or membership moved.
+       *
+       * ⚠️ EVERY MEMBER GETS THE SAME SENTENCE, and that is the design's shape
+       * rather than ours. `relLogMeta` builds one string and writes it to all
+       * members, so a member of the LOSING group in a merge reads exactly what a
+       * member of the surviving group reads — neither is told what changed for
+       * IT specifically.
+       *
+       * PER-MEMBER PHRASING IS A DELIBERATE OPEN IMPROVEMENT, not an oversight.
+       * It is a divergence from the design, and divergences here get recorded as
+       * ours rather than smuggled in as fidelity — so the limitation is ported
+       * and noted instead of quietly fixed. Small follow-up if wanted.
+       */
+      for (const id of formation.memberIds) appendAudit(id, actor, formation.action, detail)
+    }
+
     return issue
   }, [issues, appendAudit])
 
@@ -522,6 +661,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     touch(id, { proposedStatus: undefined, proposalRationale: undefined, proposedBy: undefined })
     appendAudit(id, actor, 'Rejected transition', remark)
   }, [appendAudit])
+
+  const bulkAssignRole = useCallback<StoreValue['bulkAssignRole']>((ids, role, actor) => {
+    setIssues((list) => list.map((i) => (ids.includes(i.id) ? { ...i, assigneeRole: role, updatedAt: now() } : i)))
+    // One audit row PER ISSUE: the action happened to each of them, and a single
+    // combined entry would leave four of five issues with no record of the change.
+    ids.forEach((id) => appendAudit(id, actor, 'Bulk role assignment', `assigned to ${role}`))
+  }, [appendAudit])
+
+  const saveGroupEdits = useCallback<StoreValue['saveGroupEdits']>((request, actor) => {
+    const plan = planGroupEdits(issues, request)
+    const changed = Object.keys(plan.groupIds)
+    if (!changed.length && !plan.audits.length) return
+
+    setIssues((list) =>
+      list.map((i) =>
+        i.id in plan.groupIds ? { ...i, groupId: plan.groupIds[i.id] ?? undefined, updatedAt: now() } : i,
+      ),
+    )
+    // The plan already decided who hears what, including the system-generated
+    // parent-change entry; this writes it verbatim rather than re-deriving.
+    for (const a of plan.audits) appendAudit(a.issueId, actor, a.action, a.detail)
+  }, [issues, appendAudit])
+
+  const removeRelated = useCallback<StoreValue['removeRelated']>((activeId, targetId, justification, actor) => {
+    // `groupMembers` returns [] for an ungrouped issue and never a 1-member
+    // group, so `>= 2` is the same question as "is this really a group?".
+    if (groupMembers(targetId).length >= 2) {
+      saveGroupEdits({ activeId, removals: [{ id: targetId, justification }], additions: [] }, actor)
+      return
+    }
+    unlinkIssue(activeId, targetId, justification, actor)
+  }, [groupMembers, saveGroupEdits, unlinkIssue])
 
   const bulkStatus = useCallback<StoreValue['bulkStatus']>((ids, status, reason, actor) => {
     setIssues((list) => list.map((i) => (ids.includes(i.id) ? { ...i, status, updatedAt: now() } : i)))
@@ -697,7 +868,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     issues, classification, notifications, unreadCount,
     getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, groupMembers, relKind, correlations, partOptions, teamDirectory,
     priorityFor, priorityResult, savePriority,
-    createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus,
+    createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus, bulkAssignRole, saveGroupEdits, removeRelated,
     requestClassification, addComment, addActivity, addPart, setPartStatus,
     addManualParts, addManualTeamMembers,
     requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,

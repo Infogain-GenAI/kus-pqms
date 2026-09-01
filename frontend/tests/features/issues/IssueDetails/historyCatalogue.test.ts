@@ -10,9 +10,13 @@
 // action the app actually WRITES has a catalogue row, and that the two segments
 // mean what they say.
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join, resolve } from 'node:path'
 import { HISTORY_CATALOGUE, resolveHistoryEvent } from '@/features/issues/workspace/history/history.catalogue'
 import {
   classifyHistoryAction,
+  historyIconFor,
   historyLabelFor,
 } from '@/features/issues/workspace/history/history'
 
@@ -107,6 +111,52 @@ describe('an uncatalogued action', () => {
 })
 
 /* -------------------------------------------------------------------------- */
+/* ⚠️ UNION MERGE. Both branches appended a block here and the two are         */
+/* complementary, not competing: ours reads the STORE and fails on an action  */
+/* with no catalogue row; main's reads the CATALOGUE and fails on a row with  */
+/* no segment, wrong precedence, or a duplicate key. Keeping one side would   */
+/* have left a green file and a silently unlabelled timeline — so both stay.  */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * ─── ⚠️ EVERY ACTION THE APP CAN EMIT MUST HAVE AN ENTRY ────────────────────
+ *
+ * The list above is hand-maintained, and hand-maintained lists go stale: the
+ * group editor shipped emitting 'Issue Unlinked', 'Issue Linked' and 'Parent
+ * Issue Changed' with NO catalogue entries, so those rows rendered with no icon
+ * and no label. Nothing failed — an unknown action falls through to a default.
+ *
+ * This derives the action strings from the SOURCE instead, so a new
+ * `appendAudit(..., 'Some Action', ...)` cannot be added without an entry. It is
+ * the inverse of the dead-trace check: that one finds entries with no action,
+ * this finds actions with no entry.
+ *
+ * ⚠️ IT SCANS TEXT, so it sees only literal action arguments — an action built
+ * from a variable is invisible to it. That is a real limit, and the reason the
+ * hand-maintained list above is not deleted in favour of this.
+ */
+describe('the catalogue covers every action the store emits', () => {
+  const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../apps/portal/src')
+
+  const sources = ['data/store.tsx', 'data/groupEdits.ts'].map((f) =>
+    readFileSync(join(SRC, f), 'utf8'),
+  )
+
+  it('has an entry for each literal action argument in the store', () => {
+    const emitted = new Set<string>()
+    for (const src of sources) {
+      // `appendAudit(id, actor, 'Action', …)` and the planner's `action: 'Action'`
+      for (const m of src.matchAll(/appendAudit\([^,]+,[^,]+,\s*'([^']+)'/g)) emitted.add(m[1])
+      for (const m of src.matchAll(/action:\s*'([^']+)'/g)) emitted.add(m[1])
+    }
+    expect(emitted.size, 'scanned no actions at all').toBeGreaterThan(5)
+
+    const missing = [...emitted].filter((a) => !(a in HISTORY_CATALOGUE)).sort()
+    expect(missing, `actions with no catalogue entry: ${missing.join(', ')}`).toEqual([])
+  })
+})
+
+/* -------------------------------------------------------------------------- */
 /* Ported from Vue's history.catalogue.spec.ts                                */
 /* -------------------------------------------------------------------------- */
 
@@ -188,5 +238,64 @@ describe('the catalogue and the store agree on the vocabulary', () => {
   it('gives no two rows the same key', () => {
     const keys = Object.keys(HISTORY_CATALOGUE)
     expect(new Set(keys).size).toBe(keys.length)
+  })
+})
+
+/* -------------------------------------------------------------------------- */
+/* ⚠️ THE MERGE'S OWN BLIND SPOT                                              */
+/* -------------------------------------------------------------------------- */
+/*
+ * The group model and the history-tab rewrite were built on separate branches.
+ * The rewrite's renderer was written against the action vocabulary that existed
+ * BEFORE the group actions, and the group actions fan out to every affected
+ * member — so they are new input to a renderer that has never seen them. Neither
+ * branch's diff shows that, and the merge resolved without mentioning it.
+ *
+ * So this asserts the seam directly: each group action must arrive with a real
+ * segment, a translated label, and an icon. The last assertion is the load-
+ * bearing one — it shows the CATALOGUE is what produced the answer, not the
+ * renderer's fallback regexes, which are a chain of /created/, /link/, /id/
+ * tests that would happily file 'Issue Groups merged' somewhere arbitrary.
+ */
+const GROUP_ACTIONS = [
+  'Issue Group created',
+  'Issue linked to Issue Group',
+  'Issue Groups merged',
+  'Issue Unlinked',
+  'Issue Linked',
+  'Parent Issue Changed',
+]
+
+describe("the group actions survive the history tab's renderer", () => {
+  it.each(GROUP_ACTIONS)('%s classifies, labels and gets an icon', (action) => {
+    expect(['lifecycle', 'audit'], action).toContain(classifyHistoryAction(action))
+    expect(historyIconFor(action), `${action} renders untyped`).toBeTruthy()
+    // A raw action string means no catalogue row was found and the row is
+    // rendering the internal vocabulary at the user.
+    expect(historyLabelFor(action), `${action} shows its raw action`).not.toBe(action)
+  })
+
+  it('⚠️ answers from the CATALOGUE, not the fallback regexes', () => {
+    for (const action of GROUP_ACTIONS) {
+      const row = resolveHistoryEvent(action)
+      expect(row, `${action} has no catalogue row — the fallback is answering`).toBeDefined()
+      expect(classifyHistoryAction(action), action).toBe(row!.segment)
+      expect(historyLabelFor(action), action).toBe(row!.label)
+    }
+  })
+
+  /*
+   * ⚠️ CASE IS LOAD-BEARING HERE and it is the single most dangerous thing in
+   * this vocabulary: 'Issue unlinked' (symmetric) and 'Issue Unlinked' (group)
+   * differ by one letter's case and mean different relationships. The catalogue
+   * is keyed exactly, so a case-insensitive lookup introduced anywhere would
+   * silently merge the two. Both must resolve, and to DIFFERENT rows.
+   */
+  it('keeps the symmetric and group unlink actions distinct', () => {
+    const symmetric = resolveHistoryEvent('Issue unlinked')
+    const group = resolveHistoryEvent('Issue Unlinked')
+    expect(symmetric, 'symmetric unlink lost its row').toBeDefined()
+    expect(group, 'group unlink lost its row').toBeDefined()
+    expect(symmetric!.label).not.toBe(group!.label)
   })
 })

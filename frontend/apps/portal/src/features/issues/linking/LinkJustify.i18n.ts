@@ -28,6 +28,11 @@ const messages: ComponentI18nMessages = {
      */
     apply: 'Apply',
     cancel: 'Cancel',
+    /*
+     * The immediate surfaces name the action rather than saying "Apply", because
+     * there is no later Save to confirm — pressing it commits.
+     */
+    confirmUnlink: 'Confirm unlink',
 
     appliedLink: 'Link justified:',
     appliedUnlink: 'Unlink justified:',
