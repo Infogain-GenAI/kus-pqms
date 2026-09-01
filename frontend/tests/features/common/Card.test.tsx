@@ -33,4 +33,36 @@ describe('Card', () => {
     render(<Card label="Total" count="12+" icon={Layers} />)
     expect(screen.getByText('12+')).toBeTruthy()
   })
+
+  it('raises the shadow and lifts on hover, and settles back on mouse-leave, without touching the border', () => {
+    render(<Card label="Open" count={3} icon={Layers} />)
+    const card = screen.getByRole('button')
+    expect(card.style.boxShadow).toBe('var(--shadow-xs)')
+    expect(card.style.transform).toBe('translateY(0)')
+    const border = card.style.border
+
+    fireEvent.mouseEnter(card)
+    expect(card.style.boxShadow).toBe('var(--shadow-md)')
+    expect(card.style.transform).toBe('translateY(-2px)')
+    expect(card.style.border).toBe(border)
+
+    fireEvent.mouseLeave(card)
+    expect(card.style.boxShadow).toBe('var(--shadow-xs)')
+    expect(card.style.transform).toBe('translateY(0)')
+    expect(card.style.border).toBe(border)
+  })
+
+  it('draws an accent border when selected, independent of hover', () => {
+    render(<Card label="QIR" count={13} icon={Layers} selected />)
+    const card = screen.getByRole('button')
+    expect(card.style.border).toContain('var(--accent-500)')
+
+    fireEvent.mouseEnter(card)
+    expect(card.style.border).toContain('var(--accent-500)')
+  })
+
+  it('defaults to the subtle border when not selected', () => {
+    render(<Card label="Open" count={3} icon={Layers} />)
+    expect(screen.getByRole('button').style.border).toContain('var(--border-subtle)')
+  })
 })

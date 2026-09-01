@@ -25,13 +25,10 @@ function makeIssue(overrides: Partial<Issue> = {}): Issue {
   }
 }
 
-const scoredResult = { total: 30, calc: 'A' as const, final: 'A' as const, isOverride: false, scored: true }
-const unscoredResult = { total: 0, calc: 'C' as const, final: 'C' as const, isOverride: false, scored: false }
-
-function buildFor(cols: string[], priorityResult = () => unscoredResult) {
+function buildFor(cols: string[]) {
   const nav = vi.fn()
   const onOpenLinked = vi.fn()
-  const columns = buildIssueColumns({ cols, nav, priorityResult, onOpenLinked })
+  const columns = buildIssueColumns({ cols, nav, onOpenLinked })
   return { columns, nav, onOpenLinked }
 }
 
@@ -92,17 +89,17 @@ describe('title column', () => {
 })
 
 describe('source column', () => {
-  it('shows just the badge when there are no extra sources', () => {
+  it('shows just the badge when there is only one source', () => {
     const { columns } = buildFor(['source'])
     renderCell(columns, 'source', makeIssue({ source: 'warranty' }))
     expect(screen.getByText('Warranty')).toBeTruthy()
-    expect(screen.queryByText(/^\+/)).toBeNull()
+    expect(screen.queryByText(/Sources$/)).toBeNull()
   })
 
-  it('adds a +N pill and tooltip content when other sources are present', () => {
+  it('renders a count pill and tooltip content when multiple sources are present', () => {
     const { columns } = buildFor(['source'])
     renderCell(columns, 'source', makeIssue({ source: 'warranty', sources: ['warranty', 'techline', 'ews'] }))
-    expect(screen.getByText('+2')).toBeTruthy()
+    expect(screen.getByText('3 Sources')).toBeTruthy()
   })
 })
 
@@ -204,34 +201,18 @@ describe('owner column', () => {
 })
 
 describe('days column', () => {
-  it('renders days-open computed from reportedDate/closedAt', () => {
+  it('renders days-open computed from reportedDate/closedAt, suffixed with "d"', () => {
     const { columns } = buildFor(['days'])
     renderCell(columns, 'days', makeIssue({ reportedDate: '2026-01-01', closedAt: '2026-01-04' }))
-    expect(screen.getByText('3')).toBeTruthy()
+    expect(screen.getByText('3d')).toBeTruthy()
   })
 })
 
-describe('model / modelYear columns', () => {
-  it('render the model name and year', () => {
-    const { columns } = buildFor(['model', 'modelYear'])
+describe('model column', () => {
+  it('renders the model name', () => {
+    const { columns } = buildFor(['model'])
     renderCell(columns, 'model', makeIssue({ model: 'Telluride' }))
-    renderCell(columns, 'modelYear', makeIssue({ modelYear: 2026 }))
     expect(screen.getByText('Telluride')).toBeTruthy()
-    expect(screen.getByText('2026')).toBeTruthy()
-  })
-})
-
-describe('severity column', () => {
-  it('renders the priority band chip when scored', () => {
-    const { columns } = buildFor(['severity'], () => scoredResult)
-    renderCell(columns, 'severity', makeIssue())
-    expect(screen.getByText('A')).toBeTruthy()
-  })
-
-  it('renders an em dash when not yet scored', () => {
-    const { columns } = buildFor(['severity'], () => unscoredResult)
-    renderCell(columns, 'severity', makeIssue())
-    expect(screen.getByText('—')).toBeTruthy()
   })
 })
 

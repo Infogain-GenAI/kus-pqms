@@ -12,21 +12,15 @@ import { StoreProvider } from '@/data/store'
 import { IssueListScreen } from '@/features/issues/issue-list/IssueListScreen'
 import { resetLoggerTransport, setLoggerTransport, type LoggerTransport } from '@/shared/logger'
 
-// Only `priorityResult` is overridden — everything else is the real store.
-// The Severity column (`IssueColumns.tsx`) is the one renderer that calls it,
+// Only `combinedSources` is overridden — everything else is the real module.
+// The Source column (`IssueColumns.tsx`) is the one renderer that calls it,
 // so the throw only fires once that column is switched on, inside the table.
-vi.mock('@/data/store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/data/store')>()
+vi.mock('@/data/util', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/data/util')>()
   return {
     ...actual,
-    useStore: () => {
-      const real = actual.useStore()
-      return {
-        ...real,
-        priorityResult: () => {
-          throw new Error('boom: priorityResult')
-        },
-      }
+    combinedSources: () => {
+      throw new Error('boom: combinedSources')
     },
   }
 })
@@ -42,10 +36,10 @@ const renderList = () => render(<IssueListScreen />, { wrapper: Wrapped })
 
 const fallback = () => screen.queryByTestId('error-boundary-fallback')
 
-/** Opens Columns, sets Severity to the given state, and Applies. */
-function setSeverityColumn(on: boolean) {
+/** Opens Columns, sets Source to the given state, and Applies. */
+function setSourceColumn(on: boolean) {
   fireEvent.click(screen.getByRole('button', { name: /^Columns$/i }))
-  const box = screen.getByRole('checkbox', { name: 'Severity' }) as HTMLInputElement
+  const box = screen.getByRole('checkbox', { name: 'Source' }) as HTMLInputElement
   if (box.checked !== on) fireEvent.click(box)
   fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }))
 }
@@ -69,12 +63,12 @@ describe('the table-only error boundary', () => {
     renderList()
     expect(fallback()).toBeNull()
 
-    setSeverityColumn(true)
+    setSourceColumn(true)
 
     expect(fallback()).toBeTruthy()
     // The surrounding page is untouched: title, KPI strip and toolbar survive.
     expect(screen.getByText('Issue list')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /^Filter$/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /^Filter/i })).toBeTruthy()
     expect(screen.getByPlaceholderText(/Search by keyword/i)).toBeTruthy()
   })
 
@@ -88,7 +82,7 @@ describe('the table-only error boundary', () => {
     setLoggerTransport(t)
 
     renderList()
-    setSeverityColumn(true)
+    setSourceColumn(true)
 
     expect(errors).toHaveLength(1)
     expect(errors[0].context?.source).toBe('issue-list:table')
@@ -96,7 +90,7 @@ describe('the table-only error boundary', () => {
 
   it('offers Try again, and re-catches while the cause has not gone away', () => {
     renderList()
-    setSeverityColumn(true)
+    setSourceColumn(true)
     expect(fallback()).toBeTruthy()
 
     fireEvent.click(screen.getByTestId('error-boundary-retry'))
@@ -105,10 +99,10 @@ describe('the table-only error boundary', () => {
 
   it('clears once the offending column is removed — the resetKey wiring', () => {
     renderList()
-    setSeverityColumn(true)
+    setSourceColumn(true)
     expect(fallback()).toBeTruthy()
 
-    setSeverityColumn(false)
+    setSourceColumn(false)
 
     expect(fallback()).toBeNull()
     expect(screen.getByText('Issue ID')).toBeTruthy()

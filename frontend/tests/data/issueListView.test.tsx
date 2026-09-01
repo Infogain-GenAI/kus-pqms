@@ -191,7 +191,7 @@ describe('REGRESSION — the list forgot everything on navigation', () => {
 
   it('persists an applied filter across a remount', () => {
     const first = renderList()
-    fireEvent.click(screen.getByRole('button', { name: /^Filter$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/i }))
     fireEvent.change(screen.getByLabelText(/^Status$/i), { target: { value: 'open' } })
     fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }))
     const narrowed = total()
@@ -207,7 +207,7 @@ describe('REGRESSION — the list forgot everything on navigation', () => {
     // is visibly filtered — and the next Apply would silently clear it.
     writeIssueListView({ ...DEFAULTS, flt: { ...EMPTY_ISSUE_FILTERS, status: 'open' } })
     renderList()
-    fireEvent.click(screen.getByRole('button', { name: /^Filter$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/i }))
     expect((screen.getByLabelText(/^Status$/i) as HTMLSelectElement).value).toBe('open')
   })
 })
