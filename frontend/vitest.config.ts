@@ -139,6 +139,22 @@ export default defineConfig({
          * `historyDateFilter.test.ts`), so they raise the ratio.
          */
         'apps/portal/src/features/issues/workspace/history/**',
+        /*
+         * ⚠️ WIDENED WITHOUT A FLOOR CHANGE, WHICH IS THE ONLY REASON IT IS HERE.
+         *
+         * `HistoryModals.tsx` was invisible to the gate: two runs nine tests
+         * apart reported byte-identical covered counts, which is how the gap was
+         * found. Measured before widening, the directory landed at functions
+         * 84.62% against an 85.22% floor -- and 7 of its 9 uncovered functions
+         * were in `DtcChipInput.tsx`, a 269-line component with no tests at all.
+         *
+         * That file was covered FIRST, as ordinary work, so this glob lands with
+         * every floor intact. Two different situations were deliberately not
+         * conflated: HistoryModals at 100%/100% is code we tested before the gate
+         * could see it, so widening merely lets it count; DtcChipInput at 12.5%
+         * functions was simply untested, and no argument about globs covers that.
+         */
+        'apps/portal/src/features/issues/issue-entry/**',
         'apps/portal/src/features/issues/IssueWorkspaceScreen.tsx',
         'apps/portal/src/features/issues/CreateIssueScreen.tsx',
         'packages/ui-library/src/**',
