@@ -1,4 +1,4 @@
-import { redirect, type RouteObject } from 'react-router-dom'
+import { redirect, type RouteObject } from 'react-router'
 import { RouteErrorBoundary } from '@/app/RouteErrorBoundary'
 import { redirectPreservingQuery, requireCapability } from '@/app/capabilityGuard'
 import { AdminLayout } from '@/layouts/AdminLayout'
@@ -20,20 +20,33 @@ import { FixedHeightLayout } from '@/layouts/FixedHeightLayout'
  * parent/child relationship to walk, and 03's `ErrorBoundary` resolves by tree
  * position and so has no "closest boundary above".
  *
- * VERSION NOTE, VERIFIED RATHER THAN ASSUMED: `react-router-dom` is pinned at
- * 6.30.6 (apps/portal/package.json, frontend/package.json devDependencies and
- * pnpm-lock.yaml all agree). 6.30.6 already ships the data-router APIs this file
- * needs — `createBrowserRouter`, `RouterProvider`, and `Component` /
- * `ErrorBoundary` / `lazy` on the route object (confirmed directly against
- * react-router@6.30.6/dist/lib/context.d.ts). NO VERSION BUMP WAS NEEDED and none
- * was made.
+ * VERSION NOTE — SUPERSEDED, AND THE BLOCKER IT RECORDED IS GONE. This note used
+ * to read that `react-router-dom` was pinned at 6.30.6, that no bump was needed,
+ * and — the part that mattered — that `middleware` was ABSENT from 6.30.6 and is
+ * "a v7.3+/v8 field", so 08-authentication-and-authorization.md's
+ * `requirePermission` design "CANNOT be attached on this dependency at all".
  *
- * ⚠️ ONE THING 6.30.6 DOES NOT HAVE: `middleware`. It is absent from
- * `AgnosticBaseRouteObject` in @remix-run/router@1.23.4 (verified against
- * dist/utils.d.ts) and is a v7.3+/v8 field. 08-authentication-and-authorization.md's
- * `requirePermission` design therefore CANNOT be attached on this dependency at
- * all — not merely "not this pass". The root route below is shaped to receive it,
- * but the dependency has to move first. Recorded; not acted on.
+ * THE DEPENDENCY HAS MOVED. The package is now `react-router` at ^8.3.1 — the
+ * v7 `react-router-dom` is a deprecated re-export shim and stopped at 7.18.3, so
+ * v8 is only available under the new specifier. Two consequences worth stating
+ * where the next reader will look:
+ *
+ *   1. `middleware` IS NOW AVAILABLE. The condition the old note set for 08's
+ *      auth chain — "the dependency has to move first" — is satisfied. The root
+ *      route below was deliberately shaped to receive it. It is STILL NOT WIRED,
+ *      because most of 08 is unimplemented and there is nothing real to gate on;
+ *      what changed is that this is once again a scheduling choice rather than a
+ *      hard dependency limit.
+ *   2. react-router@8 peers `react >=19.2.7`. It was UNREACHABLE on React 18.3.1
+ *      and became installable only as part of the React 19 upgrade. The two moves
+ *      are ordered, not independent — anything that rolls React back to 18 rolls
+ *      this back too.
+ *
+ * The v7 `future` flags are not set anywhere: every one of them describes
+ * behaviour that is unconditional in v8, so a flag object here would be dead
+ * configuration. They were briefly enabled on 6.30.6 to prove the behaviour
+ * change in isolation from the API change; the full suite passed under them
+ * before the package was swapped.
  *
  * ── What this pass deliberately does NOT build ─────────────────────────────────
  * Each of these is an explicit exclusion, not an oversight:

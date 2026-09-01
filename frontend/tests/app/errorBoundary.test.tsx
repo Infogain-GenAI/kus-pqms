@@ -15,7 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useState } from 'react'
-import { MemoryRouter, Route, Routes, Link, RouterProvider, createMemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, Link, RouterProvider, createMemoryRouter } from 'react-router'
 import { RouteErrorBoundary } from '@/app/RouteErrorBoundary'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { RoutedOutlet } from '@/app/RoutedOutlet'

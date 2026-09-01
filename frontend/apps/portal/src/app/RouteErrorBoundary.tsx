@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useRouteError } from 'react-router-dom'
+import { useRouteError } from 'react-router'
 import { isApiError } from '@/shared/http'
 import { logger } from '@/shared/logger'
 import { ErrorFallback } from './ErrorFallback'

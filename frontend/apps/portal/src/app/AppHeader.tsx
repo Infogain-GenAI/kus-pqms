@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import { Bell, Check, HelpCircle } from 'lucide-react'
 import { Avatar, IconButton, Logo } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'

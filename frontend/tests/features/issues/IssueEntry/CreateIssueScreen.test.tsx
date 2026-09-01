@@ -7,7 +7,7 @@
 // Characterisation, not specification: pin what it does.
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'

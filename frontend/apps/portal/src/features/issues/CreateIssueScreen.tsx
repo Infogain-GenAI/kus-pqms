@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { Check, ChevronDown, ChevronUp, CopyCheck, CornerDownRight, Crown, Eye, GitBranch, History, Link, Link2, Link2Off, RotateCcw, Search, SearchX, Send, Sparkles, TriangleAlert, X } from 'lucide-react'
 // `SOURCE`, `SOURCE_KEYS` and `SourceKey` went with the source selector, and
 // `SourceBadge` has now followed them: the suggestion card rendered one for the

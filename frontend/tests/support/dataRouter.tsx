@@ -1,6 +1,6 @@
 import { render, waitFor } from '@testing-library/react'
 import { expect } from 'vitest'
-import { RouterProvider, createMemoryRouter, type RouteObject } from 'react-router-dom'
+import { RouterProvider, createMemoryRouter, type RouteObject } from 'react-router'
 import type { RoleKey } from '@/data/types'
 import { RoleProvider } from '@/data/roles'
 import { _syncCurrentRole } from '@/data/capabilities'

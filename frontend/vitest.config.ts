@@ -4,11 +4,30 @@ import { fileURLToPath, URL } from 'node:url'
 
 // Vitest per 10-testing-standards.md.
 //
-// ⚠️ VITEST 2, NOT 4 — AND THAT IS FORCED. Vitest 4 requires Vite 6+; this
-// project is pinned to Vite 5.4, so Vitest 2 is the newest major that runs here.
-// This is the first MEASURED consequence of 00-core-rules.md's divergence table:
-// the Vite version does not merely differ from the corpus, it bounds which
-// test-framework major can be adopted. See 18's record.
+// VITEST 4 ON VITE 8. The constraint recorded here previously — "Vitest 2, not 4,
+// and that is forced" — was true of Vite 5.4 and is true of nothing now. Vitest 4
+// peers `vite: ^6 || ^7 || ^8`, so lifting Vite to 8 lifted the bound it imposed.
+// Kept as a sentence rather than deleted because the SHAPE of the finding still
+// holds: the Vite major bounds which test-framework major can be adopted, so a
+// future Vite pin is also a Vitest pin and the two are decided together.
+//
+// ⚠️ THE COVERAGE NUMBERS CHANGED UNIT AT THIS UPGRADE, AND THE CODE DID NOT.
+// Vitest 2's v8 provider remapped coverage with `v8-to-istanbul`, a heuristic that
+// UNDER-COUNTS branches. Vitest 4's provider hard-depends on `ast-v8-to-istanbul`
+// and uses it unconditionally — there is no flag that restores the old behaviour.
+// The same 1092 tests over the same sources measured:
+//
+//        statements 91.53 -> 90.97      branches 86.42 -> 80.90
+//        functions  85.22 -> 89.05      lines    91.53 -> 92.46
+//
+// TWO WENT UP AND TWO WENT DOWN, which is the tell: lost tests cannot raise
+// function coverage by four points. Nothing regressed — the denominator is now
+// AST-accurate, and the old 86.42 branch figure was inflated by the heuristic.
+// `.coverage-floors.json` was re-seeded in that same commit for exactly the reason
+// this file gives below for a widened `include`: a re-measurement is re-seeded,
+// not argued with. DO NOT read the lower branch floor as slippage and "restore" it
+// to 86.42 — that number is not expressible in the current unit, and the gate
+// would then fail forever.
 //
 // ---------------------------------------------------------------------------
 // THE COVERAGE DENOMINATOR IS DATA-LAYER ONLY. READ THIS BEFORE WIDENING IT.
