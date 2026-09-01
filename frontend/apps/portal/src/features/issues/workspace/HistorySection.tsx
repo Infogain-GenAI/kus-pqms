@@ -1,29 +1,31 @@
 import { useMemo, useState } from 'react'
-import {
-  CircleDot,
-  Expand,
-  FilePlus,
-  FilePlus2,
-  Flag,
-  Hash,
-  Link2,
-  Microscope,
-  Package,
-  SearchX,
-  SquarePen,
-  Tags,
-  UserRoundCheck,
-  UserRoundCog,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import { Button, SearchField, Select } from '@pqms/ui-library'
+import { Expand, SearchX } from 'lucide-react'
+import { Button, SearchField } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
 import { IconChip, SectionCard, TagChip, ToggleGroup } from '@/app/chrome'
 import { useStore } from '@/data/store'
 import { fmtHM, fmtMDY } from '@/data/util'
 import { NOW } from '@/data/types'
+
+/**
+ * "Today", as an ISO `yyyy-mm-dd` day.
+ *
+ * ⚠️ DERIVED FROM THE FIXED `NOW` ANCHOR, NOT FROM THE CLOCK, and passed to
+ * both the filter and the grouping. That is what stops the two disagreeing about
+ * what today is — a bucket labelled "Today" over rows a "Last 7 days" filter has
+ * just excluded is the shape of bug two independent clock reads produce.
+ */
+const TODAY = NOW.slice(0, 10)
 import { useWorkspace } from './context'
-import { resolveHistoryEvent } from './history/history.catalogue'
+import {
+  classifyHistoryAction,
+  groupHistoryByDay,
+  historyIconFor,
+  historyLabelFor,
+  matchesHistoryFilters,
+  type DateRange,
+} from './history/history'
+import { HistoryDateFilter } from './history/HistoryDateFilter'
 
 // Moved verbatim from IssueWorkspaceScreen.tsx's `HistoryTab` (2026-08-27).
 // Route path: /issues/:id/history.
@@ -36,38 +38,6 @@ import { resolveHistoryEvent } from './history/history.catalogue'
 //
 // Not to be confused with `store.activitiesFor()`, which is Investigation's
 // activity records and is unrelated to this naming.
-
-/**
- * Segment for an action.
- *
- * THE CATALOGUE ANSWERS FIRST. These regexes remain only as the fallback for an
- * action with no catalogue row — they were the whole mechanism, and they mis-file
- * anything they were not written against, silently, because a wrongly-segmented
- * row still renders perfectly.
- */
-function classify(action: string): 'LIFECYCLE' | 'AUDIT LOG' {
-  const known = resolveHistoryEvent(action)
-  if (known) return known.segment === 'lifecycle' ? 'LIFECYCLE' : 'AUDIT LOG'
-  if (/^issue record created$/i.test(action) || /^status initialized$/i.test(action)) return 'AUDIT LOG'
-  if (/^initial owner assigned$/i.test(action)) return 'LIFECYCLE'
-  return /status|created|submitted|approved|rejected|escalated|investigation|disposition/i.test(action) ? 'LIFECYCLE' : 'AUDIT LOG'
-}
-function iconFor(action: string): LucideIcon {
-  const known = resolveHistoryEvent(action)
-  if (known) return known.icon
-  if (/initial owner assigned/i.test(action)) return UserRoundCheck
-  if (/record created/i.test(action)) return FilePlus
-  if (/created/i.test(action)) return Flag
-  if (/link/i.test(action)) return Link2
-  if (/parts/i.test(action)) return Package
-  if (/updated|field/i.test(action)) return SquarePen
-  if (/classif/i.test(action)) return Tags
-  if (/status|approved|rejected|escalat/i.test(action)) return CircleDot
-  if (/owner|assign/i.test(action)) return UserRoundCog
-  if (/activity/i.test(action)) return Microscope
-  if (/id/i.test(action)) return Hash
-  return FilePlus2
-}
 
 export function HistorySection() {
   const { issueId } = useWorkspace()
@@ -83,35 +53,25 @@ export function HistorySection() {
    * Today/Yesterday grouping below uses, so the buckets and the filter can never
    * disagree about what "today" is.
    */
-  const [range, setRange] = useState<'all' | '7' | '30' | '90'>('all')
+  const [range, setRange] = useState<DateRange>({})
   const entries = store.auditFor(issueId)
-  const nowMs = new Date(NOW).getTime()
-  const shown = entries.filter((e) => {
-    const cls = classify(e.action)
-    if (filter === 'lifecycle' && cls !== 'LIFECYCLE') return false
-    if (filter === 'audit' && cls !== 'AUDIT LOG') return false
-    if (range !== 'all') {
-      const days = (nowMs - new Date(e.timestamp).getTime()) / 86400000
-      if (days > Number(range)) return false
-    }
-    // Searches the RENDERED label too, not only the raw action — a user who
-    // reads "Investigation started" and types it must find the row whose stored
-    // action is "Started investigation".
-    const label = resolveHistoryEvent(e.action)?.label ?? e.action
-    if (q && !`${e.action} ${label} ${e.detail ?? ''} ${e.actor}`.toLowerCase().includes(q.toLowerCase())) return false
-    return true
-  })
-  const groups = useMemo(() => {
-    // Proto buckets (Today / Yesterday / Last week / Older), resolved against the fixed NOW anchor.
-    const nowDay = Math.floor(new Date(NOW).getTime() / 86400000)
-    const m = new Map<string, typeof shown>()
-    for (const e of shown) {
-      const diff = nowDay - Math.floor(new Date(e.timestamp).getTime() / 86400000)
-      const key = diff <= 0 ? 'Today' : diff === 1 ? 'Yesterday' : diff <= 7 ? 'Last week' : 'Older'
-      m.set(key, [...(m.get(key) ?? []), e])
-    }
-    return Array.from(m.entries())
-  }, [shown])
+
+  /*
+   * Filtering and grouping now live in `history/history.ts`, which is pure and
+   * takes `today` as an argument. They used to be inline here, which meant
+   * neither could be tested without rendering a screen, a store and a router —
+   * and an off-by-one on an inclusive date bound looks exactly like a slow day.
+   */
+  const shown = entries.filter((e) =>
+    matchesHistoryFilters(e, {
+      segment: filter === 'all' ? undefined : filter,
+      search: q,
+      dateFrom: range.from,
+      dateTo: range.to,
+    }),
+  )
+
+  const groups = useMemo(() => groupHistoryByDay(shown, TODAY), [shown])
 
   return (
     <SectionCard>
@@ -121,19 +81,7 @@ export function HistorySection() {
         <div style={{ width: 280 }}>
           <SearchField value={q} onChange={(e) => setQ(e.target.value)} onClear={() => setQ('')} placeholder="Search history…" size="sm" />
         </div>
-        <Select
-          aria-label="Date range"
-          size="sm"
-          value={range}
-          options={[
-            { value: 'all', label: 'Date: All time' },
-            { value: '7', label: 'Date: Last 7 days' },
-            { value: '30', label: 'Date: Last 30 days' },
-            { value: '90', label: 'Date: Last 90 days' },
-          ]}
-          onChange={(e) => setRange(e.target.value as typeof range)}
-          style={{ width: 170 }}
-        />
+        <HistoryDateFilter value={range} onChange={setRange} today={TODAY} />
         <Button variant="secondary" size="sm" disabled iconLeft={<Icon icon={Expand} size={14} />}>Expand all</Button>
       </div>
       {groups.length === 0 && (
@@ -145,17 +93,17 @@ export function HistorySection() {
           </div>
         </div>
       )}
-      {groups.map(([day, list]) => (
-        <div key={day} style={{ marginBottom: 'var(--space-4)' }}>
+      {groups.map((group) => (
+        <div key={group.label} style={{ marginBottom: 'var(--space-4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 6 }}>
-            <span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{day}</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 'var(--radius-pill)', background: 'var(--neutral-100)', color: 'var(--text-secondary)', font: 'var(--fw-bold) 10px/1 var(--font-body)' }}>{list.length}</span>
+            <span style={{ font: 'var(--fw-bold) 10.5px/1 var(--font-body)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{group.label}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 'var(--radius-pill)', background: 'var(--neutral-100)', color: 'var(--text-secondary)', font: 'var(--fw-bold) 10px/1 var(--font-body)' }}>{group.count}</span>
           </div>
-          {list.map((e) => {
-            const cls = classify(e.action)
+          {group.entries.map((e) => {
+            const cls = classifyHistoryAction(e.action)
             return (
               <div key={e.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: '10px 0' }}>
-                <IconChip icon={iconFor(e.action)} tint={cls === 'LIFECYCLE' ? 'var(--success-50)' : 'var(--neutral-100)'} color={cls === 'LIFECYCLE' ? 'var(--success-600)' : 'var(--neutral-600)'} size={34} iconSize={15} />
+                <IconChip icon={historyIconFor(e.action)} tint={cls === 'lifecycle' ? 'var(--success-50)' : 'var(--neutral-100)'} color={cls === 'lifecycle' ? 'var(--success-600)' : 'var(--neutral-600)'} size={34} iconSize={15} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                     {/* The catalogue's label where there is one — "Started
@@ -163,8 +111,8 @@ export function HistorySection() {
                         started" is how a reader expects to read it. Falls back
                         to the raw action, so an uncatalogued event still shows
                         something true rather than nothing. */}
-                    <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{resolveHistoryEvent(e.action)?.label ?? e.action}</span>
-                    <TagChip tint={cls === 'LIFECYCLE' ? 'var(--success-50)' : '#EEEBFB'} color={cls === 'LIFECYCLE' ? 'var(--success-600)' : '#6B4EDB'}>{cls}</TagChip>
+                    <span style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{historyLabelFor(e.action)}</span>
+                    <TagChip tint={cls === 'lifecycle' ? 'var(--success-50)' : '#EEEBFB'} color={cls === 'lifecycle' ? 'var(--success-600)' : '#6B4EDB'}>{cls}</TagChip>
                   </div>
                   <div style={{ marginTop: 3, font: 'var(--fw-regular) var(--fs-caption)/1.3 var(--font-body)', color: 'var(--text-muted)' }}>
                     {e.actor} · {e.actorRole}{e.detail ? ` · ${e.detail}` : ''}

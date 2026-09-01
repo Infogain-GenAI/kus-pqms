@@ -133,6 +133,12 @@ export default defineConfig({
         // NOT 'apps/portal/src/features/issues/IssueListScreen.tsx' — the Issue
         // List extraction above moved that file to issue-list/IssueListScreen.tsx.
         // The old path no longer exists; issue-list/** already covers the new one.
+        /*
+         * The History feed's pure logic and its date filter, ported from Vue.
+         * Both land with their own tests (`history.test.ts`,
+         * `historyDateFilter.test.ts`), so they raise the ratio.
+         */
+        'apps/portal/src/features/issues/workspace/history/**',
         'apps/portal/src/features/issues/IssueWorkspaceScreen.tsx',
         'apps/portal/src/features/issues/CreateIssueScreen.tsx',
         'packages/ui-library/src/**',
