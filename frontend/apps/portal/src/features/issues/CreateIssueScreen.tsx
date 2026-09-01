@@ -760,7 +760,7 @@ export function CreateIssueScreen() {
                           <SuggestionCard
                             key={e.key}
                             issue={e.issue!}
-                            variant="search"
+                            showStandaloneBadge={true}
                             
                             linked={linkedIds.includes(e.issue!.id)}
                             onLink={() => askToLink([e.issue!.id], e.issue!.id)}
@@ -831,7 +831,7 @@ export function CreateIssueScreen() {
                           <SuggestionCard
                             key={e.key}
                             issue={e.issue!}
-                            variant="suggestion"
+                            showStandaloneBadge={false}
                             reasons={e.reasons}
                             linked={linkedIds.includes(e.issue!.id)}
                             onLink={() => askToLink([e.issue!.id], e.issue!.id)}

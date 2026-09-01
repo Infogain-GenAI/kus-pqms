@@ -86,7 +86,8 @@ export function SuggestionCard({
   issue,
   linked,
   reasons,
-  variant,
+  showStandaloneBadge,
+  disabled,
   onLink,
   onUnlink,
   onViewHistory,
@@ -96,7 +97,38 @@ export function SuggestionCard({
   linked: boolean
   /** Empty for search results — the design computes no reasons there. */
   reasons?: string[]
-  variant: 'suggestion' | 'search'
+  /*
+   * `variant` USED TO LIVE HERE AND IS GONE. Its only effect in this component
+   * was the badge below, so once that became an explicit prop the variant was
+   * dead weight that still looked meaningful. `GroupCard` keeps its own variant
+   * because that genuinely drives three things.
+   */
+  /**
+   * ⚠️ THE ONE LINE ON WHICH THE DESIGN'S TWO COPIES OF THIS SECTION DIFFER.
+   *
+   * The canonical renders this section twice, identical but for a single line:
+   * its EDIT copy shows the "Standalone Issue" badge on standalone SUGGESTION
+   * cards, and its CREATE copy does not. Search cards show it on both.
+   *
+   * It is a PROP rather than a `variant === 'search'` test — which is what it was
+   * — because the rule is not about the variant, it is about the surface, and a
+   * card that reads its own surface is how the two screens diverge again. The
+   * caller knows; the card must not.
+   */
+  showStandaloneBadge: boolean
+  /**
+   * ⚠️ THE MUTATION CONTROLS ONLY — history and the expander stay live.
+   *
+   * Issue Edit disables its whole form while a save is in flight or the record is
+   * locked, and its linking controls are persisted mutations, so they have to
+   * honour that. Reading and navigating do not: a disabled form is still a form
+   * you can look at, and greying out View History would remove information for no
+   * reason.
+   *
+   * Issue Entry passes nothing — its cards are never disabled — so this is
+   * `undefined` there and the markup is unchanged.
+   */
+  disabled?: boolean
   onLink: () => void
   onUnlink: () => void
   onViewHistory: () => void
@@ -139,7 +171,7 @@ export function SuggestionCard({
             className={entryStyles.cardStatus}
             style={{ height: 'var(--pill-h)', padding: '0 var(--pill-px)', borderRadius: 'var(--pill-r)', fontSize: 'var(--pill-fs)' }}
           />
-          {variant === 'search' && <span className={entryStyles.cardStandalone}>{t('cardStandalone')}</span>}
+          {showStandaloneBadge && <span className={entryStyles.cardStandalone}>{t('cardStandalone')}</span>}
           {linked && (
             <span className={entryStyles.cardLinkedPill}>
               <Icon icon={Link} size={11} />
@@ -161,6 +193,7 @@ export function SuggestionCard({
           <button
             type="button"
             className={linked ? entryStyles.cardLinkBtnOn : entryStyles.cardLinkBtn}
+            disabled={disabled}
             onClick={linked ? onUnlink : onLink}
           >
             <Icon icon={Link2} size={14} />
@@ -214,6 +247,7 @@ export function GroupCard({
   linked,
   reasons,
   variant,
+  disabled,
   onLink,
   onUnlink,
   onViewHistory,
@@ -224,6 +258,19 @@ export function GroupCard({
   linked: boolean
   reasons?: string[]
   variant: 'suggestion' | 'search'
+  /**
+   * ⚠️ THE MUTATION CONTROLS ONLY — history and the expander stay live.
+   *
+   * Issue Edit disables its whole form while a save is in flight or the record is
+   * locked, and its linking controls are persisted mutations, so they have to
+   * honour that. Reading and navigating do not: a disabled form is still a form
+   * you can look at, and greying out View History would remove information for no
+   * reason.
+   *
+   * Issue Entry passes nothing — its cards are never disabled — so this is
+   * `undefined` there and the markup is unchanged.
+   */
+  disabled?: boolean
   onLink: () => void
   onUnlink: () => void
   onViewHistory: () => void
@@ -276,6 +323,7 @@ export function GroupCard({
       type="button"
       className={entryStyles.cardHistoryBtn}
       aria-label={`${t('groupRemoveMember')} ${id}`}
+      disabled={disabled}
       onClick={() => { setRemoving(id); setRemoveText(''); setRemoveErr('') }}
     >
       <Icon icon={Link2Off} size={13} />
@@ -309,6 +357,7 @@ export function GroupCard({
           <button
             type="button"
             className={linked ? entryStyles.cardLinkBtnOn : entryStyles.cardLinkBtn}
+            disabled={disabled}
             onClick={linked ? onUnlink : onLink}
           >
             <Icon icon={Link2} size={14} />

@@ -1,11 +1,18 @@
 /*
- * Same Existing Issues, edit surface.
+ * Same Existing Issues, edit surface — what little styling is left.
  *
- * Kept in CSS rather than inline because `lint:ds:numeric` counts numeric
- * literals in `apps/*​/src/**` against a ceiling that only ratchets DOWN. Every
- * value here is a design token.
+ * ⚠️ MOST OF THIS FILE IS GONE, and deliberately. It used to style bespoke
+ * compact rows: a card shell, an id, a title, a group pill, a member list, a
+ * Parent/Child badge. All of that now comes from `related/RelatedIssueCards` and
+ * the `issue-entry` stylesheet it shares with Issue Entry, because the canonical
+ * renders this section identically on both screens — so a second set of rules for
+ * the same rows was the mechanism by which the two drifted apart.
+ *
+ * What remains is the section's own layout: the list gaps, the empty state, and
+ * the spacing above an inline justification box. Every value is a design token,
+ * and it stays in CSS because `lint:ds:numeric` counts numeric literals in
+ * `apps/*​/src/**` against a ceiling that only ratchets down.
  */
-
 .list {
   display: flex;
   flex-direction: column;
@@ -17,78 +24,6 @@
   margin: var(--space-3) 0 0;
   font: var(--fw-regular) var(--fs-body-sm) / 1.5 var(--font-body);
   color: var(--text-muted);
-}
-
-.card {
-  border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3);
-  background: var(--surface-card);
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.id {
-  font: var(--fw-semibold) var(--fs-caption) / 1 var(--font-mono);
-  color: var(--accent-700);
-  flex: none;
-  white-space: nowrap;
-}
-
-.title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font: var(--fw-regular) var(--fs-body-sm) / 1.3 var(--font-body);
-  color: var(--text-primary);
-}
-
-/* Says a suggestion stands for a whole cohort, not one issue. */
-.groupPill {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--accent-50);
-  color: var(--accent-700);
-  font: var(--fw-semibold) var(--fs-caption) / 1.9 var(--font-body);
-  white-space: nowrap;
-}
-
-.reasons {
-  margin-top: var(--space-2);
-  font: var(--fw-regular) var(--fs-caption) / 1.5 var(--font-body);
-  color: var(--text-muted);
-}
-
-.members {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: var(--border-width) solid var(--border-subtle);
-}
-
-.member {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.memberBadge {
-  flex: none;
-  font: var(--fw-semibold) var(--fs-caption) / 1.4 var(--font-body);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .justifyRow {

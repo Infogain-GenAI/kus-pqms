@@ -1,12 +1,18 @@
 import { useMemo, useState } from 'react'
-import { Link2, Sparkles } from 'lucide-react'
-import { Button, Icon, StatusBadge } from '@pqms/ui-library'
+import { Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { CardHead, SectionCard } from '@/app/chrome'
 import { useStore } from '@/data/store'
 import { relatedRank } from '@/data/relatedRank'
 import type { Issue } from '@/data/types'
 import { LinkJustifyBox, applyJustification } from '@/features/issues/linking/LinkJustifyBox'
+import { GroupCard, SuggestionCard } from '@/features/issues/related/RelatedIssueCards'
+import {
+  GroupHistoryModal,
+  IssueHistoryModal,
+  useHistoryTarget,
+} from '@/features/issues/issue-entry/HistoryModals'
 import { NS } from '../../IssueDetail.i18n'
 import styles from './SameExistingIssuesSection.module.css'
 
@@ -96,6 +102,8 @@ export function SameExistingIssuesSection({
 }) {
   const { t } = useTranslation(NS)
   const store = useStore()
+  const nav = useNavigate()
+  const history = useHistoryTarget()
 
   /**
    * One pending change at a time, replacing rather than queuing — the same rule
@@ -185,60 +193,76 @@ export function SameExistingIssuesSection({
           {entries.map((e) => {
             const ids = e.members ? e.members.map((m) => m.id) : [e.issue.id]
             return (
-              <div key={e.key} className={styles.card} data-testid={`same-suggestion-${e.key}`}>
-                <div className={styles.row}>
-                  <span className={styles.id}>{e.issue.id}</span>
-                  <span className={styles.title}>{e.issue.title}</span>
-                  <StatusBadge status={e.issue.status} size="sm" />
-                  {e.members && (
-                    <span className={styles.groupPill}>
-                      {t('sameGroupOf', { count: e.members.length })}
-                    </span>
-                  )}
-                  <Button
-                    variant="secondary"
-                    size="sm"
+              <div key={e.key} data-testid={`same-suggestion-${e.key}`}>
+                {e.members ? (
+                  <GroupCard
+                    parent={e.members[0]}
+                    children={e.members.slice(1)}
+                    /*
+                     * Always false: already-linked entries are filtered out
+                     * above, so a card here is by construction not yet linked.
+                     * That changes when the search panel folds in and this list
+                     * takes over the linked display — see the note on `entries`.
+                     */
+                    linked={false}
+                    reasons={e.reasons}
+                    variant="suggestion"
                     disabled={disabled}
-                    iconLeft={<Icon icon={Link2} size={13} />}
-                    onClick={() => start(e.key, ids, 'link')}
-                  >
-                    {t(e.members ? 'sameLinkGroup' : 'sameLink')}
-                  </Button>
-                </div>
-
-                {/* Why this was suggested. Without it a ranked list is a mystery. */}
-                {e.reasons.length > 0 && <div className={styles.reasons}>{e.reasons.join(' · ')}</div>}
-
-                {/* Members, with the derived Parent/Child roles. */}
-                {e.members && (
-                  <div className={styles.members}>
-                    {e.members.map((m, i) => (
-                      <div key={m.id} className={styles.member}>
-                        <span className={styles.memberBadge}>
-                          {t(i === 0 ? 'linksModalParent' : 'linksModalChild')}
-                        </span>
-                        <span className={styles.id}>{m.id}</span>
-                        <span className={styles.title}>{m.title}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={disabled}
-                          onClick={() => start(`${e.key}:${m.id}`, [m.id], 'unlink')}
-                        >
-                          {t('sameRemoveMember')}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                    onLink={() => start(e.key, ids, 'link')}
+                    onUnlink={() => start(e.key, ids, 'unlink')}
+                    onViewHistory={() => history.openGroup(e.members![0].id)}
+                    /*
+                     * GATED INSIDE THE CARD. `GroupCard` captures the reason with
+                     * its own inline justify box and does not call through until
+                     * it clears the shared rule, so what arrives here is already
+                     * justified — the same contract `LinkIssuesSection` honours.
+                     */
+                    onRemoveMember={(id, why) => onUnlink(id, why)}
+                  />
+                ) : (
+                  <SuggestionCard
+                    issue={e.issue}
+                    linked={false}
+                    reasons={e.reasons}
+                    /*
+                     * ⚠️ TRUE HERE, FALSE ON CREATE — the single line on which the
+                     * design's two copies of this section differ. Its edit copy
+                     * badges standalone suggestion cards; its create copy does
+                     * not.
+                     */
+                    showStandaloneBadge
+                    disabled={disabled}
+                    onLink={() => start(e.key, ids, 'link')}
+                    onUnlink={() => start(e.key, ids, 'unlink')}
+                    onViewHistory={() => history.openIssue(e.issue.id)}
+                  />
                 )}
-
                 {justifyRow(e.key)}
-                {e.members?.map((m) => <div key={m.id}>{justifyRow(`${e.key}:${m.id}`)}</div>)}
               </div>
             )
           })}
         </div>
       )}
+
+      {/*
+        View History, the same two modals Issue Entry opens — chosen by CARD TYPE,
+        not by surface: a group card opens the group modal, a standalone card the
+        single-issue one. The design's cards carry this button on both screens, so
+        rendering the shared card without wiring it would have left a dead control.
+      */}
+      <GroupHistoryModal
+        key={`g${history.nonce}`}
+        members={history.target?.kind === 'group' ? store.groupMembers(history.target.id) : []}
+        entriesFor={(id) => store.auditFor(id)}
+        onOpenIssue={(id) => nav(`/issues/${id}`)}
+        onClose={history.close}
+      />
+      <IssueHistoryModal
+        key={`i${history.nonce}`}
+        issue={history.target?.kind === 'issue' ? (store.getIssue(history.target.id) ?? null) : null}
+        entries={history.target?.kind === 'issue' ? store.auditFor(history.target.id) : []}
+        onClose={history.close}
+      />
     </SectionCard>
   )
 }

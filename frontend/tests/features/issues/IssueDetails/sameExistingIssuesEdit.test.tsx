@@ -96,8 +96,21 @@ const suggestedKeys = () =>
     (el.getAttribute('data-testid') ?? '').replace('same-suggestion-', ''),
   )
 
-const linkBtns = () => screen.queryAllByRole('button', { name: new RegExp(`^${M.sameLink}$`) })
-const groupBtns = () => screen.queryAllByRole('button', { name: new RegExp(`^${M.sameLinkGroup}$`) })
+/*
+ * ─── ⚠️ THESE NOW ADDRESS THE SHARED CARDS ──────────────────────────────────
+ *
+ * This section used to render bespoke compact rows with its own labels — four
+ * i18n keys now retired with the markup they described. It now renders
+ * `related/RelatedIssueCards`, the same components Issue Entry uses, because the
+ * canonical renders this section identically on both screens. So the labels are
+ * the shared ones — and the two that matter are HARDCODED in the card rather than
+ * translated, which is why they are literals here rather than keys.
+ *
+ * Retargeted rather than rewritten: every assertion below still checks the same
+ * behaviour it was written for, against the markup that behaviour now lives in.
+ */
+const linkBtns = () => screen.queryAllByRole('button', { name: /^Link to Issue$/ })
+const groupBtns = () => screen.queryAllByRole('button', { name: /^Link to Issue Group$/ })
 const justifyBox = () => screen.getByRole('textbox', { name: new RegExp(M.sameJustifyLink, 'i') })
 const applyBtn = (label: string) => screen.getByRole('button', { name: new RegExp(`^${label}$`) })
 
@@ -106,8 +119,12 @@ describe('the ranked half exists at all', () => {
     mount()
     expect(body()).toContain(M.sameSuggestTitle)
     expect(linkBtns().length + groupBtns().length, 'no suggestions ranked').toBeGreaterThan(0)
-    // A ranked list without reasons is a mystery; relatedRank supplies them.
-    expect(body()).toMatch(/Same|Shared|component|symptom/i)
+    /*
+     * The shared card prefixes reasons with "Suggested because:" — copy the old
+     * bespoke rows did not have. Asserting the prefix rather than a loose keyword
+     * match, because the prefix is the thing that makes a ranked list legible.
+     */
+    expect(body()).toMatch(/Suggested because:/)
   })
 
   it('says so plainly when nothing ranks', () => {
@@ -255,15 +272,23 @@ describe('per-member removal mutates real group membership', () => {
     expect(before.length).toBeGreaterThan(2)
 
     const target = before[before.length - 1]
-    fireEvent.click(screen.getAllByRole('button', { name: new RegExp(`^${M.sameRemoveMember}$`) })[before.length - 1])
+    /*
+     * ⚠️ THE CARD GATES THIS ITSELF, and its control is addressed by id: the
+     * shared card's aria-label is "Remove from group <id>", so a `^…$` match on
+     * the bare label finds nothing. Targeting by id is also stronger than
+     * indexing into a list of identical buttons, which is what this did before —
+     * the group must be expanded for a child's control to exist at all.
+     */
+    fireEvent.click(screen.getByRole('button', { name: /show child issues/i }))
+    fireEvent.click(screen.getByRole('button', { name: `Remove from group ${target}` }))
 
     // Nothing yet.
     expect(store().getIssue(target)!.groupId, 'membership changed before a reason').toBeTruthy()
 
-    fireEvent.change(screen.getByRole('textbox', { name: new RegExp(M.sameJustifyUnlink, 'i') }), {
+    fireEvent.change(screen.getByRole('textbox', { name: /justification for removing/i }), {
       target: { value: WHY },
     })
-    fireEvent.click(applyBtn(M.sameConfirmUnlink))
+    fireEvent.click(screen.getByRole('button', { name: /^confirm unlink$/i }))
 
     expect(store().getIssue(target)!.groupId, 'the member was not removed from the group').toBeUndefined()
   })

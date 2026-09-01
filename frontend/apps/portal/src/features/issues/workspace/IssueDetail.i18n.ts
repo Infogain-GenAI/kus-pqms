@@ -220,14 +220,21 @@ const messages: ComponentI18nMessages = {
      * surface the issue exists, so a link or unlink is audited and
      * carries a mandatory reason.
      */
+    /*
+     * ⚠️ FOUR KEYS RETIRED HERE — sameLink, sameLinkGroup, sameGroupOf and
+     * sameRemoveMember. They labelled bespoke compact rows this section used to
+     * render. It now renders `related/RelatedIssueCards`, the same components
+     * Issue Entry uses, because the canonical renders this section identically on
+     * both screens — so those labels come from the shared card and its own
+     * bundle, and duplicates here would drift.
+     *
+     * The keys below are the ones this section still owns: its heading, its empty
+     * state, and the justification copy for the link it gates itself.
+     */
     sameSuggestTitle: 'Same existing issues',
     sameSuggestSubtitle:
       'Ranked against the classification as you edit it. Linking and unlinking here are recorded immediately.',
     sameSuggestEmpty: 'No similar issues match the current classification.',
-    sameLink: 'Link to issue',
-    sameLinkGroup: 'Link to issue group',
-    sameGroupOf: 'Issue group · {{count}}',
-    sameRemoveMember: 'Remove from group',
     sameConfirmLink: 'Confirm link',
     sameConfirmUnlink: 'Confirm removal',
     sameJustifyLink: 'Justification for linking',
