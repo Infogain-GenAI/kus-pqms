@@ -21,7 +21,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider, useStore } from '@/data/store'
 import { ExistingIssueModal } from '@/features/issues/ExistingIssueModal'
