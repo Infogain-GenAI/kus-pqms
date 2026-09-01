@@ -86,6 +86,30 @@ function fillCompleteForm() {
   // form is complete without it, which is what the next test asserts.
 }
 
+/**
+ * Drive the classification cascade to a NAMED path.
+ *
+ * Hoisted to module scope: it was declared inside one describe, and a later
+ * block that needed the engine-vibration cohort failed with "classifyAs is not
+ * defined" rather than with anything about the behaviour under test.
+ */
+function classifyAs(labels: [string, string, string, string]) {
+  const codeBox = screen.getByRole('combobox', { name: /model code/i })
+  fireEvent.focus(codeBox)
+  const first = screen.getAllByRole('option')[0]
+  if (first) fireEvent.mouseDown(first)
+  const names = [/^System$/i, /^Sub-system$/i, /^Component$/i, /^Symptom$/i]
+  names.forEach((name, idx) => {
+    const box = screen.getByRole('combobox', { name })
+    fireEvent.focus(box)
+    const panelId = box.getAttribute('aria-controls')
+    const panel = panelId ? document.getElementById(panelId) : null
+    const opts = [...(panel?.querySelectorAll('[role="option"]') ?? [])]
+    const want = opts.find((o) => (o.textContent ?? '').trim().toLowerCase() === labels[idx].toLowerCase())
+    if (want) fireEvent.mouseDown(want)
+  })
+}
+
 describe('the form is a draft until Register Issue', () => {
   it('renders the prototype\'s two header actions', () => {
     renderCreate()
@@ -377,7 +401,14 @@ describe('Same Existing Issues — cards, search and history', () => {
       // `HistorySection` could not be reused — it reads its id from
       // `useWorkspace()`. This path goes through `store.auditFor(id)` directly,
       // so the modal must render without a workspace provider in the tree.
-      expect(body()).toMatch(/history —/i)
+      /*
+       * ⚠️ WAS `/history —/i`, THE FLAT POPUP'S TITLE. That popup is gone: a
+       * standalone card now opens the single-issue modal and a group card opens
+       * the group modal. Asserted on the SUBTITLE, because this modal's title is
+       * "View History" — the same text as the button that opens it, so a title
+       * match would pass even if nothing opened.
+       */
+      expect(body()).toContain('read-only audit trail')
     })
 
     /*
@@ -511,10 +542,10 @@ describe('Same Existing Issues — the edge states', () => {
   it('closes the history modal again', () => {
     openBlock()
     fireEvent.click(screen.getAllByRole('button', { name: /view history/i })[0])
-    expect(body()).toMatch(/history —/i)
+    expect(body()).toContain('read-only audit trail')
     // `Modal` has no close button — it binds Escape on the document.
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(body()).not.toMatch(/history —/i)
+    expect(body()).not.toContain('read-only audit trail')
   })
 
   it('links straight from a search result, not only from a suggestion', () => {
@@ -717,22 +748,6 @@ describe('Requesting a classification that does not exist yet', () => {
  */
 describe('an issue group renders as one card with its children folded in', () => {
   /** Drives the cascade by option LABEL, unlike `fillCompleteForm`'s first-option walk. */
-  function classifyAs(labels: [string, string, string, string]) {
-    const codeBox = screen.getByRole('combobox', { name: /model code/i })
-    fireEvent.focus(codeBox)
-    const first = screen.getAllByRole('option')[0]
-    if (first) fireEvent.mouseDown(first)
-    const names = [/^System$/i, /^Sub-system$/i, /^Component$/i, /^Symptom$/i]
-    names.forEach((name, idx) => {
-      const box = screen.getByRole('combobox', { name })
-      fireEvent.focus(box)
-      const panelId = box.getAttribute('aria-controls')
-      const panel = panelId ? document.getElementById(panelId) : null
-      const opts = [...(panel?.querySelectorAll('[role="option"]') ?? [])]
-      const want = opts.find((o) => (o.textContent ?? '').trim().toLowerCase() === labels[idx].toLowerCase())
-      if (want) fireEvent.mouseDown(want)
-    })
-  }
 
   const openEngineCohort = () => {
     renderCreate()
@@ -766,8 +781,20 @@ describe('an issue group renders as one card with its children folded in', () =>
   it('derives the parent as the earliest member', () => {
     openEngineCohort()
     fireEvent.click(screen.getAllByRole('button', { name: /view group history/i })[0])
-    // EE-260023 (2026-07-10) is earliest in its cohort; nothing stores that role.
-    expect(body()).toMatch(/history — EE-260023/i)
+    /*
+     * ⚠️ OBSERVED THROUGH ORDER, NOT THROUGH A TITLE. This used to read
+     * `/history — EE-260023/i`, the flat popup's title, which happened to name
+     * the id the group was keyed on. The group modal lists every member instead,
+     * parent first — so the claim "EE-260023 (2026-07-10) is earliest, and
+     * nothing stores that role" is now checked by where its row sits.
+     */
+    const txt = body()
+    expect(txt).toContain('EE-260023')
+    expect(txt).toContain('EE-260031')
+    expect(
+      txt.indexOf('EE-260023'),
+      'the earliest member is not the first row — parent derivation broke',
+    ).toBeLessThan(txt.indexOf('EE-260031'))
   })
 
   it('renders the same cohort through SEARCH with the search-only badge', () => {
@@ -1012,3 +1039,62 @@ describe('inspecting an issue before linking it', () => {
     expect(body()).not.toContain('Investigation summary')
   })
 })
+
+/* -------------------------------------------------------------------------- */
+/* ⚠️ WHICH HISTORY MODAL A CARD OPENS — THE WIRING, NOT THE COMPONENTS       */
+/* -------------------------------------------------------------------------- */
+/*
+ * `historyModals.test.tsx` renders the two modals directly and pins what each
+ * one contains. That is NOT enough, and a mutation proved it: rerouting group
+ * cards to the single-issue modal in this screen left all ten of those tests
+ * passing, because none of them go through the screen.
+ *
+ * The routing IS the finding. Issue Entry used to open one flat popup for every
+ * history button, so two controls the design means to differ behaved identically.
+ * Nothing catches that by inspection — every screen still renders — so it has to
+ * be pinned here, at the wiring, where the card type chooses the modal.
+ */
+describe('a card opens the history modal for its OWN kind', () => {
+  const groupBtns = () => screen.queryAllByRole('button', { name: /^View Group History$/ })
+  const soloBtns = () => screen.queryAllByRole('button', { name: /^View History$/ })
+
+  it('a GROUP card opens the group modal', () => {
+    // The engine-vibration cohort is the fixture's group; a generic complete
+    // form surfaces standalone matches only.
+    renderCreate()
+    classifyAs(['Engine', 'Fuel System', 'Fuel Injector', 'Engine vibration'])
+
+    const btns = groupBtns()
+    // Guards the test: no group card means the assertions below prove nothing.
+    expect(btns.length, 'no group card surfaced — cannot test the routing').toBeGreaterThan(0)
+    fireEvent.click(btns[0])
+
+    expect(body(), 'a group card did not open the group modal').toContain(
+      entryMessages.en.groupHistoryTitle,
+    )
+    // And the group modal is the one with the info summary.
+    expect(body()).toContain(entryMessages.en.historyInfoModelCode)
+  })
+
+  it('a STANDALONE card opens the single-issue modal', () => {
+    renderCreate()
+    fillCompleteForm()
+
+    const btns = soloBtns()
+    expect(btns.length, 'no standalone card surfaced — cannot test the routing').toBeGreaterThan(0)
+    fireEvent.click(btns[0])
+
+    /*
+     * Asserted through the SUBTITLE, not the title: the single-issue modal's
+     * title is "View History", which is also the button's own label, so a title
+     * match would pass whether or not the modal opened at all.
+     */
+    expect(body(), 'a standalone card did not open the single-issue modal').toContain(
+      'read-only audit trail',
+    )
+    expect(body(), 'a standalone card opened the GROUP modal').not.toContain(
+      entryMessages.en.groupHistoryTitle,
+    )
+  })
+})
+

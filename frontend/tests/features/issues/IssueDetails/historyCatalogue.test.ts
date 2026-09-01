@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { HISTORY_CATALOGUE, resolveHistoryEvent } from '@/features/issues/workspace/history/history.catalogue'
+import { AUDIT } from '@/data/seed'
 import {
   classifyHistoryAction,
   historyIconFor,
@@ -299,3 +300,76 @@ describe("the group actions survive the history tab's renderer", () => {
     expect(symmetric!.label).not.toBe(group!.label)
   })
 })
+
+/* -------------------------------------------------------------------------- */
+/* THE SEEDED TRAILS ARE THE FIRST REAL TEST OF THIS PATH AT VOLUME           */
+/* -------------------------------------------------------------------------- */
+/*
+ * Issue Entry's View History used to render `e.action` raw, so the catalogue was
+ * never consulted there at all. It now renders through `historyLabelFor`, and the
+ * seed now supplies real trails to eight issues -- which means the seeded rows
+ * are the first substantial body of actions to travel this path.
+ *
+ * A seeded action with no catalogue row would not throw. It would fall through to
+ * the renderer's regex heuristics and produce something PLAUSIBLE -- an icon that
+ * fits, a raw label that reads almost like copy -- which is precisely the failure
+ * that has to be a test failure instead.
+ */
+describe('every action the SEED writes is catalogued', () => {
+  const seeded = [...new Set(AUDIT.map((row) => row.action))].sort()
+
+  it('seeds a non-trivial number of distinct actions', () => {
+    // Guards the guard: an empty or tiny list would make every check below pass
+    // by iterating over nothing.
+    expect(seeded.length, `only saw ${seeded.join(', ')}`).toBeGreaterThan(8)
+  })
+
+  it.each(seeded)('%s has a catalogue row', (action) => {
+    expect(resolveHistoryEvent(action), `seeded action "${action}" has no catalogue row`).toBeDefined()
+  })
+
+  /*
+   * A CORRECTION WORTH LEAVING IN. This first also asserted that the rendered
+   * label must DIFFER from the raw action -- on the theory that a label equal to
+   * its action means no row was found. That is wrong: 16 of the catalogue's
+   * entries deliberately set `label` equal to the action, because strings like
+   * "Classification selected" are already the copy a user should read. The
+   * assertion failed on the catalogue being right.
+   *
+   * The consequence is worth stating rather than quietly working around: for
+   * those 16, the LABEL cannot distinguish a catalogue hit from the fallback,
+   * since the fallback returns the raw action too. What carries the distinction
+   * is the row-exists assertion above, which is why it is a separate test rather
+   * than folded in here.
+   */
+  it('resolves each one from the CATALOGUE, not the fallback', () => {
+    for (const action of seeded) {
+      const row = resolveHistoryEvent(action)!
+      expect(classifyHistoryAction(action), action).toBe(row.segment)
+      expect(historyLabelFor(action), action).toBe(row.label)
+    }
+  })
+
+  /*
+   * CASE AGAIN, because the seed now writes BOTH of them. 'Issue linked to Issue
+   * Group' and 'Issues linked' are different relationships, and 'Issue unlinked'
+   * / 'Issue Unlinked' differ by one letter's case alone. A case-insensitive
+   * lookup introduced anywhere would silently merge such pairs while every test
+   * above still passed.
+   */
+  it('keeps case-differing and near-identical actions distinct', () => {
+    const pairs: [string, string][] = [
+      ['Issue unlinked', 'Issue Unlinked'],
+      ['Issue linked', 'Issue Linked'],
+      ['Issues linked', 'Issue linked to Issue Group'],
+    ]
+    for (const [a, b] of pairs) {
+      const ra = resolveHistoryEvent(a)
+      const rb = resolveHistoryEvent(b)
+      expect(ra, `${a} lost its row`).toBeDefined()
+      expect(rb, `${b} lost its row`).toBeDefined()
+      expect(ra!.label, `${a} and ${b} collapsed to one label`).not.toBe(rb!.label)
+    }
+  })
+})
+
