@@ -1,0 +1,773 @@
+/*
+ * Manage Related Issues — a 1:1 port of the prototype's
+ * "MANAGE RELATED ISSUES MODAL (Issue Workspace)" block in
+ * `docs/ux-prototype/PQMS-2.html/PQMS.html`.
+ *
+ * EVERY VALUE HERE IS THE PROTOTYPE'S OWN. Where a token's value matches
+ * exactly it is used; where nothing resolves, the literal stays. Verified
+ * against `tokens/colors.css` rather than eyeballed:
+ *
+ *   #E7ECF1 -> --border-subtle     #6B7681 -> --text-muted
+ *   #9AA5AE -> --text-disabled     #D92D20 -> --danger-500
+ *   #EEF2FB -> (near --accent-50 #EAF2FB, NOT equal — kept literal)
+ *
+ * The literals with no token: #F0F2F5 and #E1EAF3 (band rules), #DDE3E9 and
+ * #DDE7F2 (control and panel borders), #E3B8B0 (the destructive outline),
+ * #F8FAFD / #F7FAFD / #FCFDFE (three distinct near-white fills), #FFFBF3 /
+ * #F3DDA8 / #FBF1E2 / #B4690E / #8A5A05 / #6B5A3D / #B5750B (the pending-amber
+ * family), #E7F6EF / #15724A (pending-link green), #E4E8EC / #F4F6F8 / #EEF2F6
+ * (disabled and chip greys). Rounding these to the nearest token would flatten
+ * four separate near-whites into one and lose the pending states' distinction.
+ *
+ * They live in CSS because `scripts/ds-gate.mjs` counts raw px/hex literals in
+ * .ts/.tsx against a ceiling with zero headroom.
+ */
+
+/* ── Shell ───────────────────────────────────────────────────────────────── */
+
+/* The dialog surface itself: `Modal bare` supplies the scrim, Escape and the
+   width, and nothing else — see the `bare` note in chrome.tsx. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: calc(100vh - 112px);
+  background: var(--surface-card);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(5, 20, 31, 0.32);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 20px 22px;
+  border-bottom: var(--border-width) solid #f0f2f5;
+  flex: none;
+}
+
+.headerIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #eef2fb;
+  color: var(--accent-600);
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.headerTitle {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-lg);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.headerSubtitle {
+  margin: 2px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.headerClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: #f4f6f8;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 18px 22px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ── Section headings ────────────────────────────────────────────────────── */
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sectionLabel {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+/* "Issue Group · 3 Issues" */
+.groupPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--radius-md);
+  background: #eef2fb;
+  color: var(--accent-700);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+}
+
+.sectionNote {
+  margin: 0 0 12px;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.emptyNote {
+  margin: 0;
+  padding: 6px 2px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--text-disabled);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.divider {
+  height: 1px;
+  flex: none;
+  background: #edf0f3;
+}
+
+/* ── A related-issue row ─────────────────────────────────────────────────── */
+
+.row {
+  border: var(--border-width) solid #e7ecf1;
+  border-radius: 11px;
+  background: var(--surface-card);
+  overflow: hidden;
+}
+
+/* Pending unlink and pending link are DIFFERENT surfaces, not one "dirty" state:
+   amber for something leaving, blue for something arriving. */
+.rowPending {
+  border-color: #f3dda8;
+  background: #fffbf3;
+}
+
+.rowEditing {
+  border-color: #dde7f2;
+}
+
+.rowIncoming {
+  border-color: #dde7f2;
+  background: #f7fafd;
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowTags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+}
+
+.rowId {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--accent-700);
+}
+
+.relBadge {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: var(--radius-sm);
+  background: #f1f4f7;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.relBadgeParent {
+  background: #eef2fb;
+  color: var(--accent-700);
+}
+
+.stateBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.stateUnlink {
+  color: #b4690e;
+  background: #fbf1e2;
+}
+
+.stateLink {
+  color: #15724a;
+  background: #e7f6ef;
+}
+
+.rowTitle {
+  margin-bottom: 4px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--text-disabled);
+}
+
+/* ── Row actions ─────────────────────────────────────────────────────────── */
+
+.unlinkButton {
+  flex: none;
+  height: 34px;
+  padding: 0 13px;
+  border: var(--border-width) solid #e3b8b0;
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  color: var(--danger-500);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.undoButton {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-700);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.removeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+}
+
+/* ── The inline justification editor ─────────────────────────────────────── */
+
+.justify {
+  padding: 13px 14px 14px;
+  border-top: var(--border-width) solid #f0f2f5;
+}
+
+.justifyIncoming {
+  border-top-color: #e1eaf3;
+}
+
+.justifyLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.required {
+  color: var(--danger-500);
+}
+
+.justifyInput {
+  width: 100%;
+  box-sizing: border-box;
+  border: var(--border-width) solid #e7ecf1;
+  border-radius: 9px;
+  padding: 11px 13px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
+  background: var(--surface-card);
+  outline: none;
+  resize: vertical;
+}
+
+.justifyInputError {
+  border-color: var(--danger-500);
+}
+
+.justifyFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.justifyError {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--danger-500);
+}
+
+/* `margin-left:auto` so the counter stays right-aligned whether or not the
+   error is showing beside it. */
+.counter {
+  flex: none;
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
+.justifyActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ghostButton {
+  height: 36px;
+  padding: 0 14px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.applyButton {
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--kia-midnight);
+  color: var(--neutral-0);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+/* ── Search & Link Another Issue ─────────────────────────────────────────── */
+
+.searchToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  height: 34px;
+  padding: 0 13px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  color: var(--accent-700);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.searchToggle:hover {
+  background: #f4f8fc;
+  border-color: #c7d6ec;
+}
+
+.searchPanel {
+  margin-bottom: 14px;
+  padding: 16px;
+  border: var(--border-width) solid #dde7f2;
+  border-radius: var(--radius-xl);
+  background: #f8fafd;
+}
+
+.searchHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.searchHeadLeft {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.searchChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #eef2fb;
+  color: var(--accent-600);
+}
+
+.searchTitle {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.searchClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: #eef2f6;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.searchField {
+  position: relative;
+}
+
+.searchFieldIcon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-disabled);
+  pointer-events: none;
+  display: inline-flex;
+}
+
+.searchInput {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 9px;
+  padding: 0 13px 0 38px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--text-primary);
+  background: var(--surface-card);
+  outline: none;
+}
+
+.searchRule {
+  height: 1px;
+  margin: 14px 0;
+  background: #e7ecf1;
+}
+
+/* Idle and no-results share one centred column; only the glyph and copy differ. */
+.searchState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 16px;
+  color: var(--text-disabled);
+}
+
+.searchStateText {
+  margin: 8px 0 0;
+  max-width: 360px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.resultsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.resultsLabel {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.resultsCount {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
+.result {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 13px;
+  border: var(--border-width) solid #e7ecf1;
+  border-radius: 10px;
+  background: var(--surface-card);
+}
+
+.resultTags {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.resultMeta {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.resultActions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+
+.resultGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 12px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.resultLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--kia-midnight);
+  color: var(--neutral-0);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.searchMsg {
+  margin: 8px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--danger-500);
+}
+
+/* ── The impact band ─────────────────────────────────────────────────────── */
+
+.impact {
+  flex: none;
+  padding: 14px 22px;
+  border-top: var(--border-width) solid #f0f2f5;
+  background: #fcfdfe;
+}
+
+.impactCount {
+  margin: 0 0 4px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.impactHead {
+  margin: 2px 0 0;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.impactBody {
+  margin: 3px 0 0;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.parentWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 11px;
+  padding: 11px 13px;
+  border: var(--border-width) solid #f3dda8;
+  border-radius: 9px;
+  background: #fffbf3;
+}
+
+.parentWarnIcon {
+  flex: none;
+  margin-top: 1px;
+  color: #b5750b;
+  display: inline-flex;
+}
+
+.parentWarnTitle {
+  margin: 0 0 2px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-bold);
+  color: #8a5a05;
+}
+
+.parentWarnBody {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #6b5a3d;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: none;
+  padding: 16px 22px;
+  border-top: var(--border-width) solid #f0f2f5;
+}
+
+.cancelButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border: var(--border-width) solid #dde3e9;
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.saveButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 9px;
+  background: var(--kia-midnight);
+  color: var(--neutral-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+/* Disabled is a DIFFERENT FILL, not an opacity: the prototype swaps to a flat
+   grey so the button reads as inert rather than as a faded live control. */
+.saveButton:disabled {
+  background: #e4e8ec;
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}

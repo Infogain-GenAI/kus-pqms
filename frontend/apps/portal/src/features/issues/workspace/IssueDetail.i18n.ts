@@ -161,6 +161,44 @@ const messages: ComponentI18nMessages = {
 
     linksModalFootnote: 'Links notify both owners; unlink is a soft delete recorded in the audit trail.',
 
+    /*
+     * ─── The prototype's own vocabulary for this modal ───────────────────────
+     *
+     * Every string below is lifted verbatim from the "MANAGE RELATED ISSUES
+     * MODAL (Issue Workspace)" block in `docs/ux-prototype/PQMS-2.html`.
+     *
+     * ⚠️ THE IMPACT SENTENCES ARE NOT HERE. They live in
+     * `features/issues/linking/relatedIssues.ts`, because CHOOSING between them
+     * is a three-way branch over two counts — logic, not copy. A component that
+     * merely picks a key would leave that decision spread over two files.
+     */
+    linksModalClose: 'Close',
+    linksModalGroupPill: 'Issue Group · {{group}}',
+    linksModalGroupCount_one: '{{count}} Issue',
+    linksModalGroupCount_other: '{{count}} Issues',
+    linksModalGroupNote:
+      'These issues are currently linked as one issue group. Changes made below will update the group when you save.',
+    linksModalRemove: 'Remove',
+    linksModalUnlinkJustification: 'Unlink justification',
+    linksModalLinkJustification: 'Link justification',
+    linksModalJustifyPlaceholder: 'Enter justification...',
+
+    linksModalSearchToggle: 'Search & Link Another Issue',
+    linksModalSearchPanelTitle: 'Search & link existing issue',
+    linksModalSearchClose: 'Close search',
+    linksModalSearchBoxPlaceholder: 'Search by Issue ID, title or keyword…',
+    linksModalSearchIdle: 'Search by Issue ID, title or keyword to find and link an existing issue.',
+    linksModalSearchNone: 'No issues match “{{query}}”. Try a different Issue ID, title or keyword.',
+    linksModalResultsHeading: 'Search results',
+    linksModalResultCount_one: '{{count}} issue',
+    linksModalResultCount_other: '{{count}} issues',
+    linksModalResultMeta: 'Model: {{model}}  ·  Classification: {{classification}}',
+    linksModalViewHistory: 'View History',
+
+    linksModalParentWarnTitle: 'Parent issue will change',
+    linksModalParentWarnBody:
+      '{{next}} will become the new Parent because it has the earliest Issue Date ({{date}}). The current Parent, {{current}}, will become a Child.',
+
     editFormTitle: 'Edit Issue',
     editFormCancel: 'Cancel',
     editFormSave: 'Save changes',
