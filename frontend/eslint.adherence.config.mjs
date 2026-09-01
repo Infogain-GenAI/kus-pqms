@@ -152,6 +152,35 @@ const jsxCopy = {
 
 export default [
   {
+    /*
+     * ─── ⚠️ VITE'S TEMP CONFIG IS NOT SOURCE, AND LINTING IT IS A RACE ────────
+     *
+     * `ds-gate.mjs` calls `eslint.lintFiles(['apps', 'packages'])` — DIRECTORY
+     * targets, so ESLint enumerates every lintable file it finds, `.mjs`
+     * included, and only then applies the `files` globs below to decide which
+     * rules run. Enumeration still parses.
+     *
+     * While Vite loads a config it writes `vite.config.ts.timestamp-<n>.mjs`
+     * beside it and deletes it moments later. The four ds families run
+     * concurrently with the test suite, so ESLint enumerated one of those temp
+     * files and vitest removed it mid-run:
+     *
+     *     Error: ENOENT … apps/portal/vite.config.ts.timestamp-….mjs
+     *     Error [RolldownError]: Parse failed with 1 error
+     *
+     * ⚠️ THE CONSEQUENCE IS WORSE THAN A FLAKE. `lint:ds:values` FAILED FOR
+     * REASONS THAT HAVE NOTHING TO DO WITH LINT, which means a ds ceiling can be
+     * computed from a crashed run — the same "a number from a failed run is not a
+     * count" problem the ceilings exist to prevent. And a gate that fails
+     * infrastructurally teaches people to retry gates until green.
+     *
+     * Ignored rather than serialised: the file is generated, transient, and never
+     * ours to lint. Scheduling around it would have cost wall-clock and left the
+     * race live for anyone running the checks another way.
+     */
+    ignores: ['**/*.timestamp-*.mjs'],
+  },
+  {
     // ⚠️ THREE src ROOTS NOW, NOT ONE. Before the workspace split this was a single
     // 'src/**/*.{ts,tsx}'. That glob still parses after the move and matches NOTHING,
     // because there is no top-level src/ any more — and a no-restricted-syntax rule whose
