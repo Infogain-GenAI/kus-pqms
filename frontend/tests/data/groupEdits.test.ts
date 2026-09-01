@@ -172,3 +172,89 @@ describe('nothing to do', () => {
     expect(plan.audits).toEqual([])
   })
 })
+
+/*
+ * ─── ⚠️ THE CHRONOLOGY RULE, BOTH DIRECTIONS AND THE TIE ────────────────────
+ *
+ * Forming a brand-new pair picks the EARLIEST as parent. The canonical does NOT
+ * do this at this one spot — it anchors unconditionally on the ACTIVE issue
+ * (`groupId = 'GRP-' + activeId + …`) however old the other is. Ours is a
+ * deliberate divergence, recorded in the module header: every other formation
+ * path in this app keys on the earliest, and a user should not get a different
+ * parent depending on which of two issues they happened to have open.
+ *
+ * The suite above only ever pins the case where the ADDED issue is older, which
+ * is the half where the two rules disagree. Both halves are pinned here, because
+ * a rule tested in one direction is indistinguishable from a constant.
+ */
+describe('the earliest-wins parent rule', () => {
+  const form = (activeId: string, addId: string, pool: Issue[]) =>
+    planGroupEdits(pool, { activeId, removals: [], additions: [{ id: addId, justification: WHY }] })
+
+  it('keys on the ACTIVE issue when it is the earlier of the two', () => {
+    const pool = [mk('OLD', '2026-01-01T00:00:00Z'), mk('YOUNG', '2026-05-01T00:00:00Z')]
+    expect(form('OLD', 'YOUNG', pool).groupIds).toEqual({ OLD: 'OLD', YOUNG: 'OLD' })
+  })
+
+  /*
+   * Same instant — possible because `createdAt` is a date-time string the app
+   * assigns, not a unique key. `<=` resolves the tie to the ACTIVE issue, which
+   * is the one input where our rule and the canonical's agree. Pinned so a
+   * change from `<=` to `<` is a visible decision rather than a silent flip.
+   */
+  it('resolves an exact tie to the active issue', () => {
+    const T = '2026-01-01T00:00:00Z'
+    expect(form('A', 'B', [mk('A', T), mk('B', T)]).groupIds).toEqual({ A: 'A', B: 'A' })
+    expect(form('B', 'A', [mk('A', T), mk('B', T)]).groupIds).toEqual({ B: 'B', A: 'B' })
+  })
+})
+
+describe('requests naming issues that are not in the pool', () => {
+  // The planner is handed a pool by the store; a stale modal can still name an
+  // id that has since gone. Each guard returns rather than throwing, and the
+  // distinction that matters is that it plans NOTHING instead of planning a
+  // group keyed on `undefined`.
+  it('ignores a removal of an unknown id', () => {
+    const plan = remove(trio(), ['GHOST'])
+    expect(plan.groupIds).toEqual({})
+    expect(plan.audits).toEqual([])
+  })
+
+  it('ignores an addition of an unknown id when forming a new group', () => {
+    const pool = [mk('SOLO', '2026-01-01T00:00:00Z')]
+    const plan = planGroupEdits(pool, {
+      activeId: 'SOLO',
+      removals: [],
+      additions: [{ id: 'GHOST', justification: WHY }],
+    })
+    expect(plan.groupIds).toEqual({})
+    expect(plan.audits).toEqual([])
+  })
+
+  it('ignores an addition when the ACTIVE issue itself is unknown', () => {
+    const pool = [mk('REAL', '2026-01-01T00:00:00Z')]
+    const plan = planGroupEdits(pool, {
+      activeId: 'GHOST',
+      removals: [],
+      additions: [{ id: 'REAL', justification: WHY }],
+    })
+    expect(plan.groupIds).toEqual({})
+    expect(plan.audits).toEqual([])
+  })
+})
+
+describe('members of a group registered in the same instant', () => {
+  // The sort comparator has an equal-createdAt arm. Whichever member it puts
+  // first becomes the parent, so the arm is load-bearing: it must at least be
+  // STABLE, or the parent of such a group would vary between renders.
+  it('orders them stably, so the parent does not move between calls', () => {
+    const T = '2026-01-01T00:00:00Z'
+    const pool = () => [mk('X', T, 'X'), mk('Y', T, 'X'), mk('Z', T, 'X')]
+    const first = remove(pool(), ['X'], 'X')
+    const again = remove(pool(), ['X'], 'X')
+    expect(first.audits).toEqual(again.audits)
+    const promo = first.audits.find((a) => a.action === 'Parent Issue Changed')
+    expect(promo, 'no promotion planned for a tied-timestamp group').toBeTruthy()
+  })
+})
+

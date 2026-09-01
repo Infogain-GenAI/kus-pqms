@@ -37,6 +37,24 @@ import type { Issue } from './types'
  * either — its disjointness check is conditional on the key resolving to a
  * seeded issue — so this is our choice, recorded as ours.
  *
+ * ─── ⚠️ AND WE DIVERGE ON WHICH ISSUE BECOMES THE PARENT ────────────────────
+ *
+ * When a link forms a BRAND-NEW pair, we key the group on the EARLIER of the
+ * two. The canonical does not: at this one spot it anchors unconditionally on
+ * the ACTIVE issue — `groupId = 'GRP-' + i.id + '-' + Date.now()` where `i` is
+ * whichever issue's modal is open — however much older the other one is.
+ *
+ * Ours is the deliberate choice. Every other formation path in this app keys on
+ * the earliest, registration included, and a user should not get a different
+ * parent depending on which of two issues they happened to have open. The
+ * canonical already contradicts itself about group keys at this same seam (see
+ * above), so "match the literal binding" has no single target to match.
+ *
+ * ⚠️ At an exact `createdAt` tie the two rules AGREE — `<=` resolves to the
+ * active issue. That is the one input where the divergence is unobservable, so
+ * it is not the case to test the rule with. Both directions and the tie are
+ * pinned in `tests/data/groupEdits.test.ts`.
+ *
  * ⚠️ A CONSEQUENCE, ported deliberately: when the PARENT leaves a group, the
  * remaining members keep their `groupId`, which now names a non-member. The key
  * DANGLES. The canonical does exactly this — its removal path never rewrites the
