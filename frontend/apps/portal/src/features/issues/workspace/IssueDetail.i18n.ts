@@ -232,6 +232,24 @@ const messages: ComponentI18nMessages = {
      * state, and the justification copy for the link it gates itself.
      */
     sameSuggestTitle: 'Same existing issues',
+    /*
+     * The folded-in search panel. Its heading, idle and result copy come from
+     * Issue Entry's bundle — the shared cards already read that bundle and the
+     * design's copy is identical on both screens, so duplicating it here would
+     * only create two strings to drift apart. These four are the ones this
+     * surface genuinely owns.
+     */
+    sameSearchLabel: 'Search issues to link',
+    sameSearchPlaceholder: 'Search by Issue ID, title, model or symptom…',
+    sameSearchClose: 'Close search',
+    sameSearchNoMatch: 'No unlinked issue matches “{{query}}”.',
+    /*
+     * ⚠️ NAMES WHAT THE DESIGN DROPS SILENTLY. A linked id with no issue behind
+     * it is skipped by the prototype's own injection; this fixture has such ids,
+     * and showing fewer linked issues than the count claims is the failure the
+     * link invariants exist to catch.
+     */
+    sameDangling: 'Linked to {{ids}}, which is not in this register.',
     sameSuggestSubtitle:
       'Ranked against the classification as you edit it. Linking and unlinking here are recorded immediately.',
     sameSuggestEmpty: 'No similar issues match the current classification.',

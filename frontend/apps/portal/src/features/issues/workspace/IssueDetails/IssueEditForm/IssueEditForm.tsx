@@ -5,7 +5,6 @@ import { ULabel } from '@/app/chrome'
 import { useStore } from '@/data/store'
 import type { SourceChannel } from '@/data/sourceChannels'
 import type { Issue } from '@/data/types'
-import { LinkIssuesSection } from '../../../LinkIssuesSection'
 import { SameExistingIssuesSection } from './SameExistingIssuesSection'
 import { DtcChipInput } from '@/features/issues/issue-entry/DtcChipInput'
 import { useTranslation } from 'react-i18next'
@@ -26,10 +25,11 @@ import styles from './IssueEditForm.module.css'
  * form is five sections and would be unusable in a dialog — which is exactly why
  * the Vue implementation moved it out of one.
  *
- * REUSES, RATHER THAN FORKS, THE PICKERS. `ModelCodeYearPicker` and
- * `LinkIssuesSection` already exist here and their own doc comments say they are
- * shared with "Issue Detail's in-tab edit mode" — this is that consumer finally
- * arriving. The Vue file records the same lesson learned the hard way: its
+ * REUSES, RATHER THAN FORKS, THE PICKERS. `ModelCodeYearPicker` already exists
+ * here and its doc comment says it is shared with "Issue Detail's in-tab edit
+ * mode" — this is that consumer finally arriving. `SameExistingIssuesSection`
+ * likewise renders the cards Issue Entry renders, because the canonical draws
+ * that section identically on both screens. The Vue file records the same lesson learned the hard way: its
  * sections were once hand-rolled markup that drifted from Issue Entry's, and two
  * of its panels were suppressed on the false assumption that this form had its
  * own working versions. It did not, and the clicks silently did nothing.
@@ -98,15 +98,15 @@ export function IssueEditForm({
   // GATED NOW, IN BOTH DIRECTIONS. This note used to say the Vue form's
   // justification prompt was not reproduced because "this app has no
   // justification capture anywhere" — true when it was written, and no longer.
-  // `LinkIssuesSection` captures the reason inline and does not call through
-  // until it clears the shared rule, so both callbacks below receive one.
+  // `SameExistingIssuesSection` captures the reason inline and does not call
+  // through until it clears the shared rule, so the callbacks below receive one.
   const linked = issue.linkedIssueIds ?? []
 
   /*
    * ─── ⚠️ THE LITERAL ACTOR IS DELIBERATE, AND IT EXPIRES ─────────────────────
    *
-   * Every store call on this screen — the two `LinkIssuesSection` callbacks below
-   * and the ranked block's — passes this literal rather than reading the session.
+   * Every store call on this screen passes this literal rather than reading the
+   * session.
    * That is CORRECT today: RBAC is not implemented and SE is the only role in
    * use, so a hardcoded SE reports reality instead of inventing an attribution.
    *
@@ -118,13 +118,12 @@ export function IssueEditForm({
    *
    * WHEN RBAC ARRIVES: replace this with `useRole()` and pass the real actor.
    *
-   * ⚠️ THERE ARE THREE CALL SITES AND ONLY ONE READS THIS CONSTANT. The two
-   * `LinkIssuesSection` callbacks below still pass the literal inline — they
-   * predate this note, and rewriting them would have been an edit to behaviour
-   * this change had no business touching. Consolidating all three onto this
-   * constant is the first step of the RBAC change, not a tidy-up to do now; said
-   * plainly here so the next person finds an explanation rather than two
-   * unexplained literals.
+   * ⚠️ THERE IS NOW EXACTLY ONE CALL SITE, and this comment used to say three.
+   * The other two belonged to `LinkIssuesSection`, the separate search card this
+   * form no longer renders — so the consolidation that used to be "the first step
+   * of the RBAC change" happened as a side effect of superseding that component.
+   * Recorded because a stale count in a comment is exactly the kind of claim that
+   * outlives its subject.
    */
   const EDIT_ACTOR = { name: 'You', role: 'SE' }
 
@@ -222,15 +221,12 @@ export function IssueEditForm({
       <div className={styles.section} data-section="same-existing-issues">
         <h3 className={styles.sectionTitle}>{t('editFormSameExisting')}</h3>
         {/*
-          TWO BLOCKS, AND THE SPLIT IS DELIBERATE. The heading has always said
-          "Same existing issues" while the body was the SEARCH block alone, so it
-          promised ranked suggestions the screen never made. The ranked half is
-          now its own component; `LinkIssuesSection` is unchanged and still owns
-          search and the linked list.
-
-          They do not overlap: suggestions exclude anything already linked, so
-          unlink is offered in exactly one place. Two ways to perform one
-          mutation is how two paths drift apart.
+          ONE BLOCK NOW. This section holds the ranked suggestions AND the search
+          panel, folded in behind its own header toggle, because the canonical
+          renders them as one section — the same one it renders on Issue Entry.
+          `LinkIssuesSection`, the separate search card that used to sit beside
+          this, is superseded and deleted; its behaviour was pinned first and its
+          tests target this panel.
         */}
         <SameExistingIssuesSection
           issue={issue}
@@ -255,12 +251,6 @@ export function IssueEditForm({
             for (const id of ids) store.linkIssue(issue.id, id, why, EDIT_ACTOR)
           }}
           onUnlink={(id, why) => store.removeRelated(issue.id, id, why, EDIT_ACTOR)}
-        />
-        <LinkIssuesSection
-          linkedIds={linked}
-          excludeId={issue.id}
-          onLink={(id, why) => store.linkIssue(issue.id, id, why, { name: 'You', role: 'SE' })}
-          onUnlink={(id, why) => store.unlinkIssue(issue.id, id, why, { name: 'You', role: 'SE' })}
         />
       </div>
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { CopyCheck, Search, SearchX, X } from 'lucide-react'
+import { Button, Icon, SearchField } from '@pqms/ui-library'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { CardHead, SectionCard } from '@/app/chrome'
@@ -13,62 +14,52 @@ import {
   IssueHistoryModal,
   useHistoryTarget,
 } from '@/features/issues/issue-entry/HistoryModals'
+import { NS as ENTRY_NS } from '@/features/issues/issue-entry/IssueEntry.i18n'
 import { NS } from '../../IssueDetail.i18n'
 import styles from './SameExistingIssuesSection.module.css'
 
 /**
- * Same Existing Issues — ranked suggestions, on the EDIT surface.
+ * Same Existing Issues, on the EDIT surface — suggestions AND search, one section.
  *
- * ─── WHAT WAS ACTUALLY MISSING ──────────────────────────────────────────────
+ * ─── ⚠️ THE DESIGN RENDERS THIS SECTION TWICE, AND ALMOST IDENTICALLY ───────
  *
- * The edit form already had a section headed "Same existing issues" — but its
- * body was `LinkIssuesSection`, which is the SEARCH block. The ranked half was
- * absent, so the heading promised suggestions the screen never made. This is the
- * ranked half, and it is ADDITIVE: `LinkIssuesSection` is untouched and still
- * owns search and the linked list.
+ * Once inside `sc-if showCreate` (Issue Entry) and once inside `sc-if editMode`
+ * (Issue Edit): 132 non-blank lines against 133, differing by ONE line. So the
+ * edit surface is not a smaller variant of the create surface, it is the same
+ * section — which is why this renders the shared `RelatedIssueCards` and why
+ * search now lives INSIDE here, behind the header's own toggle, rather than in a
+ * separate card beside it.
  *
- * ─── ⚠️ EVERY MUTATION HERE IS PERSISTED, SO EVERY ONE IS GATED ─────────────
+ * ⚠️ IT SUPERSEDES `LinkIssuesSection`, WHICH IS DELETED. That component was the
+ * edit form's search block: a separate always-visible card. Its behaviour was
+ * pinned first, in `tests/features/issues/linking/linkIssuesSection.test.tsx`,
+ * against the unmodified original — so "its behaviour survived" is a measurement
+ * rather than a reading. Those tests now target this panel.
  *
- * Issue Entry's version of this block edits a DRAFT. Three of its controls write
- * to a local array and one — the card-level link — opens the confirmation modal,
- * collects a justification, and then also writes to the local array. That last
- * one is the dangerous shape to port: a reviewer asking "does linking ask for a
- * reason here?" gets yes, while nothing is persisted and nothing is audited.
+ * ─── ⚠️ LINKED ISSUES APPEAR HERE, TAGGED, RATHER THAN IN A SEPARATE LIST ────
  *
- * None of those four are reused. On this surface the issue EXISTS, so a link or
- * an unlink is a persisted relationship mutation and carries an audited reason —
- * committed through the store, never through local state. The tests assert the
- * STORE changed, not that a modal appeared, for exactly that reason.
+ * The old card kept its own list of everything linked. This section has no such
+ * list, and does not need one: the design INJECTS every linked issue that did not
+ * rank into the entry list with `reasons: ['Manually linked']` and score 0 — which
+ * is what its `isManualOnly` annotation exists to render. So a linked issue is
+ * always visible and always unlinkable from here, whether it ranked or not.
  *
- * ─── ⚠️ THE RANKING IS LIVE, AND IT SELF-EXCLUDES ───────────────────────────
+ * ⚠️ ONE THING THE DESIGN DROPS SILENTLY AND WE DO NOT. Its injection reads
+ * `const p = _pool.find(...); if (p)` — so a linked id whose issue is not in the
+ * pool is skipped without trace. This fixture HAS such ids (see
+ * `UNPORTED_LINK_TARGETS`), and the old card named them "Issue not found" rather
+ * than rendering a blank row. Silently showing fewer linked issues than the count
+ * claims is the failure class the link invariants were written after, so the
+ * unresolvable ones are named below. That is a deliberate divergence.
  *
- * LIVE: the subject is the form's CURRENT classification, not the issue's saved
- * one, so editing the classification re-ranks as you type. That follows the
- * design's own binding — its view-model computes the matches unconditionally
- * from the form state, and its edit mode repopulates that same form state.
+ * ─── EVERY MUTATION IS PERSISTED, SO EVERY ONE IS GATED ─────────────────────
  *
- * SELF-EXCLUDES, AND THE DESIGN DOES NOT — a recorded divergence. The design
- * calls its ranker with a hardcoded `null` exclude while, twenty lines later in
- * the same function, its free-text search correctly excludes the issue being
- * edited. So an issue can rank as its own top suggestion while being edited.
- * That is an oversight rather than a specification: the adjacent code visibly
- * cares about this exact case. We pass the issue's own id, as Issue Entry's
- * create path already does.
- *
- * ─── NO SECOND WAY TO JOIN A GROUP ──────────────────────────────────────────
- *
- * A group card here offers a symmetric LINK to the group's members, and per-member
- * removal from the group. It deliberately offers no way to ADD an issue to a
- * group: `ManageRelatedIssuesModal` is the group editor and is reachable from the
- * workspace shell, and a second entry point to the same mutation is how two
- * paths drift apart.
- *
- * ⚠️ PER-MEMBER REMOVAL EDITS A GROUP THE SUBJECT MAY NOT BELONG TO. Removing a
- * member from a SUGGESTED group restructures that group, which is a real
- * mutation reached from a suggestions list. Issue Entry's card already behaves
- * this way, so this is consistent rather than new — but it is worth a reader
- * knowing it is possible from here, because "suggestions" does not sound like a
- * surface that edits other issues' groups.
+ * Unchanged by the fold-in, and the reason it is stated again: the issue EXISTS
+ * on this surface, so a link or an unlink is an audited mutation. One pending
+ * change at a time, replacing rather than queuing, so an abandoned reason cannot
+ * attach itself to the next change. Issue Entry's four draft controls are not
+ * reused — including the one that collects a justification and then writes only to
+ * a local array.
  */
 export function SameExistingIssuesSection({
   issue,
@@ -81,9 +72,9 @@ export function SameExistingIssuesSection({
   /** The issue being edited — the exclusion target, and the link counterpart. */
   issue: Issue
   /**
-   * The form's CURRENT values, not the saved issue's. Ranking follows the edits.
-   * Passed in rather than read from `issue` so this component cannot accidentally
-   * rank against stale data.
+   * The form's CURRENT values, not the saved issue's. Ranking follows the edits,
+   * as the design's own view-model does: it computes matches unconditionally from
+   * form state, and its edit mode repopulates that state from the issue.
    */
   subject: {
     system?: string
@@ -101,14 +92,19 @@ export function SameExistingIssuesSection({
   disabled?: boolean
 }) {
   const { t } = useTranslation(NS)
+  const { t: te } = useTranslation(ENTRY_NS)
   const store = useStore()
   const nav = useNavigate()
   const history = useHistoryTarget()
 
+  /** Collapsed by default, as the design's is — the header button opens it. */
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [query, setQuery] = useState('')
+
   /**
-   * One pending change at a time, replacing rather than queuing — the same rule
-   * `LinkIssuesSection` states: a half-typed reason for an abandoned change must
-   * not be able to attach itself to the next one.
+   * One pending change at a time, replacing rather than queuing: a half-typed
+   * reason for a change the user walked away from must not be able to attach
+   * itself to the next one. Carried over from the component this supersedes.
    */
   const [pending, setPending] = useState<{ key: string; ids: string[]; kind: 'link' | 'unlink'; text: string; err: string } | null>(null)
 
@@ -120,51 +116,98 @@ export function SameExistingIssuesSection({
     const err = applyJustification(pending.text)
     if (err) return setPending({ ...pending, err })
     const why = pending.text.trim()
-    if (pending.kind === 'link') onLink(pending.ids, why)
-    else onUnlink(pending.ids[0], why)
+    if (pending.kind === 'link') {
+      onLink(pending.ids, why)
+      // The old card cleared its query on a successful link; a result that is now
+      // linked has no business still sitting in a list of things to link.
+      setQuery('')
+    } else {
+      onUnlink(pending.ids[0], why)
+    }
     setPending(null)
   }
 
+  type Entry = { key: string; issue: Issue; reasons: string[]; members?: Issue[] }
+
   /**
-   * Ranked entries, grouped. A group is represented ONCE by its parent row with
-   * its children folded in, so a four-issue cohort is one suggestion rather than
-   * four — and `groupMembers` decides the parent, which is always the earliest.
+   * Collapse a ranked list into cards: a group is represented ONCE by its parent
+   * with its children folded in, so a four-issue cohort is one card rather than
+   * four. Shared by the suggestions and the search results, because the design
+   * renders group cards in both.
+   */
+  const toEntries = useMemo(
+    () => (ranked: { issue: Issue; reasons: string[] }[], limit: number): Entry[] => {
+      const out: Entry[] = []
+      const seenGroup = new Set<string>()
+      for (const r of ranked) {
+        const gid = r.issue.groupId
+        if (gid) {
+          if (seenGroup.has(gid)) continue
+          seenGroup.add(gid)
+          /*
+           * ⚠️ NEVER THE SUBJECT'S OWN GROUP. Offering the group the edited issue
+           * already belongs to is not a suggestion, and its controls would be
+           * incoherent: a card-level link would call `linkIssue(id, id, …)`, a
+           * self-link the seed invariants forbid, and the member list would offer
+           * "Remove from group" on the issue being edited. Skipped whole, because
+           * a group card missing one member misrepresents the group.
+           */
+          if (gid === issue.groupId) continue
+          const members = store.groupMembers(r.issue.id).filter((m) => m.id !== issue.id)
+          if (members.length > 1) {
+            out.push({ key: gid, issue: members[0], reasons: r.reasons, members })
+            continue
+          }
+        }
+        out.push({ key: r.issue.id, issue: r.issue, reasons: r.reasons })
+      }
+      return out.slice(0, limit)
+    },
+    [store, issue.id, issue.groupId],
+  )
+
+  /**
+   * Ranked suggestions, PLUS every linked issue that did not rank.
    *
-   * Already-linked issues are excluded rather than shown with a pill: the linked
-   * list belongs to `LinkIssuesSection`, and offering unlink in two places is the
-   * duplicate-affordance problem this section is otherwise careful to avoid.
+   * The injection is the design's: a linked issue absent from the matches is
+   * appended with `reasons: ['Manually linked']`, which is why that annotation
+   * exists on the card. Without it, linking an issue with an unrelated
+   * classification would make it vanish from this screen and become impossible to
+   * unlink here.
    */
   const entries = useMemo(() => {
-    const linked = new Set(linkedIds)
-    const ranked = relatedRank(subject, store.issues, issue.id).filter((r) => !linked.has(r.issue.id))
-
-    const out: { key: string; issue: Issue; reasons: string[]; members?: Issue[] }[] = []
-    const seenGroup = new Set<string>()
-    for (const r of ranked) {
-      const gid = r.issue.groupId
-      if (gid) {
-        if (seenGroup.has(gid)) continue
-        seenGroup.add(gid)
-        /*
-         * ⚠️ NEVER THE SUBJECT'S OWN GROUP. Suggesting the group the edited issue
-         * is already in is not a suggestion, and the controls would be incoherent:
-         * a card-level link would call `linkIssue(issue.id, issue.id, ...)` — a
-         * self-link, which `assertLinks` forbids even in the fixture — and the
-         * member list would offer "Remove from group" on the issue being edited.
-         * Skipped whole rather than filtered, because a group card that omits one
-         * member misrepresents the group.
-         */
-        if (gid === issue.groupId) continue
-        const members = store.groupMembers(r.issue.id).filter((m) => m.id !== issue.id)
-        if (members.length > 1) {
-          out.push({ key: gid, issue: members[0], reasons: r.reasons, members })
-          continue
-        }
-      }
-      out.push({ key: r.issue.id, issue: r.issue, reasons: r.reasons })
+    const ranked = relatedRank(subject, store.issues, issue.id).map((r) => ({ issue: r.issue, reasons: r.reasons }))
+    const seen = new Set(ranked.map((r) => r.issue.id))
+    for (const id of linkedIds) {
+      if (seen.has(id)) continue
+      const found = store.getIssue(id)
+      if (found) ranked.push({ issue: found, reasons: ['Manually linked'] })
     }
-    return out.slice(0, 5)
-  }, [subject, store, issue.id, linkedIds])
+    return toEntries(ranked, 8)
+  }, [subject, store, issue.id, linkedIds, toEntries])
+
+  /**
+   * Search results — the old card's predicate exactly: id, title, model or
+   * symptom, excluding the edited issue and anything already linked, capped at 8.
+   * Offering an action that would do nothing is worse than not offering it.
+   */
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    const hits = store.issues
+      .filter((i) => i.id !== issue.id && !linkedIds.includes(i.id))
+      .filter((i) => `${i.id} ${i.title} ${i.model} ${i.symptom ?? ''}`.toLowerCase().includes(q))
+      .map((i) => ({ issue: i, reasons: [] as string[] }))
+    return toEntries(hits, 8)
+  }, [store, query, linkedIds, issue.id, toEntries])
+
+  /**
+   * Linked ids with no issue behind them. The design drops these silently; the
+   * component this replaces named them. See the header note — showing fewer
+   * linked issues than the count claims is the failure the link invariants exist
+   * to catch.
+   */
+  const dangling = useMemo(() => linkedIds.filter((id) => !store.getIssue(id)), [linkedIds, store])
 
   const justifyRow = (key: string) =>
     pending && pending.key === key ? (
@@ -182,73 +225,144 @@ export function SameExistingIssuesSection({
       </div>
     ) : null
 
+  /**
+   * One card, either kind.
+   *
+   * ⚠️ `showStandaloneBadge` IS PER CARD TYPE, NOT PER SURFACE, and reading it as
+   * per-surface is a live trap. The design badges standalone SEARCH-RESULT cards
+   * on BOTH screens, and standalone SUGGESTION cards on the EDIT screen only. It
+   * is therefore true for every card this section renders — but that is a
+   * coincidence of this surface, not the rule, and Issue Entry passes false for
+   * its suggestion cards for exactly that reason.
+   */
+  const card = (e: Entry) => {
+    const ids = e.members ? e.members.map((m) => m.id) : [e.issue.id]
+    const linked = ids.every((id) => linkedIds.includes(id))
+    const gate = (kind: 'link' | 'unlink') => () => start(e.key, ids, kind)
+    return (
+      <div key={e.key} data-testid={`same-suggestion-${e.key}`}>
+        {e.members ? (
+          <GroupCard
+            parent={e.members[0]}
+            children={e.members.slice(1)}
+            linked={linked}
+            reasons={e.reasons}
+            variant="suggestion"
+            disabled={disabled}
+            onLink={gate('link')}
+            onUnlink={gate('unlink')}
+            onViewHistory={() => history.openGroup(e.members![0].id)}
+            /* Gated inside the card: it captures its own reason and does not
+               call through until the reason clears the shared rule. */
+            onRemoveMember={(id, why) => onUnlink(id, why)}
+          />
+        ) : (
+          <SuggestionCard
+            issue={e.issue}
+            linked={linked}
+            reasons={e.reasons}
+            showStandaloneBadge
+            disabled={disabled}
+            onLink={gate('link')}
+            onUnlink={gate('unlink')}
+            onViewHistory={() => history.openIssue(e.issue.id)}
+          />
+        )}
+        {justifyRow(e.key)}
+      </div>
+    )
+  }
+
+  const linkedCount = linkedIds.length
+
   return (
     <SectionCard>
-      <CardHead icon={Sparkles} title={t('sameSuggestTitle')} subtitle={t('sameSuggestSubtitle')} />
+      <CardHead
+        icon={CopyCheck}
+        title={te('sameExistingTitle')}
+        subtitle={te('sameExistingSubtitle')}
+        right={
+          <div className={styles.headActions}>
+            {linkedCount > 0 && (
+              <span className={styles.linkedCount}>
+                {linkedCount} {te('sameExistingLinked')}
+              </span>
+            )}
+            {/* The design's own affordance: search is folded into this section
+                and opened from here, not a card of its own beside it. */}
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={disabled}
+              iconLeft={<Icon icon={Search} size={14} />}
+              onClick={() => setSearchOpen((o) => !o)}
+            >
+              {te('searchLinkAnother')}
+            </Button>
+          </div>
+        }
+      />
+
+      {searchOpen && (
+        <div className={styles.searchPanel} data-testid="same-search-panel">
+          <div className={styles.searchHead}>
+            <span className={styles.searchTitle}>
+              <Icon icon={Search} size={14} />
+              {te('searchLinkExisting')}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={t('sameSearchClose')}
+              onClick={() => { setSearchOpen(false); setQuery('') }}
+            >
+              <Icon icon={X} size={14} />
+            </Button>
+          </div>
+
+          <SearchField
+            aria-label={t('sameSearchLabel')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('sameSearchPlaceholder')}
+          />
+
+          {query.trim().length === 0 ? (
+            <p className={styles.searchIdle}>
+              <Icon icon={Search} size={14} />
+              {te('searchIdle')}
+            </p>
+          ) : results.length === 0 ? (
+            <p className={styles.searchIdle}>
+              <Icon icon={SearchX} size={14} />
+              {t('sameSearchNoMatch', { query: query.trim() })}
+            </p>
+          ) : (
+            <>
+              <div className={styles.searchResultsHead}>
+                <span>{te('searchResults')}</span>
+                <span>{te('searchCount', { count: results.length })}</span>
+              </div>
+              <div className={styles.list}>{results.map(card)}</div>
+            </>
+          )}
+        </div>
+      )}
 
       {entries.length === 0 ? (
         <p className={styles.empty}>{t('sameSuggestEmpty')}</p>
       ) : (
-        <div className={styles.list}>
-          {entries.map((e) => {
-            const ids = e.members ? e.members.map((m) => m.id) : [e.issue.id]
-            return (
-              <div key={e.key} data-testid={`same-suggestion-${e.key}`}>
-                {e.members ? (
-                  <GroupCard
-                    parent={e.members[0]}
-                    children={e.members.slice(1)}
-                    /*
-                     * Always false: already-linked entries are filtered out
-                     * above, so a card here is by construction not yet linked.
-                     * That changes when the search panel folds in and this list
-                     * takes over the linked display — see the note on `entries`.
-                     */
-                    linked={false}
-                    reasons={e.reasons}
-                    variant="suggestion"
-                    disabled={disabled}
-                    onLink={() => start(e.key, ids, 'link')}
-                    onUnlink={() => start(e.key, ids, 'unlink')}
-                    onViewHistory={() => history.openGroup(e.members![0].id)}
-                    /*
-                     * GATED INSIDE THE CARD. `GroupCard` captures the reason with
-                     * its own inline justify box and does not call through until
-                     * it clears the shared rule, so what arrives here is already
-                     * justified — the same contract `LinkIssuesSection` honours.
-                     */
-                    onRemoveMember={(id, why) => onUnlink(id, why)}
-                  />
-                ) : (
-                  <SuggestionCard
-                    issue={e.issue}
-                    linked={false}
-                    reasons={e.reasons}
-                    /*
-                     * ⚠️ TRUE HERE, FALSE ON CREATE — the single line on which the
-                     * design's two copies of this section differ. Its edit copy
-                     * badges standalone suggestion cards; its create copy does
-                     * not.
-                     */
-                    showStandaloneBadge
-                    disabled={disabled}
-                    onLink={() => start(e.key, ids, 'link')}
-                    onUnlink={() => start(e.key, ids, 'unlink')}
-                    onViewHistory={() => history.openIssue(e.issue.id)}
-                  />
-                )}
-                {justifyRow(e.key)}
-              </div>
-            )
-          })}
-        </div>
+        <div className={styles.list}>{entries.map(card)}</div>
+      )}
+
+      {dangling.length > 0 && (
+        <p className={styles.dangling}>{t('sameDangling', { ids: dangling.join(', ') })}</p>
       )}
 
       {/*
         View History, the same two modals Issue Entry opens — chosen by CARD TYPE,
         not by surface: a group card opens the group modal, a standalone card the
-        single-issue one. The design's cards carry this button on both screens, so
-        rendering the shared card without wiring it would have left a dead control.
+        single-issue one. The design's cards carry this button on both screens.
       */}
       <GroupHistoryModal
         key={`g${history.nonce}`}

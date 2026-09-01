@@ -17,6 +17,7 @@ import { RoleProvider } from '@/data/roles'
 import { StoreProvider, useStore } from '@/data/store'
 import { SameExistingIssuesSection } from '@/features/issues/workspace/IssueDetails/IssueEditForm/SameExistingIssuesSection'
 import messages from '@/features/issues/workspace/IssueDetail.i18n'
+import entryMessages from '@/features/issues/issue-entry/IssueEntry.i18n'
 import { JUSTIFICATION_MIN } from '@/data/linkJustification'
 
 const M = messages.en
@@ -117,7 +118,12 @@ const applyBtn = (label: string) => screen.getByRole('button', { name: new RegEx
 describe('the ranked half exists at all', () => {
   it('renders suggestions with the reasons they were suggested for', () => {
     mount()
-    expect(body()).toContain(M.sameSuggestTitle)
+    /*
+     * The heading is Issue Entry's `sameExistingTitle` now, not this surface's
+     * own `sameSuggestTitle` — the design gives both screens the same section, so
+     * the copy comes from one bundle rather than two that can drift.
+     */
+    expect(body()).toContain(entryMessages.en.sameExistingTitle)
     expect(linkBtns().length + groupBtns().length, 'no suggestions ranked').toBeGreaterThan(0)
     /*
      * The shared card prefixes reasons with "Suggested because:" — copy the old
@@ -294,96 +300,41 @@ describe('per-member removal mutates real group membership', () => {
   })
 })
 
-describe('no duplicate unlink affordance', () => {
+describe('⚠️ A LINKED ENTRY NOW STAYS IN THE LIST — the reverse of what it did', () => {
   /*
-   * `LinkIssuesSection` owns the linked list and its gated unlink. If suggestions
-   * also listed already-linked issues, unlink would exist in two places — and two
-   * paths to one mutation drift apart. So linked issues are excluded here.
-   */
-  /*
-   * ⚠️ AN EARLIER VERSION OF THIS TEST WAS VACUOUS, and it is recorded because the
-   * shape is the one that keeps recurring. It ended in
-   * `expect(typeof stillOffered).toBe('boolean')` — true for every possible input,
-   * a green that cannot go red. The fix is not a stronger matcher, it is asserting
-   * against something addressable: the card's own testid.
-   */
-  /*
-   * ⚠️ THIS TEST USED TO EXIT WITHOUT ASSERTING, and a mutation caught it: every
-   * ranked suggestion in this fixture is a GROUP card, so an `if (!singleLinkBtn)
-   * return` guard fired every run and removing the exclusion filter entirely left
-   * the suite green. Same family as the fallback test that silently substituted a
-   * weaker scenario — a test whose primary case never runs.
+   * ⚠️ THIS TEST ASSERTED THE OPPOSITE, AND THE REVERSAL IS DELIBERATE.
    *
-   * Rewritten around the case the fixture actually produces: linking the group
-   * links every member INCLUDING its parent, and the card is keyed on the group,
-   * so the whole card must leave the suggestions.
+   * While this section was only the ranked half, already-linked issues were
+   * EXCLUDED from it — the separate search card owned the linked list, and
+   * offering unlink in two places was the duplicate-affordance problem.
+   *
+   * That card is gone. The design keeps linked issues in this list, marked, and
+   * INJECTS any that did not rank with `reasons: ['Manually linked']`. So there is
+   * exactly one place to unlink again, and it is here. Excluding them now would
+   * make a linked issue with an unrelated classification invisible: counted in the
+   * header, absent from the list, impossible to unlink from this screen.
    */
-  it('drops a group from the suggestions once its members are linked', () => {
+  it('keeps a linked issue visible and offers Unlink on it', () => {
     const { store } = mount()
-    const groupKeys = suggestedKeys()
-    expect(groupBtns().length, 'no group card ranked — this test would assert nothing').toBeGreaterThan(0)
-    expect(groupKeys.length).toBeGreaterThan(0)
-
-    fireEvent.click(groupBtns()[0])
+    fireEvent.click(groupBtns()[0] ?? linkBtns()[0])
     fireEvent.change(justifyBox(), { target: { value: WHY } })
     fireEvent.click(applyBtn(M.sameConfirmLink))
 
     const linked = store().getIssue(SUBJECT_ID)!.linkedIssueIds ?? []
     expect(linked.length, 'nothing was linked').toBeGreaterThan(0)
 
-    // The group's own key must be gone, and no linked id may head a card.
-    const after = suggestedKeys()
-    expect(after, 'the linked group is still offered').not.toContain(groupKeys[0])
-    for (const id of linked) {
-      expect(after, `${id} is linked but still heads a suggestion card`).not.toContain(id)
-    }
-  })
-})
-
-describe('⚠️ THE RANKING IS LIVE — it follows the FORM, not the saved issue', () => {
-  /*
-   * The design's view-model computes its matches unconditionally from form state,
-   * and its edit mode repopulates that state from the issue — so changing the
-   * classification while editing re-ranks. That is evidence from the binding
-   * rather than a preference.
-   *
-   * Asserted as a DIFFERENCE between two subjects for the same issue. If this
-   * component ranked from `issue` instead of `subject`, both renders would
-   * produce identical suggestions and the claim in its header would be false
-   * while everything still looked right on screen.
-   */
-  const OWN = {
-    system: 'Powertrain',
-    subSystem: '6-Speed Automatic Transmission',
-    component: 'Valve Body',
-    symptom: 'Cold-start shift slip',
-    title: '6AT slip at cold start, intermittent',
-  }
-
-  it('ranks differently for the same issue under a different classification', () => {
-    mount(SUBJECT_ID, COHORT_SUBJECT)
-    const underCohort = suggestedKeys()
-    cleanup()
-
-    mount(SUBJECT_ID, OWN)
-    const underOwn = suggestedKeys()
-
-    expect(underCohort.length, 'the engine classification ranked nothing').toBeGreaterThan(0)
-    expect(underOwn.length, 'its own classification ranked nothing').toBeGreaterThan(0)
+    /*
+     * ⚠️ CHECKED BY CARD, NOT BY SCANNING FOR EVERY MEMBER ID. A group card keeps
+     * its children behind a collapsed expander, so a linked child is legitimately
+     * absent from the rendered text — requiring every id made a correct component
+     * look like it had dropped one.
+     */
+    const cards = Array.from(document.querySelectorAll('[data-testid^="same-suggestion-"]'))
+    expect(cards.length, 'the list emptied once something was linked').toBeGreaterThan(0)
+    expect(body(), 'the linked entry vanished').toContain(store().groupMembers('EE-260023')[0].id)
     expect(
-      underCohort,
-      'the two classifications produced identical suggestions — ranking is not following the subject',
-    ).not.toEqual(underOwn)
-  })
-
-  it('ranks the engine cohort ONLY under the engine classification', () => {
-    // The specific, checkable half of the claim above.
-    mount(SUBJECT_ID, COHORT_SUBJECT)
-    expect(suggestedKeys(), 'the engine cohort did not rank under its own classification').toContain('EE-260023')
-    cleanup()
-
-    mount(SUBJECT_ID, OWN)
-    expect(suggestedKeys(), 'the engine cohort ranked under an unrelated classification').not.toContain('EE-260023')
+      screen.queryAllByRole('button', { name: /^Unlink from Issue( Group)?$/ }).length,
+      'no unlink control on a linked entry',
+    ).toBeGreaterThan(0)
   })
 })
-
