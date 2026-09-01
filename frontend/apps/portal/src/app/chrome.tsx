@@ -1,5 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Icon } from '@pqms/ui-library'
@@ -256,9 +256,31 @@ export function ULabel({ children, style }: { children: ReactNode; style?: CSSPr
   return <div style={{ ...fieldLabel, marginBottom: 6, ...style }}>{children}</div>
 }
 
-/** Single-level modal dialog (depth-1 per EXPERIENCE.md). Esc closes. `align` defaults to
- * the established top-anchored position; pass 'center' to vertically center instead. */
-export function Modal({ open, onClose, title, children, footer, width = 540, align = 'top' }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width?: number; align?: 'top' | 'center' }) {
+/**
+ * Single-level modal dialog (depth-1 per EXPERIENCE.md). Esc closes. `align` defaults to
+ * the established top-anchored position; pass 'center' to vertically center instead.
+ *
+ * ─── `bare` — THE DIALOG WITHOUT ITS FURNITURE ───────────────────────────────
+ *
+ * The standard shape is one padded box: a title row, a scrolling body, a footer
+ * row, all inside `--space-6`. Manage Related Issues is not that shape — the
+ * prototype gives it EDGE-TO-EDGE BANDS: a ruled header, a scrolling body, a
+ * tinted impact band and a ruled footer, each with its own padding and its own
+ * background. A single padded container cannot express a band that reaches the
+ * dialog's edge.
+ *
+ * `bare` hands the whole SURFACE to the caller: no background, no radius, no
+ * shadow, no padding, no title/footer wrappers and no `maxHeight`, so the panel
+ * and its bands are the caller's own stylesheet. What stays here is everything
+ * that must not diverge between dialogs — Escape, the overlay click, the
+ * z-index, the scrim and `role="dialog"`.
+ *
+ * It changes NOTHING for the other callers: the flag defaults off and the
+ * standard branch is untouched. Additive rather than a second Modal component,
+ * because duplicating the dismissal logic to get a different padding is how two
+ * dialogs end up closing differently.
+ */
+export function Modal({ open, onClose, title, children, footer, width = 540, align = 'top', bare = false }: { open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; footer?: ReactNode; width?: number; align?: 'top' | 'center'; bare?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
@@ -281,10 +303,25 @@ export function Modal({ open, onClose, title, children, footer, width = 540, ali
         padding: align === 'center' ? 'var(--space-4)' : '9vh var(--space-4) var(--space-4)',
       }}
     >
-      <div ref={ref} role="dialog" aria-modal="true" style={{ width, maxWidth: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', padding: 'var(--space-6)' }}>
-        <div style={{ font: 'var(--fw-semibold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)', marginBottom: 'var(--space-4)', flex: 'none' }}>{title}</div>
-        <div style={{ overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>{children}</div>
-        {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-5)', flex: 'none' }}>{footer}</div>}
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        style={
+          bare
+            ? { width, maxWidth: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }
+            : { width, maxWidth: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', padding: 'var(--space-6)' }
+        }
+      >
+        {bare ? (
+          children
+        ) : (
+          <>
+            <div style={{ font: 'var(--fw-semibold) var(--fs-h4)/1.25 var(--font-body)', color: 'var(--text-primary)', marginBottom: 'var(--space-4)', flex: 'none' }}>{title}</div>
+            <div style={{ overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>{children}</div>
+            {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-5)', flex: 'none' }}>{footer}</div>}
+          </>
+        )}
       </div>
     </div>
   )

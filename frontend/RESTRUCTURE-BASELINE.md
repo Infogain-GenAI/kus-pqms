@@ -1,5 +1,17 @@
 # RESTRUCTURE-BASELINE.md — Phase 0 snapshot
 
+> ⚠️ **HISTORICAL RECORD. ITS `PQMS_docs/` PATHS NO LONGER RESOLVE, AND THAT IS
+> LEFT AS-IS ON PURPOSE.** The corpus this document was measured against was
+> removed when `frontend/` moved repos. Every `PQMS_docs/...` reference below is
+> therefore dangling, and at least one assertion is now factually stale: the line
+> stating that `.prettierignore` contains `PQMS_docs/**` was true when measured
+> and is no longer true — that entry was removed with the corpus.
+>
+> These lines are NOT being corrected, because this file is a dated transcript of
+> what was measured on 2026-08-25, quoted command output included. Editing the
+> measurements to match today would destroy the only thing the file is for. Read
+> it as history; do not read any path in it as a live pointer.
+
 **Class:** dated snapshot. Reference, not a standard.
 **Date:** 2026-08-25
 **Scope:** `frontend/` only.

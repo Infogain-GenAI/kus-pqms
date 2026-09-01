@@ -25,5 +25,7 @@ font state or app commit for any of them.
 **Do not write here.** A `--write` once overwrote seven of these tracked images
 because the screen names collided; that is why the two directories are separate.
 
-Status and the open decision on this directory's fate:
-`PQMS_docs/standards/18-project-context-and-implementation-status.md`.
+Status and the open decision on this directory's fate were tracked in a standards
+corpus that is no longer in this repo. The decision is still open: these tracked
+baselines and the reproducible `pnpm run fidelity:baseline` output serve different
+purposes, and nothing has ruled on whether the tracked set stays.

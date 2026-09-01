@@ -3,7 +3,6 @@
 # markdown destroys the tables and rewrites every line, which turns
 # `git blame` into a single useless commit for the whole file.
 # 14-code-style-and-linting.md states the same rule: "Prettier ignores **/*.md".
-PQMS_docs/**
 **/*.md
 
 # ---------------------------------------------------------------------------

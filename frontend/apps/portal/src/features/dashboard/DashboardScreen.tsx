@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { Activity, ArrowUpRight, BellRing, CalendarClock, CheckCheck, ChevronRight, ClipboardList, Clock, History, IdCard, ListChecks, ShieldAlert } from 'lucide-react'
 import { Badge, StatusBadge, StatusIndicator, type StatusKey } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'

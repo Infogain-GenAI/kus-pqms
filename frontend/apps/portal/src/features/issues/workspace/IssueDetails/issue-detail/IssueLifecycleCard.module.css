@@ -1,0 +1,276 @@
+/*
+ * The Issue Lifecycle card — a 1:1 port of the prototype's "Compact lifecycle
+ * tracker" (`docs/ux-prototype/PQMS-2.html/PQMS.html`, the `tabOverview` block
+ * that sits directly above Vehicle information).
+ *
+ * EVERY VALUE BELOW IS THE PROTOTYPE'S OWN, and each is either a token whose
+ * value matches exactly or the literal the prototype wrote. The mapping was
+ * verified against `tokens/colors.css` rather than eyeballed:
+ *
+ *   #fff     -> --neutral-0        #E7ECF1 -> --border-subtle   (neutral-200)
+ *   #EAF2FB  -> --accent-50        #C3CBD2 -> --border-default  (neutral-300)
+ *   #9AA5AE  -> --text-disabled    #6B7681 -> --text-muted      (neutral-500)
+ *   #05141F  -> --neutral-900      12px radius -> --radius-xl   16px -> --space-4
+ *
+ * THREE HEXES HAVE NO TOKEN and stay literal rather than being rounded to a
+ * "nearest" one: #DCE1E6 (untravelled rail), #EDF0F3 (panel rule) and #EEF2F6
+ * (close button). #DCE1E6 in particular sits BETWEEN --border-subtle and
+ * --border-default; snapping it either way visibly changes the rail.
+ *
+ * They live here rather than in the .tsx because `scripts/ds-gate.mjs` counts
+ * raw px/hex literals in .ts/.tsx against a ceiling with zero headroom — the
+ * same constraint that made IssueDetailSection.module.css a stylesheet.
+ *
+ * `--stage` is the one value the component passes in: the status's own hue from
+ * `STATUS[key].color`. It is given a default here as well as set inline, because
+ * `scripts/check-css-vars.mjs` only treats a property as known once some CSS
+ * file DEFINES it.
+ */
+
+/*
+ * ITS OWN SURFACE, NOT A `SectionCard`. The prototype gives this card 16px
+ * padding, a 12px radius and NO shadow, where SectionCard is 20px, and the
+ * four-section record card below it is 14px radius WITH a shadow. Reusing
+ * either would have been the wrong card at the wrong size.
+ */
+.card {
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* 32px / 9px radius / 16px glyph — the same chip the four record sections use,
+   and the prototype writes it identically in both places. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 9px;
+  background: var(--accent-50);
+  color: var(--accent-600);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+/* "Current stage: QIR" — ONE run of text at one size and weight; only the value
+   changes colour. It is not a label/value pair with its own spacing. */
+.current {
+  flex: none;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+}
+
+.track {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  /* Fixed-width stations and flexible rails: the track cannot compress, so past
+     its natural width it scrolls rather than crushing the labels together. */
+  overflow-x: auto;
+  /* `padding-inline: 0` is load-bearing, not tidiness: a bare <ol> carries a
+     40px start indent, which pushed the whole track off the card's own padding
+     edge and made every rail 10px short. */
+  padding: 2px 0;
+  margin: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  width: 84px;
+}
+
+/* A visited station opens its detail panel, so it is a real button — reset to
+   look like the plain node the prototype draws with a div + cursor:pointer. */
+.stepButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Fixed height so the 23px and 29px dots share one centre line and the rails
+   meet every one of them at the same y. */
+.dotRow {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  --stage: var(--text-disabled);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: var(--neutral-0);
+  border: var(--border-width) solid var(--border-default);
+  color: var(--text-disabled);
+}
+
+.dotReached {
+  background: var(--stage);
+  border: var(--border-width-emphasis) solid var(--stage);
+  color: var(--neutral-0);
+}
+
+/* The current station is BIGGER as well as haloed — 29px against 23px. Size is
+   what carries "you are here" when the hue alone cannot. */
+.dotCurrent {
+  width: 29px;
+  height: 29px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--stage) 15%, transparent);
+}
+
+.label {
+  margin-top: 6px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.labelCurrent {
+  font-weight: var(--fw-semibold);
+}
+
+.labelUpcoming {
+  color: var(--text-disabled);
+}
+
+/* The rail absorbs whatever the fixed-width stations leave. `margin-top: 15px`
+   is the dot row's centre (32 / 2) minus half the rail — not a nudge. */
+.line {
+  flex: 1;
+  height: 2px;
+  min-width: 12px;
+  margin-top: 15px;
+  background: #dce1e6;
+}
+
+.lineTravelled {
+  background: var(--neutral-900);
+}
+
+/* ── The selected-stage panel ─────────────────────────────────────────────── */
+
+.panel {
+  margin-top: 10px;
+  border-top: var(--border-width) solid #edf0f3;
+  padding-top: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.panelBody {
+  min-width: 0;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 3px;
+}
+
+.panelDot {
+  --stage: var(--text-disabled);
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--stage);
+}
+
+.panelLabel {
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.panelMeta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.panelReason {
+  margin: 3px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.panelClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: #eef2f6;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Each station's state is carried by colour, size and glyph — none of which
+   reach a screen reader. This puts the same word in the accessibility tree. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

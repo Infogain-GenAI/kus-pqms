@@ -8,7 +8,7 @@
 // pin it and record the finding — do not fix it here.
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
@@ -142,9 +142,11 @@ describe('sorting and columns', () => {
 // page. They land on the last page of results they did not ask for. Less
 // alarming, equally wrong.
 //
-// PINNED, NOT FIXED. Recorded in PQMS_docs/APPLICATION-DEFECTS.md. When it is
-// fixed these expectations flip, and that failure is the signal.
-describe('pagination interaction — PINNED DEFECT, see APPLICATION-DEFECTS.md', () => {
+// PINNED, NOT FIXED. The defect log that recorded this lived in a docs corpus no
+// longer in this repo, so THE PARAGRAPH ABOVE IS NOW THE ONLY RECORD OF IT —
+// treat it as load-bearing and do not trim it to "clean up a comment". When the
+// defect is fixed these expectations flip, and that failure is the signal.
+describe('pagination interaction — PINNED DEFECT, described in the note above', () => {
   /** All Issues (35) at 20/page gives 2 pages. Returns true if we reached page 2. */
   const goToPage2 = () => {
     fireEvent.click(tab(/^All Issues/i))

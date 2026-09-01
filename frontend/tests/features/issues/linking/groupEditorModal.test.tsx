@@ -1,18 +1,26 @@
-// Manage Related Issues as the GROUP editor — the add path and its validation.
+// Manage Related Issues as the GROUP editor — the add path.
 //
-// The removal path and its gate are covered in `linkJustificationGate.test.tsx`.
-// This covers what the repurposing ADDED: linking by Issue ID, with the
-// canonical's own refusal messages, and a pending addition that must be justified
-// before Save will commit it.
+// The removal path and its gate are covered in `linkJustificationGate.test.tsx`;
+// the impact copy and Parent projection in `relatedIssues.test.ts`. This covers
+// how an issue GETS INTO the group.
 //
-// ⚠️ THERE IS NO CANDIDATE LIST TO TEST, and its absence is asserted rather than
-// assumed. The modal used to suggest `store.correlations()` matches; the design
-// offers only the ID box. A test suite that simply stopped mentioning candidates
-// would leave nobody able to tell whether the list was removed on purpose.
+// ─── ⚠️ THE ADD PATH CHANGED SHAPE, AND SO DID WHAT IS WORTH TESTING ────────
+//
+// It used to be an Issue-ID box that ACCEPTED anything and then refused it with
+// one of five messages — "cannot link an issue to itself", "already related",
+// "already pending link". The prototype's design does not refuse: it EXCLUDES.
+// The search pool drops the issue itself, every current group member and every
+// pending addition, so none of those three mistakes is reachable.
+//
+// That makes exclusion the property under test. A refusal message can be
+// verified by reading the screen; an absence cannot, and an exclusion that
+// silently stops excluding looks exactly like a search that found nothing —
+// which is why each case below names a specific id and asserts it is missing
+// while proving the search itself still works.
 import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider, useStore } from '@/data/store'
 import { ManageLinksModal } from '@/features/issues/workspace/modals'
@@ -49,89 +57,125 @@ function openModal(anchor = GROUPED) {
   return { store: () => captured! }
 }
 
-const idBox = () => screen.getByRole('textbox', { name: M.linksModalSearchLabel })
-const linkBtn = () => screen.getAllByRole('button', { name: new RegExp(`^${M.linksModalLink}$`) })[0]
 const body = () => document.body.textContent ?? ''
+const btn = (name: string) => screen.getByRole('button', { name })
 
-const tryId = (value: string) => {
-  fireEvent.change(idBox(), { target: { value } })
-  fireEvent.click(linkBtn())
+/** The search panel is closed until asked for — that is the design. */
+const openSearch = () => fireEvent.click(btn(M.linksModalSearchToggle as string))
+const searchFor = (q: string) =>
+  fireEvent.change(screen.getByRole('textbox', { name: M.linksModalSearchLabel as string }), { target: { value: q } })
+
+/** The results region, so "is this id on screen" cannot be answered by a row elsewhere. */
+const results = () => screen.queryAllByRole('button', { name: M.linksModalLink as string })
+const resultCardFor = (id: string) =>
+  results()
+    .map((b) => b.closest('div')?.parentElement)
+    .find((card) => card?.textContent?.includes(id))
+
+const linkFromSearch = (id: string) => {
+  searchFor(id)
+    const card = resultCardFor(id)
+  if (!card) throw new Error(`${id} was not offered by the search`)
+  fireEvent.click(within(card as HTMLElement).getByRole('button', { name: M.linksModalLink as string }))
 }
 
-describe('the candidate list is gone, deliberately', () => {
-  it('offers an Issue-ID box and no suggested candidates', () => {
+describe('the search panel — closed until asked for', () => {
+  it('offers a toggle rather than a permanently open search', () => {
     openModal()
-    expect(idBox()).toBeTruthy()
-    // The old empty-state copy is gone with the list it belonged to — asserted so
-    // that reinstating a candidate list is a visible change, not a silent one.
-    expect(body()).not.toContain('No classification-matched candidates')
+    expect(btn(M.linksModalSearchToggle as string)).toBeTruthy()
+    expect(screen.queryByRole('textbox', { name: M.linksModalSearchLabel as string })).toBeNull()
+  })
+
+  it('opens to an idle prompt, not to an empty result list', () => {
+    openModal()
+    openSearch()
+    expect(screen.getByRole('textbox', { name: M.linksModalSearchLabel as string })).toBeTruthy()
+    expect(body()).toContain(M.linksModalSearchIdle)
+    expect(results()).toHaveLength(0)
+  })
+
+  it('says so when nothing matches, quoting what was searched for', () => {
+    openModal()
+    openSearch()
+    searchFor('ZZ-999999')
+    expect(body()).toContain('No issues match')
+    expect(body()).toContain('ZZ-999999')
+    expect(results()).toHaveLength(0)
+  })
+
+  it('finds an outsider by id and reports how many matched', () => {
+    const { store } = openModal()
+    const outsider = store().issues.find((i) => !i.groupId && i.id !== GROUPED)!.id
+    openSearch()
+    searchFor(outsider)
+    expect(resultCardFor(outsider), 'the outsider was not offered').toBeTruthy()
+    expect(body()).toContain(M.linksModalResultsHeading)
   })
 })
 
-describe("⚠️ ID validation uses the canonical's own refusals", () => {
-  it('refuses an empty box', () => {
+describe('⚠️ EXCLUSION replaces refusal — three mistakes made unreachable', () => {
+  it('never offers the issue being managed', () => {
     openModal()
-    tryId('   ')
-    expect(body()).toContain(M.linksModalErrEmpty)
+    openSearch()
+    searchFor(GROUPED)
+    expect(resultCardFor(GROUPED), 'the anchor issue offered itself for linking').toBeFalsy()
   })
 
-  it('distinguishes a MALFORMED id from a well-formed one that does not exist', () => {
-    // The design says these differently, and the distinction is useful: one is a
-    // typo, the other is a real-looking id for a record that is not there.
-    openModal()
-    tryId('not an id')
-    expect(body()).toContain(M.linksModalErrInvalid)
-
-    tryId('ZZ-999999')
-    expect(body()).toContain('No issue found with ID')
-    expect(body()).not.toContain(M.linksModalErrInvalid)
-  })
-
-  it('refuses the issue itself', () => {
-    openModal()
-    tryId(GROUPED)
-    expect(body()).toContain(M.linksModalErrSelf)
-  })
-
-  it('refuses an issue already in the group', () => {
+  it('never offers an issue already in the group', () => {
     const { store } = openModal()
     const member = store().groupMembers(GROUPED).find((m) => m.id !== GROUPED)!
-    tryId(member.id)
-    expect(body()).toContain('already related to this issue')
+    openSearch()
+    searchFor(member.id)
+    expect(resultCardFor(member.id), 'an existing group member was offered again').toBeFalsy()
   })
 
-  it('refuses a duplicate pending addition', () => {
+  it('never offers an issue that is already a pending addition', () => {
     const { store } = openModal()
-    const outsider = store().issues.find((i) => !i.groupId)!.id
-    tryId(outsider)
-    // First one is accepted...
-    expect(body()).toContain(M.linksModalPendingLink)
-    // ...the second is not.
-    tryId(outsider)
-    expect(body()).toContain('already pending link')
+    const outsider = store().issues.find((i) => !i.groupId && i.id !== GROUPED)!.id
+    openSearch()
+    linkFromSearch(outsider)
+    // The row is now in the pending list; searching for it again must find nothing
+    // to link, or the same issue could be queued twice.
+    searchFor(outsider)
+    expect(resultCardFor(outsider), 'a pending addition was offered a second time').toBeFalsy()
   })
 
-  it('is case-insensitive on the id, as the design is', () => {
+  it('matches on title as well as id, so the pool is genuinely searched', () => {
     const { store } = openModal()
-    const outsider = store().issues.find((i) => !i.groupId)!.id
-    tryId(outsider.toLowerCase())
-    expect(body()).toContain(M.linksModalPendingLink)
+    const outsider = store().issues.find((i) => !i.groupId && i.id !== GROUPED && i.title.length > 8)!
+    openSearch()
+    searchFor(outsider.title.slice(0, 8))
+    expect(resultCardFor(outsider.id)).toBeTruthy()
   })
 })
 
 describe('a pending addition must be justified before Save', () => {
   const addOutsider = () => {
     const { store } = openModal()
-    const outsider = store().issues.find((i) => !i.groupId)!.id
-    tryId(outsider)
+    const outsider = store().issues.find((i) => !i.groupId && i.id !== GROUPED)!.id
+    openSearch()
+    linkFromSearch(outsider)
     return { store, outsider }
   }
 
   it('blocks Save until the addition is applied', () => {
     addOutsider()
-    const save = screen.getByRole('button', { name: new RegExp(`^${M.linksModalSave}$`) }) as HTMLButtonElement
+    const save = btn(M.linksModalSave as string) as HTMLButtonElement
     expect(save.disabled, 'Save offered with an unjustified addition').toBe(true)
-    expect(body()).toContain(J.saveBlocked)
+  })
+
+  it('shows no Pending Link badge until the reason is accepted', () => {
+    const { outsider } = addOutsider()
+    // The row exists — its justification box has to live somewhere...
+    expect(body()).toContain(outsider)
+    // ...but it is not yet a pending change.
+    expect(body()).not.toContain(M.linksModalPendingLink)
+
+    fireEvent.change(screen.getByRole('textbox', { name: `Justification for linking ${outsider}` }), {
+      target: { value: AT_FLOOR },
+    })
+    fireEvent.click(btn(J.apply as string))
+    expect(body()).toContain(M.linksModalPendingLink)
   })
 
   it('JOINS THE GROUP on Save, with the reason audited', () => {
@@ -141,8 +185,8 @@ describe('a pending addition must be justified before Save', () => {
     fireEvent.change(screen.getByRole('textbox', { name: `Justification for linking ${outsider}` }), {
       target: { value: REASON },
     })
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${J.apply}$`) }))
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${M.linksModalSave}$`) }))
+    fireEvent.click(btn(J.apply as string))
+    fireEvent.click(btn(M.linksModalSave as string))
 
     // ⚠️ GROUP membership, not the symmetric link array.
     const groupId = store().getIssue(GROUPED)!.groupId
@@ -159,14 +203,33 @@ describe('a pending addition must be justified before Save', () => {
     fireEvent.change(screen.getByRole('textbox', { name: `Justification for linking ${outsider}` }), {
       target: { value: AT_FLOOR },
     })
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${M.linksModalUndo}$`) }))
+    fireEvent.click(btn(`${M.linksModalRemove} ${outsider}`))
     expect(body()).not.toContain(M.linksModalPendingLink)
 
-    // Re-added, it starts blank.
-    fireEvent.change(idBox(), { target: { value: outsider } })
-    fireEvent.click(linkBtn())
+    // Re-added, it starts blank — a reason the user withdrew must not come back.
+    linkFromSearch(outsider)
     const again = screen.getByRole('textbox', { name: `Justification for linking ${outsider}` }) as HTMLTextAreaElement
     expect(again.value).toBe('')
+  })
+})
+
+describe('the impact band — what Save will actually do', () => {
+  it('stays hidden until a change is applied, then states the count', () => {
+    const { store } = openModal()
+    const outsider = store().issues.find((i) => !i.groupId && i.id !== GROUPED)!.id
+    expect(body()).not.toContain('Pending')
+
+    openSearch()
+    linkFromSearch(outsider)
+    // Toggled but unjustified is not yet a pending CHANGE.
+    expect(body()).not.toContain('1 Change Pending')
+
+    fireEvent.change(screen.getByRole('textbox', { name: `Justification for linking ${outsider}` }), {
+      target: { value: AT_FLOOR },
+    })
+    fireEvent.click(btn(J.apply as string))
+    expect(body()).toContain('1 Change Pending')
+    expect(body()).toContain('will become part of the same issue group')
   })
 })
 
@@ -180,5 +243,10 @@ describe('Parent and Child roles are shown and derived', () => {
     // Whether Parent appears depends on whether the anchor IS the parent —
     // asserted through the store rather than guessed.
     if (all[0].id !== GROUPED) expect(body()).toContain(M.linksModalParent)
+  })
+
+  it('names the group size, so the user knows what they are editing', () => {
+    const { store } = openModal()
+    expect(body()).toContain(`Issue Group · ${store().groupMembers(GROUPED).length} Issues`)
   })
 })

@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { notificationTarget } from '@/data/notifications'
 import { useStore } from '@/data/store'
 import type { AppNotification } from '@/data/types'

@@ -21,7 +21,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider, useStore } from '@/data/store'
 import { ManageLinksModal } from '@/features/issues/workspace/modals'
@@ -141,12 +141,14 @@ describe('Manage Links — Save cannot commit an unjustified group change', () =
   it('offers no Save while a pending removal has no justification', () => {
     renderGroupModal()
     expect(isDisabled(M.linksModalSave)).toBe(true)
-    expect(body()).not.toContain(J.saveBlocked)
+    expect(btn(M.linksModalSave).getAttribute('title')).toBeNull()
 
     fireEvent.click(unlinkNthMember(0))
 
     expect(isDisabled(M.linksModalSave)).toBe(true)
-    expect(body()).toContain(J.saveBlocked)
+    // The prototype gives a disabled Save no prose; the open justification box in
+    // the row is what says why. The reason rides on the button as a tooltip.
+    expect(btn(M.linksModalSave).getAttribute('title')).toBe(J.saveBlocked)
   })
 
   it('REFUSES a justification one character below the floor', () => {
@@ -166,7 +168,9 @@ describe('Manage Links — Save cannot commit an unjustified group change', () =
     fireEvent.change(justifyBoxFor(members[0].id, 'unlink'), { target: { value: AT_FLOOR } })
     fireEvent.click(btn(J.apply))
 
-    expect(body()).toContain(J.appliedUnlink)
+    // An accepted reason collapses the editor and flags the row Pending Unlink —
+    // the prototype's own applied state, in place of the old summary line.
+    expect(body()).toContain(M.linksModalPendingUnlink)
     expect(isDisabled(M.linksModalSave)).toBe(false)
     expect(body()).not.toContain('entered.')
   })
@@ -201,6 +205,15 @@ describe('Manage Links — a pending removal stays visible', () => {
     fireEvent.click(unlinkNthMember(0))
 
     expect(screen.queryByText(target), 'ROW VANISHED — its justification has nowhere to live').toBeTruthy()
+    // ⚠️ NOT YET "Pending Unlink". In the prototype's state machine a toggled row is
+    // EDITING until its reason is accepted, and only an applied change is pending —
+    // which is also why Undo appears only after Apply. Before that the row's own
+    // Cancel withdraws it.
+    expect(body()).not.toContain(M.linksModalPendingUnlink)
+    expect(queryBtn(M.linksModalUndo)).toBeNull()
+
+    fireEvent.change(justifyBoxFor(target, 'unlink'), { target: { value: AT_FLOOR } })
+    fireEvent.click(btn(J.apply))
     expect(body()).toContain(M.linksModalPendingUnlink)
     expect(queryBtn(M.linksModalUndo)).toBeTruthy()
   })
@@ -213,7 +226,9 @@ describe('Manage Links — a pending removal stays visible', () => {
     fireEvent.change(justifyBoxFor(target, 'unlink'), { target: { value: AT_FLOOR } })
     expect(valueOf(justifyBoxFor(target, 'unlink'))).toBe(AT_FLOOR)
 
-    fireEvent.click(btn(M.linksModalUndo))
+    // Unapplied, the row's own Cancel is the withdrawal — Undo belongs to an
+    // applied change and is not on screen yet.
+    fireEvent.click(btn(`${M.linksModalCancel} unlinking ${target}`))
     expect(body()).not.toContain(M.linksModalPendingUnlink)
 
     fireEvent.click(unlinkNthMember(0))

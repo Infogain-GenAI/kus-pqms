@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { ArrowRight } from 'lucide-react'
 import { Icon } from '@pqms/ui-library'
 import { useStore } from '@/data/store'

@@ -18,7 +18,7 @@
 // worth a test, and a hand-maintained name list cannot catch it.
 import { describe, it, expect, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
-import type { RouteObject } from 'react-router-dom'
+import type { RouteObject } from 'react-router'
 import { capabilityDecision, requireCapability, type RouteCapabilityHandle } from '@/app/capabilityGuard'
 import { __resetCurrentCapability, _syncCurrentRole, hasCapability } from '@/data/capabilities'
 import { routes } from '@/routes'

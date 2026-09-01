@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { ArrowLeftRight, Calendar, Car, ClipboardPlus, FileText, PenSquare, Settings2 } from 'lucide-react'
 import { Avatar, Button, SOURCE, StatusBadge } from '@pqms/ui-library'
 import { Icon } from '@pqms/ui-library'
@@ -163,12 +163,15 @@ export function IssueWorkspaceScreen() {
 
   const actor = { name: user.name, role: user.role }
   const comments = store.commentsFor(id).filter((c) => !c.hidden)
-  const isOwn = issue.owner === user.name || issue.assignee === user.name
-  const canEditIssue = can('propose') && isOwn && issue.status === 'open'
+  // Editing is capability-gated only. Neither ownership nor status narrows it: any
+  // contributor may correct an issue's details at any point in its life, including
+  // after it has been escalated or closed.
+  const canEditIssue = can('propose')
   // V4-V5: an issue's priority is the QIR's priority, so it must be scored and saved
   // before a QIR can be raised. Unscored issues route the user to the matrix instead.
+  // Status does not narrow this — a QIR can be raised from any status.
   const priority = store.priorityResult(id)
-  const canQir = issue.status !== 'escalated' && issue.status !== 'closed' && can('propose') && priority.scored
+  const canQir = can('propose') && priority.scored
 
   /** Handed to every section through the Outlet. See workspace/context.ts. */
   const context: WorkspaceContext = {

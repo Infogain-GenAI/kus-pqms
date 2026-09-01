@@ -7,7 +7,7 @@
 // mid-test `vi.resetModules()` would otherwise cause.
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'
