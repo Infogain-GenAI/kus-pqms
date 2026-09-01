@@ -22,7 +22,7 @@ import type { RouteObject } from 'react-router'
 import { capabilityDecision, requireCapability, type RouteCapabilityHandle } from '@/app/capabilityGuard'
 import { __resetCurrentCapability, _syncCurrentRole, hasCapability } from '@/data/capabilities'
 import { routes } from '@/routes'
-import { bodyText, renderAt } from '../support/dataRouter'
+import { bodyText, FIRST_PAINT_TIMEOUT, renderAt } from '../support/dataRouter'
 
 afterEach(() => {
   __resetCurrentCapability()
@@ -178,7 +178,10 @@ describe('/admin through the real route tree', () => {
     // never moves under it.
     const { router } = renderAt(routes, '/admin', { role: 'SE' })
 
-    await waitFor(() => expect(router.state.location.pathname).not.toBe('/admin'))
+    // A redirect only settles `router.state.location` once the whole matched
+    // branch's async work resolves, lazy Component included — same cold-load
+    // budget as `waitForBody` (see dataRouter.tsx), not the default 5000ms.
+    await waitFor(() => expect(router.state.location.pathname).not.toBe('/admin'), { timeout: FIRST_PAINT_TIMEOUT })
     // Lands on /dashboard, not /: `/` is itself a redirect. The MARKER is what
     // must survive that hop — see `redirectPreservingQuery`.
     expect(router.state.location.pathname).toBe('/dashboard')
@@ -187,19 +190,21 @@ describe('/admin through the real route tree', () => {
 
   it('redirects an override session too — override is not admin', async () => {
     const { router } = renderAt(routes, '/admin', { role: 'ASM' })
-    await waitFor(() => expect(router.state.location.search).toBe('?denied=1'))
+    await waitFor(() => expect(router.state.location.search).toBe('?denied=1'), { timeout: FIRST_PAINT_TIMEOUT })
   })
 
   it('lets an ADMIN session through to the screen', async () => {
     const { router } = renderAt(routes, '/admin', { role: 'ADMIN' })
-    await waitFor(() => expect(bodyText().length).toBeGreaterThan(0))
+    // A first render of a lazily-loaded route — same cold-load budget as
+    // `waitForBody` (see dataRouter.tsx), not the default 5000ms.
+    await waitFor(() => expect(bodyText().length).toBeGreaterThan(0), { timeout: FIRST_PAINT_TIMEOUT })
     expect(router.state.location.pathname).toBe('/admin')
     expect(router.state.location.search).not.toBe('?denied=1')
   })
 
   it('leaves ungated routes alone', async () => {
     const { router } = renderAt(routes, '/issues', { role: 'SE' })
-    await waitFor(() => expect(bodyText()).toMatch(/issues/i))
+    await waitFor(() => expect(bodyText()).toMatch(/issues/i), { timeout: FIRST_PAINT_TIMEOUT })
     expect(router.state.location.pathname).toBe('/issues')
     expect(router.state.location.search).toBe('')
   })
@@ -208,7 +213,7 @@ describe('/admin through the real route tree', () => {
     // The point of gating in a loader rather than in the component: the screen
     // never mounts at all, so its chunk is never fetched and its hooks never run.
     const { router } = renderAt(routes, '/admin', { role: 'SE' })
-    await waitFor(() => expect(router.state.location.search).toBe('?denied=1'))
+    await waitFor(() => expect(router.state.location.search).toBe('?denied=1'), { timeout: FIRST_PAINT_TIMEOUT })
     expect(screen.queryByText(/Administration/i)).toBeNull()
   })
 })
@@ -220,19 +225,19 @@ describe('REGRESSION — a hop-through redirect swallowed the query string', () 
   // user landed on the dashboard with no sign anything had been refused.
   it('carries the query from / to /dashboard', async () => {
     const { router } = renderAt(routes, '/?denied=1', { role: 'SE' })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'), { timeout: FIRST_PAINT_TIMEOUT })
     expect(router.state.location.search).toBe('?denied=1')
   })
 
   it('carries it through the /overview alias too', async () => {
     const { router } = renderAt(routes, '/overview?denied=1', { role: 'SE' })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'), { timeout: FIRST_PAINT_TIMEOUT })
     expect(router.state.location.search).toBe('?denied=1')
   })
 
   it('carries it through /issue-management', async () => {
     const { router } = renderAt(routes, '/issue-management?foo=bar', { role: 'SE' })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/issues'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/issues'), { timeout: FIRST_PAINT_TIMEOUT })
     expect(router.state.location.search).toBe('?foo=bar')
   })
 
@@ -240,7 +245,7 @@ describe('REGRESSION — a hop-through redirect swallowed the query string', () 
     // `.search` is '' for a bare URL, so the redirect target must not gain a
     // stray '?'.
     const { router } = renderAt(routes, '/', { role: 'SE' })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'), { timeout: FIRST_PAINT_TIMEOUT })
     expect(router.state.location.search).toBe('')
   })
 })

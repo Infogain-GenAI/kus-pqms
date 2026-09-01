@@ -34,7 +34,6 @@ const ACTIONS_WRITTEN_BY_THE_APP = [
   'Activity change rejected',
   'Activity change requested',
   'Approved transition',
-  'Bulk role assignment',
   'Bulk status change',
   'Issue linked',
   'Issue unlinked',
