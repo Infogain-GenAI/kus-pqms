@@ -215,6 +215,26 @@ interface StoreValue {
    */
   saveGroupEdits: (request: GroupEditRequest, actor: Actor) => void
   /**
+   * Remove ONE related issue, immediately — the group cards' per-member control.
+   *
+   * ⚠️ IT BRANCHES, AND THE BRANCH IS THE POINT. The design's
+   * `openGroupUnlinkModal(id)` inspects `groupMembers(id)` first:
+   *   · a genuine 2+ group  → GROUP removal, with the dissolve cascade and the
+   *     parent-promotion entry, all of which `planGroupEdits` owns;
+   *   · anything else       → plain SYMMETRIC unlink.
+   * Two different relationship types behind one control, chosen by what the
+   * target actually is. Calling the wrong one silently edits the wrong
+   * relationship, which is the defect this whole model change exists to fix.
+   *
+   * IMMEDIATE, not draft/commit — there is no Save here, so the justification is
+   * mandatory at the point of action rather than per pending row.
+   *
+   * `activeId` is the issue the user is looking at. It matters ONLY to the
+   * symmetric fallback, which needs two parties; a group removal is defined
+   * entirely by its target.
+   */
+  removeRelated: (activeId: string, targetId: string, justification: string, actor: Actor) => void
+  /**
    * Request a new classification node — the forms' "Request New System" flow.
    *
    * The node is added immediately with pendingApproval: true rather than being
@@ -664,6 +684,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     for (const a of plan.audits) appendAudit(a.issueId, actor, a.action, a.detail)
   }, [issues, appendAudit])
 
+  const removeRelated = useCallback<StoreValue['removeRelated']>((activeId, targetId, justification, actor) => {
+    // `groupMembers` returns [] for an ungrouped issue and never a 1-member
+    // group, so `>= 2` is the same question as "is this really a group?".
+    if (groupMembers(targetId).length >= 2) {
+      saveGroupEdits({ activeId, removals: [{ id: targetId, justification }], additions: [] }, actor)
+      return
+    }
+    unlinkIssue(activeId, targetId, justification, actor)
+  }, [groupMembers, saveGroupEdits, unlinkIssue])
+
   const bulkStatus = useCallback<StoreValue['bulkStatus']>((ids, status, reason, actor) => {
     setIssues((list) => list.map((i) => (ids.includes(i.id) ? { ...i, status, updatedAt: now() } : i)))
     ids.forEach((id) => appendAudit(id, actor, 'Bulk status change', `→ ${status}: ${reason}`))
@@ -838,7 +868,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     issues, classification, notifications, unreadCount,
     getIssue, partsFor, commentsFor, activitiesFor, changeRequestsFor, auditFor, classChildren, classByLevel, groupMembers, relKind, correlations, partOptions, teamDirectory,
     priorityFor, priorityResult, savePriority,
-    createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus, bulkAssignRole, saveGroupEdits,
+    createIssue, startInvestigation, setStatus, updateIssue, linkIssue, unlinkIssue, proposeTransition, approveProposal, rejectProposal, bulkStatus, bulkAssignRole, saveGroupEdits, removeRelated,
     requestClassification, addComment, addActivity, addPart, setPartStatus,
     addManualParts, addManualTeamMembers,
     requestActivityChange, approveActivityChange, rejectActivityChange, markAllRead, markRead,

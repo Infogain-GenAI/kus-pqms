@@ -138,6 +138,14 @@ const messages: ComponentI18nMessages = {
     cardManuallyLinked: 'Manually linked',
     cardSuggestedBecause: 'Suggested because: {{reasons}}',
     groupHeader: 'Issue Group · {{count}} Issues',
+    /*
+     * ⚠️ NAMES THE RELATIONSHIP, because two controls inches apart edit
+     * DIFFERENT ones: the card's own button is a symmetric bulk link over every
+     * member ("Link to Issue Group"), while this removes ONE member FROM the
+     * group. A bare "Unlink" on both would be the same word for two things.
+     */
+    groupRemoveMember: 'Remove from group',
+    groupRemoveLabel: 'Justification for removing',
     badgeParent: 'Parent',
     badgeChild: 'Child',
 

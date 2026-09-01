@@ -10,6 +10,9 @@
 // action the app actually WRITES has a catalogue row, and that the two segments
 // mean what they say.
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join, resolve } from 'node:path'
 import { HISTORY_CATALOGUE, resolveHistoryEvent } from '@/features/issues/workspace/history/history.catalogue'
 
 /**
@@ -99,5 +102,43 @@ describe('an uncatalogued action', () => {
   // nobody reading the lifecycle segment would ever see it.
   it('resolves to undefined rather than a default', () => {
     expect(resolveHistoryEvent('Something Nobody Has Written Yet')).toBeUndefined()
+  })
+})
+
+/*
+ * ─── ⚠️ EVERY ACTION THE APP CAN EMIT MUST HAVE AN ENTRY ────────────────────
+ *
+ * The list above is hand-maintained, and hand-maintained lists go stale: the
+ * group editor shipped emitting 'Issue Unlinked', 'Issue Linked' and 'Parent
+ * Issue Changed' with NO catalogue entries, so those rows rendered with no icon
+ * and no label. Nothing failed — an unknown action falls through to a default.
+ *
+ * This derives the action strings from the SOURCE instead, so a new
+ * `appendAudit(..., 'Some Action', ...)` cannot be added without an entry. It is
+ * the inverse of the dead-trace check: that one finds entries with no action,
+ * this finds actions with no entry.
+ *
+ * ⚠️ IT SCANS TEXT, so it sees only literal action arguments — an action built
+ * from a variable is invisible to it. That is a real limit, and the reason the
+ * hand-maintained list above is not deleted in favour of this.
+ */
+describe('the catalogue covers every action the store emits', () => {
+  const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../apps/portal/src')
+
+  const sources = ['data/store.tsx', 'data/groupEdits.ts'].map((f) =>
+    readFileSync(join(SRC, f), 'utf8'),
+  )
+
+  it('has an entry for each literal action argument in the store', () => {
+    const emitted = new Set<string>()
+    for (const src of sources) {
+      // `appendAudit(id, actor, 'Action', …)` and the planner's `action: 'Action'`
+      for (const m of src.matchAll(/appendAudit\([^,]+,[^,]+,\s*'([^']+)'/g)) emitted.add(m[1])
+      for (const m of src.matchAll(/action:\s*'([^']+)'/g)) emitted.add(m[1])
+    }
+    expect(emitted.size, 'scanned no actions at all').toBeGreaterThan(5)
+
+    const missing = [...emitted].filter((a) => !(a in HISTORY_CATALOGUE)).sort()
+    expect(missing, `actions with no catalogue entry: ${missing.join(', ')}`).toEqual([])
   })
 })

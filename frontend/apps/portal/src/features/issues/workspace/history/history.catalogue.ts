@@ -1,9 +1,11 @@
 import {
   CircleDot,
+  Crown,
   FileEdit,
   FilePlus,
   FilePlus2,
   Flag,
+  Flame,
   GitBranch,
   GitCompareArrows,
   GitMerge,
@@ -93,6 +95,19 @@ export const HISTORY_CATALOGUE: Record<string, HistoryEventPresentation> = {
   'Owner assigned': { label: 'Owner assigned', segment: 'lifecycle', icon: UserRoundCog, tint: 'blue' },
   'Bulk role assignment': { label: 'Role reassigned in bulk', segment: 'lifecycle', icon: UserRoundCog, tint: 'blue' },
   'Classification selected': { label: 'Classification selected', segment: 'lifecycle', icon: Tags, tint: 'purple' },
+
+  /*
+   * ─── THREE ENTRIES THE NEW COVERAGE TEST FOUND ────────────────────────────
+   *
+   * All three actions were already being emitted with no entry here, so they
+   * rendered in the timeline with no icon and no label — an unknown action falls
+   * through to a default rather than failing. They predate the group work; the
+   * test that derives actions from the store source surfaced them on its first
+   * run, which is the argument for deriving rather than hand-maintaining.
+   */
+  'Classification requested': { label: 'Classification requested', segment: 'lifecycle', icon: Tags, tint: 'amber' },
+  'Issue Priority saved': { label: 'Priority scored', segment: 'lifecycle', icon: Flame, tint: 'amber' },
+  'Linked issue(s) added': { label: 'Linked issues recorded', segment: 'lifecycle', icon: Link2, tint: 'blue' },
   'Issue linked': { label: 'Issue linked', segment: 'lifecycle', icon: Link2, tint: 'blue' },
   'Issues linked': { label: 'Issues linked', segment: 'lifecycle', icon: Link2, tint: 'blue' },
   'Issue unlinked': { label: 'Issue unlinked', segment: 'lifecycle', icon: Link2Off, tint: 'neutral' },
@@ -116,6 +131,29 @@ export const HISTORY_CATALOGUE: Record<string, HistoryEventPresentation> = {
   // Purple, unlike its siblings: a merge folds two groups into one and is the
   // largest of the three events. The tint is the only at-a-glance difference.
   'Issue Groups merged': { label: 'Issue groups merged', segment: 'lifecycle', icon: GitMerge, tint: 'purple' },
+
+  /*
+   * ─── GROUP MEMBERSHIP EDITS ────────────────────────────────────────────────
+   *
+   * Written by `planGroupEdits` from the Manage Related Issues editor and the
+   * per-member controls.
+   *
+   * ⚠️ THESE DIFFER FROM `'Issue linked'` / `'Issue unlinked'` ONLY BY CASE, and
+   * that is a collision OUR port created: the capitalised names are the
+   * canonical's own for GROUP events, while the lowercase pair are our names for
+   * the SYMMETRIC ones. They are genuinely different events — one changes
+   * Parent/Child membership, the other a symmetric link — so they are not merged,
+   * but the near-identical spelling is a trap and is called out here.
+   *
+   * They were missing when the group editor shipped, which rendered those rows
+   * with no icon and no label. `historyCatalogue.test.ts` now derives the action
+   * list from the store itself so a new action cannot be added without one.
+   */
+  'Issue Unlinked': { label: 'Removed from issue group', segment: 'lifecycle', icon: Link2Off, tint: 'amber' },
+  'Issue Linked': { label: 'Added to issue group', segment: 'lifecycle', icon: GitBranch, tint: 'blue' },
+  // The promotion is system-generated and carries no user reason — see
+  // `planGroupEdits`. Purple marks it as structural rather than a user edit.
+  'Parent Issue Changed': { label: 'Parent issue changed', segment: 'lifecycle', icon: Crown, tint: 'purple' },
 
   // ── Activity / audit log ──
   'Issue record created': { label: 'Issue record created', segment: 'audit', icon: FilePlus, tint: 'neutral' },
