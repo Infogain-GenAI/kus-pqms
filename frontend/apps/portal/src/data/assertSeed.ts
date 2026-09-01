@@ -165,6 +165,19 @@ function failLink(msg: string): never {
  * So they are tolerated and enumerated. A NEW dangling id — a genuine typo, or a
  * relink that misses — is not in this list and fails.
  */
+/*
+ * ⚠️ AN ALLOWLIST STOPS CHECKING THE THING IT NAMES, and that is the cost of
+ * this one. Each id here is a link target that exists in the design's issue pool
+ * but was never ported into this fixture, so a link to it is recorded as
+ * deliberate rather than dangling.
+ *
+ * The failure mode is the day one of these is seeded for real: it becomes a
+ * genuine issue, and a MISSING reciprocal link on it would then be waved through
+ * by its own entry here instead of being reported. That is inherent to
+ * allowlists — so rather than leaving it as a caveat nobody re-reads,
+ * `assertLinks` fails if an allowlisted id is ever seeded, forcing the entry to
+ * be removed in the same change that seeds it.
+ */
 const UNPORTED_LINK_TARGETS = new Set([
   'EE-260019',
   'EE-260020',
@@ -208,6 +221,21 @@ function assertLinks(): void {
       } else if (!UNPORTED_LINK_TARGETS.has(target)) {
         failLink(`${issue.id} links to "${target}", which is neither a seeded issue nor a known unported design id`)
       }
+    }
+  }
+
+  /*
+   * The allowlist must not outlive its reason. An id that is now a real seeded
+   * issue is no longer "unported", and leaving it listed would exempt it from
+   * the reciprocity check above — silently, and for as long as nobody re-read
+   * the list.
+   */
+  for (const allowed of UNPORTED_LINK_TARGETS) {
+    if (ids.has(allowed)) {
+      failLink(
+        `"${allowed}" is in UNPORTED_LINK_TARGETS but is now a seeded issue; ` +
+          'remove its entry so its links are reciprocity-checked like every other issue',
+      )
     }
   }
 

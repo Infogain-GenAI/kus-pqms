@@ -137,63 +137,93 @@ describe('⚠️ THE DISSOLVE — removing from a group of exactly two', () => {
 })
 
 describe('⚠️ THE FALLBACK — target is NOT in a real group', () => {
-  /** Two seeded issues that share a symmetric link and belong to no group. */
-  const linkedPair = (s: ReturnType<typeof useStore>) => {
-    const ids = new Set(s.issues.map((i) => i.id))
-    for (const i of s.issues) {
-      if (i.groupId) continue
-      const partner = (i.linkedIssueIds ?? []).find((l) => ids.has(l) && !s.getIssue(l)?.groupId)
-      if (partner) return [i.id, partner]
-    }
-    return []
+  /*
+   * ─── TWO HONEST CAVEATS, BOTH WORTH STATING ────────────────────────────────
+   *
+   * 1. THIS BRANCH IS UNREACHABLE FROM THE UI TODAY. Both live callers of
+   *    `removeRelated` are GroupCard's `onRemoveMember`, and GroupCard renders
+   *    only for a `e.group` entry — entries gain `.group` only when the issue has
+   *    a `groupId` that resolves to members — so every id a control can pass is
+   *    already a confirmed multi-member group. The branch exists so
+   *    `removeRelated` is safe as a general-purpose store function for whoever
+   *    wires the workspace's own removal next. That is a real reason, but it is
+   *    not the same as "covered because users hit it", and it should not read
+   *    that way.
+   *
+   * 2. THE SEED CANNOT PRODUCE THE SCENARIO. An earlier version of this suite
+   *    searched for two seeded issues sharing a symmetric link and belonging to
+   *    no group, and quietly substituted a weaker synthetic case when it found
+   *    none. It ALWAYS found none: of 35 seeded issues, all 10 reciprocal links
+   *    are between issues that also share a `groupId`. So the primary scenario
+   *    silently degraded on every run — a test that passes while proving less
+   *    than it claims, which is the same family as the vacuity cases.
+   *
+   * The fix is neither to seed a pair nor to write the limitation off: the pair
+   * is CONSTRUCTED here, unconditionally, through `linkIssue`. `linkIssue` writes
+   * only `linkedIssueIds` and never `groupId`, so two ungrouped issues linked
+   * this way are exactly the intended input, and the setup cannot degrade because
+   * there is no longer a search to fail.
+   */
+  const WHY_LINK = 'Recorded as related while the investigation was open.'
+
+  /** Two ungrouped issues, symmetrically linked on purpose. */
+  const linkUngroupedPair = (r: { current: ReturnType<typeof useStore> }) => {
+    const ungrouped = r.current.issues.filter((i) => !i.groupId).map((i) => i.id)
+    expect(ungrouped.length, 'fixture has no ungrouped issues at all').toBeGreaterThan(1)
+    const [a, b] = ungrouped
+    act(() => r.current.linkIssue(a, b, WHY_LINK, ACTOR))
+
+    // The construction is asserted, not assumed — if `linkIssue` ever starts
+    // assigning a group, or stops being symmetric, these tests would otherwise
+    // go on "passing" against the wrong input.
+    expect(r.current.getIssue(a)!.linkedIssueIds ?? [], 'link not written').toContain(b)
+    expect(r.current.getIssue(b)!.linkedIssueIds ?? [], 'link is not reciprocal').toContain(a)
+    expect(r.current.getIssue(a)!.groupId, 'linkIssue assigned a group').toBeUndefined()
+    expect(r.current.getIssue(b)!.groupId, 'linkIssue assigned a group').toBeUndefined()
+    return [a, b] as const
   }
 
   it('falls back to a SYMMETRIC unlink rather than a group removal', () => {
     const { result } = setup()
-    const [a, b] = linkedPair(result.current)
-
-    if (!a) {
-      /*
-       * No ungrouped, mutually-linked pair in the fixture — so the branch is
-       * exercised through its other observable consequence instead: an
-       * ungrouped target must not gain or lose a group.
-       */
-      const lone = result.current.issues.find((i) => !i.groupId)!.id
-      const other = result.current.issues.find((i) => i.id !== lone)!.id
-      remove(result, other, lone)
-      expect(result.current.getIssue(lone)!.groupId).toBeUndefined()
-      /*
-       * ⚠️ THE ROW LANDS ON THE ACTIVE ISSUE, NOT THE TARGET — the two branches
-       * audit differently, and that asymmetry is easy to assert backwards.
-       * `unlinkIssue` writes one row to the issue whose screen you are on;
-       * `planGroupEdits` writes to the removed member AND every survivor.
-       */
-      const rows = result.current.auditFor(other).filter((x) => x.action === 'Issue unlinked')
-      expect(rows.length, 'the symmetric branch did not run').toBe(1)
-      expect(rows[0].detail).toContain(WHY)
-      // Lowercase 'Issue unlinked' is the SYMMETRIC action; the group one is
-      // 'Issue Unlinked'. They differ only by case, so this pins which ran.
-      expect(result.current.auditFor(other).map((x) => x.action)).not.toContain('Issue Unlinked')
-      return
-    }
+    const [a, b] = linkUngroupedPair(result)
 
     remove(result, a, b)
 
-    // Symmetric removal, both sides — and NOT a group action.
+    // Removed from BOTH sides — the defining property of the symmetric relation.
     expect(result.current.getIssue(a)!.linkedIssueIds ?? []).not.toContain(b)
     expect(result.current.getIssue(b)!.linkedIssueIds ?? []).not.toContain(a)
-    const actions = result.current.auditFor(b).map((x) => x.action)
-    expect(actions).toContain('Issue unlinked')
-    expect(actions, 'took the group branch for an ungrouped target').not.toContain('Issue Unlinked')
+  })
+
+  it('⚠️ takes the symmetric branch, distinguished by CASE alone', () => {
+    const { result } = setup()
+    const [a, b] = linkUngroupedPair(result)
+
+    remove(result, a, b)
+
+    /*
+     * `unlinkIssue` audits the issue whose screen you are on, NOT the target —
+     * the group path audits the removed member and every survivor instead. The
+     * asymmetry is easy to assert backwards and doing so cost a debugging cycle.
+     *
+     * And the two actions differ only by one letter's case: 'Issue unlinked' is
+     * symmetric, 'Issue Unlinked' is the group removal. That is what pins which
+     * branch ran.
+     */
+    const rows = result.current.auditFor(a).filter((x) => x.action === 'Issue unlinked')
+    expect(rows.length, 'the symmetric branch did not run').toBe(1)
+    expect(rows[0].detail).toContain(WHY)
+    expect(
+      result.current.auditFor(a).map((x) => x.action),
+      'took the GROUP branch for an ungrouped target',
+    ).not.toContain('Issue Unlinked')
   })
 
   it('leaves every group untouched', () => {
     const { result } = setup()
+    const [a, b] = linkUngroupedPair(result)
     const before = new Map(result.current.issues.map((i) => [i.id, i.groupId]))
-    const lone = result.current.issues.find((i) => !i.groupId)!.id
-    const other = result.current.issues.find((i) => i.id !== lone)!.id
 
-    remove(result, other, lone)
+    remove(result, a, b)
 
     const moved = result.current.issues.filter((i) => before.get(i.id) !== i.groupId).map((i) => i.id)
     expect(moved, 'the fallback changed group membership').toEqual([])
