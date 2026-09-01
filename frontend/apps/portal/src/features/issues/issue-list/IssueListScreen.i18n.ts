@@ -32,7 +32,6 @@ const messages: ComponentI18nMessages = {
     // pre-i18n code rather than silently corrected — this pass moves copy.
     bulkChangeStatus: 'Change Status',
     bulkExport: 'Export',
-    bulkAssignRole: 'Assign Role',
     /*
      * ICU variants replacing `selected.length === 1 ? 'Issue Selected' : 'Issues
      * Selected'` — a hand-rolled plural 00-core-rules.md bans by name, and it
