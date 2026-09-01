@@ -46,9 +46,21 @@
  * checkbox is likewise already exact (#C3CBD2) and is untouched; and
  * "Clear selection" is `--text-muted` per the note above.
  *
- * These are part of the OPEN decision request in
- * `PQMS_docs/DECISION-REQUEST-design-tokens.md` (Category B) — resolved here as
- * literals for this component only. The rest of that request is unaffected.
+ * These are part of an OPEN, UNRESOLVED design-system question — resolved here as
+ * literals for THIS COMPONENT ONLY. The decision request that tracked it lived in
+ * a docs corpus no longer in this repo, so its substance is inlined so the open
+ * question survives the code: the disputed class was "Category B — prototype
+ * constants", ~141 uses, made up of half-pixel font sizes (12.5px, 10.5px,
+ * 13.5px, 11.5px — 42 uses, off the type scale), font sizes below the scale's
+ * smallest step (10px, 11px, 9px — 63 uses), and near-miss greys plus a tan
+ * (#F0F2F5, #F6F8FA, #DDE3E9, #F4E2C0 — 36 uses).
+ *
+ * THE OPEN QUESTION IS NARROW: were those values deliberate, or prototype
+ * artefacts? If incidental, the honest fix is snapping them to the nearest scale
+ * value — but that CHANGES WHAT USERS SEE, so it needs product sign-off, not a
+ * refactor. The counts above were flagged as estimates by their own author and
+ * should be re-measured before anyone acts on them. Nothing else in this file
+ * depends on the answer.
  *
  * The 50%-width first column is deliberate and is why the row below it is a
  * grid, not a flex wrap: the trigger's width must not change when a value is

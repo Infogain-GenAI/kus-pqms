@@ -26,8 +26,6 @@
     "tokens:gen": "pnpm --filter @pqms/design-tokens tokens:gen",
     "tokens:check": "pnpm --filter @pqms/design-tokens tokens:check",
     "tokens:drift": "node scripts/check-tokens-drift.mjs",
-    "docs:standards": "node scripts/build-standards-doc.mjs",
-    "docs:standards:check": "node scripts/build-standards-doc.mjs --check",
     "hooks:check": "node scripts/setup-hooks.mjs --check",
     "fidelity:baseline": "node scripts/fidelity-gate.mjs --write",
     "fidelity:check": "node scripts/fidelity-gate.mjs --check",
