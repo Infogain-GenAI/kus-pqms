@@ -130,8 +130,9 @@ nothing; nothing else in this project catches it.
 - `pnpm run lint:ds` — the three adherence ratchets
 - `pnpm run lint:css-vars` — custom-property reference check
 - `pnpm run tokens:gen` / `tokens:check` / `tokens:drift`
-- `pnpm run docs:standards` / `docs:standards:check` — regenerate and verify the
-  standards distribution document from `PQMS_docs/standards/`
+<!-- `docs:standards` / `docs:standards:check` removed: both generated a
+     distribution document from a standards corpus that is no longer in this
+     repo, so the scripts had no source to read. -->
 - `pnpm run hooks:check` — verify this clone has hooks enabled
 
 ## Status

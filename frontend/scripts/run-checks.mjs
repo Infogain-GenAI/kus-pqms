@@ -44,6 +44,35 @@ const require_ = createRequire(root + '/')
  */
 const js = (spec) => require_.resolve(spec)
 
+/**
+ * Resolve a package's BIN entrypoint WITHOUT going through its `exports` map.
+ *
+ * ⚠️ WHY THIS IS NOT `js('vitest/vitest.mjs')` ANY MORE. That call worked on
+ * vitest 2 and throws ERR_PACKAGE_PATH_NOT_EXPORTED on vitest 4. The file is
+ * still shipped and is still the declared bin — what changed is that
+ * `./vitest.mjs` was dropped from the package's `exports`, and `exports` GATES
+ * subpath resolution. So the old line failed against a package that was
+ * perfectly intact, and the error named the subpath rather than the cause.
+ *
+ * `./package.json` is still exported, so resolving THAT and reading the `bin`
+ * field reaches the real file by the route the package itself declares. That also
+ * survives a maintainer renaming or moving the entrypoint, which a hardcoded
+ * subpath does not.
+ *
+ * ⚠️ HOW THIS BREAKAGE HID: this file is the ONLY caller that resolves tools this
+ * way. `pnpm run test` and `pnpm run build` go through the package manager and
+ * both stayed green while the pre-push hook was dead. A tool upgrade that is
+ * "verified" by those two commands has NOT exercised this path — run
+ * `node scripts/run-checks.mjs` as well.
+ */
+const bin = (spec, binName = spec) => {
+  const pkgPath = require_.resolve(spec + '/package.json')
+  const declared = require_(pkgPath).bin
+  const rel = typeof declared === 'string' ? declared : declared?.[binName]
+  if (!rel) throw new Error(`run-checks: ${spec} declares no bin named ${binName}`)
+  return join(dirname(pkgPath), rel)
+}
+
 // Declaration order is report order. Cost is the SLOWEST of these, not the sum.
 const CHECKS = [
   { name: 'typecheck', cmd: process.execPath, args: [js('typescript/bin/tsc'), '--noEmit', '-p', 'apps/portal/tsconfig.json'] },
@@ -66,7 +95,7 @@ const CHECKS = [
   {
     name: 'test + coverage ratchet',
     cmd: process.execPath,
-    args: [js('vitest/vitest.mjs'), 'run', '--coverage'],
+    args: [bin('vitest'), 'run', '--coverage'],
     then: { cmd: process.execPath, args: ['scripts/coverage-gate.mjs'] },
   },
 ]

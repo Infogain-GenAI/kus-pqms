@@ -1,5 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+// ⚠️ BOTH SIDES' INTENT, and neither alone is right. Main codemodded the router
+// specifier — `react-router-dom` is a deprecated shim and the dependency is now
+// `react-router` at v8 — while this branch pruned the icon list, because the
+// suggestion and group cards that used those icons moved to
+// `related/RelatedIssueCards`. Taking either side whole would have restored a
+// dozen unused imports or reinstated a package that is no longer installed.
+import { useNavigate } from 'react-router'
 import { Check, CopyCheck, RotateCcw, Search, SearchX, Send, TriangleAlert, X } from 'lucide-react'
 // `SOURCE`, `SOURCE_KEYS` and `SourceKey` went with the source selector, and
 // `SourceBadge` has now followed them: the suggestion card rendered one for the

@@ -93,7 +93,6 @@ export const HISTORY_CATALOGUE: Record<string, HistoryEventPresentation> = {
   'Bulk status change': { label: 'Status changed in bulk', segment: 'lifecycle', icon: CircleDot, tint: 'blue' },
   'Initial owner assigned': { label: 'Initial owner assigned', segment: 'lifecycle', icon: UserRoundCheck, tint: 'blue' },
   'Owner assigned': { label: 'Owner assigned', segment: 'lifecycle', icon: UserRoundCog, tint: 'blue' },
-  'Bulk role assignment': { label: 'Role reassigned in bulk', segment: 'lifecycle', icon: UserRoundCog, tint: 'blue' },
   'Classification selected': { label: 'Classification selected', segment: 'lifecycle', icon: Tags, tint: 'purple' },
 
   /*

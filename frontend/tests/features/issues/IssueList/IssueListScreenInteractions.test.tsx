@@ -8,7 +8,7 @@
 // column's correlation modal.
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useParams } from 'react-router'
 import type { ReactNode } from 'react'
 import { RoleProvider } from '@/data/roles'
 import { StoreProvider } from '@/data/store'

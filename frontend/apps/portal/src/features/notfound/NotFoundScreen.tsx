@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { SearchX } from 'lucide-react'
 import { Button } from '@pqms/ui-library'
 import { IconChip, PageContainer } from '@/app/chrome'

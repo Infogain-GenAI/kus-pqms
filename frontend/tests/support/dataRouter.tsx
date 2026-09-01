@@ -1,6 +1,6 @@
 import { render, waitFor } from '@testing-library/react'
 import { expect } from 'vitest'
-import { RouterProvider, createMemoryRouter, type RouteObject } from 'react-router-dom'
+import { RouterProvider, createMemoryRouter, type RouteObject } from 'react-router'
 import type { RoleKey } from '@/data/types'
 import { RoleProvider } from '@/data/roles'
 import { _syncCurrentRole } from '@/data/capabilities'
@@ -213,7 +213,17 @@ export const bodyText = () => document.body.textContent ?? ''
  * above was produced, and how to re-derive it rather than trusting these figures
  * on a different machine.
  */
-const FIRST_PAINT_TIMEOUT = 15000
+/**
+ * Exported so callers that cannot phrase their assertion as "this substring
+ * appears in the body" — a role query, a regex match, a length check, a
+ * `router.state.location` check — can still opt into the same scoped budget
+ * via `waitFor(fn, { timeout: FIRST_PAINT_TIMEOUT })` instead of reinventing
+ * this number or, worse, inheriting the default 5000ms and re-discovering the
+ * flake this constant exists to absorb. `router.state.location` needs it too:
+ * a redirect only settles once the whole matched branch's async work resolves,
+ * lazy Component included, not just once the loader's `redirect()` runs.
+ */
+export const FIRST_PAINT_TIMEOUT = 15000
 
 export async function waitForBody(needle: string, label = 'the rendered body'): Promise<void> {
   const started = Date.now()
