@@ -31,7 +31,7 @@ export interface WorkspaceContext {
   /** The issue. The shell renders its own not-found branch, so this is never undefined here. */
   issue: Issue
   issueId: string
-  /** can('propose') && owns the issue && status === 'open' — the shell's own gate. */
+  /** can('propose') — editing an issue's details is not narrowed by ownership or status. */
   canEditIssue: boolean
   /** can('propose') — the broader "may contribute" gate the sections use. */
   canPropose: boolean
@@ -46,13 +46,13 @@ export interface WorkspaceContext {
    *
    * It is in the context rather than derived per section for the reason the rest
    * of this field set exists: computed once in the shell, so five sections
-   * cannot drift. `canEditIssue` already implies it (that gate requires status
-   * `open`), so Detail does not need to re-check — but Investigation,
-   * Communication and the linked-issues control all gate on `canPropose`, which
-   * does not.
+   * cannot drift. `canEditIssue` deliberately does NOT AND the lock in — editing
+   * an issue's own details stays open on a Closed issue — but Investigation,
+   * Communication and the linked-issues control all gate on `canPropose &&
+   * lock.isEditable`.
    */
   lock: IssueLock
-  /** Not escalated/closed, may propose, AND the issue is scored. V4-V5: an issue's priority is the QIR's. */
+  /** May propose AND the issue is scored — any status. V4-V5: an issue's priority is the QIR's. */
   canQir: boolean
   /** Visible comments only (hidden ones filtered), shared with the tab-strip badge. */
   comments: Comment[]

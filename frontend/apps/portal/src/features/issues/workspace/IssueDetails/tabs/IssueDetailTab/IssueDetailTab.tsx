@@ -1,15 +1,18 @@
 import type { SourceChannel } from '@/data/sourceChannels'
 import type { Issue } from '@/data/types'
 import { BasicIssueInformationCard } from '../../issue-detail/BasicIssueInformationCard'
+import { IssueLifecycleCard } from '../../issue-detail/IssueLifecycleCard'
 import { IssueSourceCard } from '../../issue-detail/IssueSourceCard'
 import { SystemClassificationCard } from '../../issue-detail/SystemClassificationCard'
 import { VehicleInformationCard } from '../../issue-detail/VehicleInformationCard'
 import styles from './IssueDetailTab.module.css'
 
 /**
- * The Issue Detail tab — ONE card, exactly four sections, in this order.
+ * The Issue Detail tab — the lifecycle card, then ONE card of exactly four
+ * sections, in this order.
  *
- * Ported from `IssueDetailTab.vue`.
+ * Ported from `IssueDetailTab.vue`. The lifecycle card is this app's own
+ * addition above that port; the four-section card below it is unchanged.
  *
  * A THIN WRAPPER, DELIBERATELY. `01-project-structure-and-architecture.md`'s
  * feature-folder depth rule requires it: "if a screen has real tabs, tab folders
@@ -41,11 +44,20 @@ export function IssueDetailTab({
   onSaveSources: (channels: SourceChannel[]) => void
 }) {
   return (
-    <div className={styles.cards} data-testid="issue-detail-tab">
-      <VehicleInformationCard issue={issue} />
-      <SystemClassificationCard issue={issue} />
-      <BasicIssueInformationCard issue={issue} />
-      <IssueSourceCard issue={issue} channels={channels} canEdit={canEdit} onSave={onSaveSources} />
+    <div className={styles.stack}>
+      {/* Its OWN surface, above the four-section card rather than inside it. The
+          four sections are the issue's RECORD — fields you read and edit. The
+          lifecycle is the issue's POSITION, which no field holds and which the
+          section rule between records would visually file as a fifth field
+          block. Separating the surfaces is what keeps that distinction
+          readable. */}
+      <IssueLifecycleCard issue={issue} />
+      <div className={styles.cards} data-testid="issue-detail-tab">
+        <VehicleInformationCard issue={issue} />
+        <SystemClassificationCard issue={issue} />
+        <BasicIssueInformationCard issue={issue} />
+        <IssueSourceCard issue={issue} channels={channels} canEdit={canEdit} onSave={onSaveSources} />
+      </div>
     </div>
   )
 }

@@ -15,3 +15,12 @@
   box-shadow: var(--shadow-xs);
   overflow: hidden;
 }
+
+/* The tab's two surfaces: the lifecycle card, then the four-section record card. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  /* 18px — the prototype's own column gap between the lifecycle card and the
+     record card below it (`data-ws-main`). No token resolves to 18px. */
+  gap: 18px;
+}

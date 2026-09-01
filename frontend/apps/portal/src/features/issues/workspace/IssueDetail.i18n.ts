@@ -70,6 +70,31 @@ const messages: ComponentI18nMessages = {
     shellChangeStatus: 'Change status',
     shellCreateQir: 'Create QIR',
 
+    /*
+     * ─── Issue Lifecycle stepper ─────────────────────────────────────────────
+     *
+     * THE FIVE STAGE NAMES ARE NOT HERE, and that is deliberate. They come from
+     * the ui-library's `STATUS` map, which is the one definition of what a
+     * status is called; copying them into this namespace would create a second
+     * set of words for the same thing that only one surface uses.
+     *
+     * The three state words are the prototype's own (`statusLabel` in its
+     * lifecycle tracker) and are read by screen readers only — the visual card
+     * carries the same information in colour, fill and glyph.
+     */
+    lifecycleTitle: 'Issue Lifecycle',
+    lifecycleCurrent: 'Current stage:',
+    lifecycleStateCompleted: 'Completed',
+    lifecycleStateCurrent: 'Current stage',
+    lifecycleStateUpcoming: 'Not yet reached',
+    /*
+     * The prototype invents a date and an author for a stage its log does not
+     * cover. This app shows real issues, so it says this instead — see the
+     * "WHAT THIS DOES NOT INVENT" note in `IssueDetails/issue-detail/lifecycle.ts`.
+     */
+    lifecycleNoRecord: 'The issue passed through this stage, but no transition is recorded in the audit trail.',
+    lifecycleClose: 'Close stage details',
+
     statusModalTitle: 'Change issue status',
     statusModalSubtitle: 'A valid reason is required for every status change.',
     statusModalCancel: 'Cancel',
