@@ -17,7 +17,6 @@ import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
 import type { Issue } from '@/data/types'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { SystemClassificationPicker, type ClassificationValue } from './SystemClassificationPicker'
-import { ExistingIssueModal } from './ExistingIssueModal'
 import { ClearFormConfirmModal, SubmitConfirmationModal, ValidationBanner } from './issue-entry/modals'
 import { errorFor, validateIssueEntry } from './issue-entry/validation'
 import { relatedRank } from '@/data/relatedRank'
@@ -77,7 +76,6 @@ export function CreateIssueScreen() {
    * a way to inspect an issue before deciding to link it. Suggestion cards have
    * no such affordance; they carry View History instead.
    */
-  const [inspecting, setInspecting] = useState<string | null>(null)
   /**
    * Link confirmation — a governance control, not a courtesy prompt.
    *
@@ -766,7 +764,6 @@ export function CreateIssueScreen() {
                             onLink={() => askToLink([e.issue!.id], e.issue!.id)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.issue!.id))}
                             onViewHistory={() => history.openIssue(e.issue!.id)}
-                            onInspect={() => setInspecting(e.issue!.id)}
                           />
                         ),
                       )}
@@ -976,14 +973,6 @@ export function CreateIssueScreen() {
         </div>
       </Modal>
 
-      <ExistingIssueModal
-        issue={inspecting ? (store.issues.find((i) => i.id === inspecting) ?? null) : null}
-        linked={!!inspecting && linkedIds.includes(inspecting)}
-        onClose={() => setInspecting(null)}
-        onLink={() => { if (inspecting) { setInspecting(null); askToLink([inspecting], inspecting) } }}
-        onUnlink={() => { if (inspecting) setLinkedIds((l) => l.filter((x) => x !== inspecting)) }}
-        onOpenIssue={(id) => nav(`/issues/${id}`)}
-      />
 
       <ClearFormConfirmModal open={clearOpen} onClose={() => setClearOpen(false)} onConfirm={clearAll} />
 

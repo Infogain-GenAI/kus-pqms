@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, CornerDownRight, Crown, Eye, GitBranch, History, Link, Link2, Link2Off, Sparkles } from 'lucide-react'
+import { ChevronDown, ChevronUp, CornerDownRight, Crown, GitBranch, History, Link, Link2, Link2Off, Sparkles } from 'lucide-react'
 import { Icon, StatusBadge } from '@pqms/ui-library'
 import { useTranslation } from 'react-i18next'
 import { fmtDate } from '@/data/util'
@@ -36,22 +36,25 @@ import entryStyles from '@/features/issues/issue-entry/issue-entry.module.css'
  * see than two files — a conditional inside a shared component looks like shared
  * behaviour and is not.
  *
- * ─── TWO RECORDED DIVERGENCES FROM THE CANONICAL ────────────────────────────
+ * ─── ONE RECORDED DIVERGENCE FROM THE CANONICAL ─────────────────────────────
  *
- * 1. PER-MEMBER REMOVAL (`onRemoveMember`) is offered on the group parent and on
- *    each child. The canonical's own entry model DOES carry a child `onUnlink`,
- *    but this section's markup never renders it — so this surfaces an affordance
- *    the design has and does not show, rather than inventing one. Kept on both
- *    screens because it was asked for directly, and it is gated: every removal
- *    carries an audited justification. Presentation fidelity is not worth losing
- *    a requested capability.
+ * PER-MEMBER REMOVAL (`onRemoveMember`) is offered on the group parent and on
+ * each child. The canonical's own entry model DOES carry a child `onUnlink`, but
+ * this section's markup never renders it — so this surfaces an affordance the
+ * design has and does not show, rather than inventing one. Kept on both screens
+ * because it was asked for directly, and it is gated: every removal carries an
+ * audited justification. Presentation fidelity is not worth losing a requested
+ * capability.
  *
- * 2. ⚠️ THE `onInspect` "View" (Eye) BUTTON IS OURS, with no counterpart in the
- *    design's model, and it now duplicates what View History and the card body
- *    already give the user. A CANDIDATE FOR REMOVAL — left in place deliberately
- *    so the decision is made on purpose rather than as a side effect of a
- *    presentation fix. If you are reading this while wondering why the search
- *    cards have three buttons where the design has two, that is why.
+ * ─── PREVIEW WAS REMOVED, DELIBERATELY ──────────────────────────────────────
+ *
+ * These cards once carried an `onInspect` "View" (Eye) button opening the
+ * existing-issue popup. It had no counterpart in the design — whose search-result
+ * cards offer View History and the link button, nothing else — and it is gone on
+ * BOTH screens by decision, to match the canonical. `ExistingIssueModal` itself
+ * stays: the workspace's linked-issues rail is still its caller, and it now has
+ * its own tests (`tests/features/issues/linking/existingIssueModal.test.tsx`)
+ * rather than being covered incidentally through whichever screen opened it.
  *
  * The StatusBadge geometry normalisation (the system's `md` at 22px/radius 4
  * against the design's 26px/radius 7) is recorded at its own call site below and
@@ -91,7 +94,6 @@ export function SuggestionCard({
   onLink,
   onUnlink,
   onViewHistory,
-  onInspect,
 }: {
   issue: Issue
   linked: boolean
@@ -132,12 +134,6 @@ export function SuggestionCard({
   onLink: () => void
   onUnlink: () => void
   onViewHistory: () => void
-  /**
-   * Search results only. The design gives a search hit a way to inspect the
-   * issue before linking (`onView → openExistingModal`); suggestion cards have
-   * no equivalent, so this is absent there rather than rendered disabled.
-   */
-  onInspect?: () => void
 }) {
   // `Model: … · Classification: … · Issue Date: …` — the design's `_rowMeta`.
   // Note the TWO spaces either side of the outer separators, and that every
@@ -180,12 +176,6 @@ export function SuggestionCard({
           )}
         </div>
         <div className={entryStyles.cardActions}>
-          {onInspect && (
-            <button type="button" className={entryStyles.cardHistoryBtn} onClick={onInspect}>
-              <Icon icon={Eye} size={14} />
-              {t('cardView')}
-            </button>
-          )}
           <button type="button" className={entryStyles.cardHistoryBtn} onClick={onViewHistory}>
             <Icon icon={History} size={14} />
             {t('cardViewHistory')}
