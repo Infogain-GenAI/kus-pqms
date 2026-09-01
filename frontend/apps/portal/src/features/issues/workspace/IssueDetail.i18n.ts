@@ -208,6 +208,31 @@ const messages: ComponentI18nMessages = {
     editFormYearRequired_other: 'Select at least one model year for {{codes}}.',
     editFormClassification: 'System Classification',
     editFormSameExisting: 'Same existing issues',
+
+    /*
+     * ─── SAME EXISTING ISSUES, the RANKED half ───────────────────
+     *
+     * The section headed `editFormSameExisting` used to contain only
+     * the SEARCH block, so the heading promised suggestions the
+     * screen never made. These belong to the ranked half.
+     *
+     * Every one of these labels sits on a PERSISTED mutation: on this
+     * surface the issue exists, so a link or unlink is audited and
+     * carries a mandatory reason.
+     */
+    sameSuggestTitle: 'Same existing issues',
+    sameSuggestSubtitle:
+      'Ranked against the classification as you edit it. Linking and unlinking here are recorded immediately.',
+    sameSuggestEmpty: 'No similar issues match the current classification.',
+    sameLink: 'Link to issue',
+    sameLinkGroup: 'Link to issue group',
+    sameGroupOf: 'Issue group · {{count}}',
+    sameRemoveMember: 'Remove from group',
+    sameConfirmLink: 'Confirm link',
+    sameConfirmUnlink: 'Confirm removal',
+    sameJustifyLink: 'Justification for linking',
+    sameJustifyUnlink: 'Justification for removing',
+
     editFormIssueInformation: 'Issue Information',
     editFormIssueTitle: 'Issue title *',
     editFormDescription: 'Description *',

@@ -1,0 +1,364 @@
+// Same Existing Issues on the EDIT surface — ranked suggestions that persist.
+//
+// ⚠️ EVERY ASSERTION READS THE STORE. Not that a handler fired, not that a modal
+// opened, not that a justification box rendered. The reason is a specific trap
+// this block was built to avoid: Issue Entry's card-level link opens the
+// confirmation modal, COLLECTS a justification, and then commits by mutating a
+// local draft array. Ported to a surface where the issue exists, that control
+// would answer "yes" to "does linking ask for a reason here?" while persisting
+// nothing and auditing nothing. A test that watched the modal could not tell the
+// two apart; one that reads `linkedIssueIds` can.
+import { describe, it, expect } from 'vitest'
+import { useState } from 'react'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { MemoryRouter } from 'react-router-dom'
+import { RoleProvider } from '@/data/roles'
+import { StoreProvider, useStore } from '@/data/store'
+import { SameExistingIssuesSection } from '@/features/issues/workspace/IssueDetails/IssueEditForm/SameExistingIssuesSection'
+import messages from '@/features/issues/workspace/IssueDetail.i18n'
+import { JUSTIFICATION_MIN } from '@/data/linkJustification'
+
+const M = messages.en
+const ACTOR = { name: 'Tester', role: 'SE' }
+const WHY = 'Same injector symptom across this cohort; investigating together.'
+const TOO_SHORT = 'x'.repeat(JUSTIFICATION_MIN - 1)
+
+/** The engine-vibration cohort's classification — ranks the EE-260023 group. */
+const COHORT_SUBJECT = {
+  system: 'Engine',
+  subSystem: 'Fuel System',
+  component: 'Fuel Injector',
+  symptom: 'Engine vibration',
+  title: 'Vibration felt at idle',
+  description: 'Reported through warranty.',
+}
+
+/** An issue OUTSIDE that cohort, so the cohort is a genuine suggestion. */
+const SUBJECT_ID = 'PT-260005'
+/** An issue INSIDE the cohort — used to prove the subject's own group is skipped. */
+const COHORT_MEMBER = 'EE-260031'
+
+const Wrapped = ({ children }: { children: ReactNode }) => (
+  <MemoryRouter>
+    <RoleProvider>
+      <StoreProvider>{children}</StoreProvider>
+    </RoleProvider>
+  </MemoryRouter>
+)
+
+let captured: ReturnType<typeof useStore> | null = null
+const body = () => document.body.textContent ?? ''
+
+/**
+ * Rendered with the SAME store wiring `IssueEditForm` uses, so what the tests
+ * observe is what the screen does. A harness that stubbed onLink/onUnlink would
+ * be measuring the stub.
+ */
+function mount(subjectId = SUBJECT_ID, subject = COHORT_SUBJECT) {
+  captured = null
+  const Harness = () => {
+    const store = useStore()
+    captured = store
+    const [, force] = useState(0)
+    const issue = store.getIssue(subjectId)
+    if (!issue) return null
+    return (
+      <SameExistingIssuesSection
+        issue={issue}
+        subject={subject}
+        linkedIds={issue.linkedIssueIds ?? []}
+        onLink={(ids, why) => {
+          for (const id of ids) store.linkIssue(issue.id, id, why, ACTOR)
+          force((n) => n + 1)
+        }}
+        onUnlink={(id, why) => {
+          store.removeRelated(issue.id, id, why, ACTOR)
+          force((n) => n + 1)
+        }}
+      />
+    )
+  }
+  render(<Harness />, { wrapper: Wrapped })
+  return { store: () => captured! }
+}
+
+/**
+ * The ids currently offered as suggestion CARDS.
+ *
+ * ⚠️ ADDRESSED BY TESTID, NOT BY SEARCHING BODY TEXT. An id also appears inside a
+ * group card's member list and inside audit detail strings, so `body().includes(id)`
+ * cannot answer "is this offered as a suggestion" — and an assertion built on it
+ * passes for the wrong reason. The card carries `data-testid="same-suggestion-<key>"`.
+ */
+const suggestedKeys = () =>
+  Array.from(document.querySelectorAll('[data-testid^="same-suggestion-"]')).map((el) =>
+    (el.getAttribute('data-testid') ?? '').replace('same-suggestion-', ''),
+  )
+
+const linkBtns = () => screen.queryAllByRole('button', { name: new RegExp(`^${M.sameLink}$`) })
+const groupBtns = () => screen.queryAllByRole('button', { name: new RegExp(`^${M.sameLinkGroup}$`) })
+const justifyBox = () => screen.getByRole('textbox', { name: new RegExp(M.sameJustifyLink, 'i') })
+const applyBtn = (label: string) => screen.getByRole('button', { name: new RegExp(`^${label}$`) })
+
+describe('the ranked half exists at all', () => {
+  it('renders suggestions with the reasons they were suggested for', () => {
+    mount()
+    expect(body()).toContain(M.sameSuggestTitle)
+    expect(linkBtns().length + groupBtns().length, 'no suggestions ranked').toBeGreaterThan(0)
+    // A ranked list without reasons is a mystery; relatedRank supplies them.
+    expect(body()).toMatch(/Same|Shared|component|symptom/i)
+  })
+
+  it('says so plainly when nothing ranks', () => {
+    mount(SUBJECT_ID, { system: 'Nonexistent System', component: 'Nothing', symptom: 'Nothing' })
+    expect(body()).toContain(M.sameSuggestEmpty)
+  })
+})
+
+describe('⚠️ SELF-EXCLUSION — the divergence from the design', () => {
+  /*
+   * The design calls its ranker with a hardcoded `null` exclude, so an issue can
+   * rank as its own top suggestion while being edited. We pass the issue's id.
+   * Twenty lines from that call, the design's own free-text search excludes the
+   * issue being edited — which is why this is an oversight and not a spec.
+   */
+  /*
+   * ⚠️ THE SUBJECT MUST BE UNGROUPED, and the first version of this test got that
+   * wrong. It edited a GROUPED issue, so the own-group skip below removed the
+   * issue before self-exclusion had to — deleting the `issue.id` exclude entirely
+   * left the test passing. Proved by mutation, not by reading.
+   *
+   * `PT-260005` belongs to no group, and it is ranked against ITS OWN
+   * classification, so nothing but the exclude can keep it out of its own list.
+   */
+  const OWN_CLASSIFICATION = {
+    system: 'Powertrain',
+    subSystem: '6-Speed Automatic Transmission',
+    component: 'Valve Body',
+    symptom: 'Cold-start shift slip',
+    title: '6AT slip at cold start, intermittent',
+  }
+
+  it('never suggests the issue being edited', () => {
+    const { store } = mount(SUBJECT_ID, OWN_CLASSIFICATION)
+    const self = store().getIssue(SUBJECT_ID)!
+    expect(self.groupId, 'this subject must be UNGROUPED or the own-group skip masks the exclude').toBeUndefined()
+    expect(suggestedKeys(), `${SUBJECT_ID} was offered as a suggestion for itself`).not.toContain(SUBJECT_ID)
+  })
+
+  it('and its own classification still ranks OTHER issues, so the list is not simply empty', () => {
+    mount(SUBJECT_ID, OWN_CLASSIFICATION)
+    expect(
+      suggestedKeys().length,
+      'nothing ranked against its own classification — the exclusion test proves nothing',
+    ).toBeGreaterThan(0)
+  })
+
+  it('and still ranks OTHER issues, so exclusion has not emptied the list', () => {
+    // The control for the test above: excluding everything would satisfy it.
+    mount(SUBJECT_ID, COHORT_SUBJECT)
+    expect(suggestedKeys().length, 'nothing ranked at all — the previous test proves nothing').toBeGreaterThan(
+      0,
+    )
+  })
+
+  /*
+   * ⚠️ AND ITS OWN GROUP IS SKIPPED WHOLE. Found while writing these tests, not
+   * by review: a card for the subject's own group would call
+   * `linkIssue(id, id, …)` — a self-link the seed invariants forbid — and would
+   * offer "Remove from group" on the issue being edited.
+   */
+  it("never offers the subject's OWN group as a suggestion", () => {
+    const { store } = mount(COHORT_MEMBER, COHORT_SUBJECT)
+    const gid = store().getIssue(COHORT_MEMBER)!.groupId
+    expect(gid, 'fixture issue must be grouped for this to mean anything').toBeTruthy()
+    expect(groupBtns().length, "the subject's own group was offered for linking").toBe(0)
+  })
+})
+
+describe('⚠️ LINKING IS GATED, AND THE GATE IS THE STORE', () => {
+  it('persists NOTHING until a reason is accepted', () => {
+    const { store } = mount()
+    const before = [...(store().getIssue(SUBJECT_ID)!.linkedIssueIds ?? [])]
+
+    // Open the justification box and stop there.
+    const btn = groupBtns()[0] ?? linkBtns()[0]
+    fireEvent.click(btn)
+    expect(store().getIssue(SUBJECT_ID)!.linkedIssueIds ?? [], 'a link persisted before any reason').toEqual(
+      before,
+    )
+
+    // A reason below the floor is refused, and still nothing persists.
+    fireEvent.change(justifyBox(), { target: { value: TOO_SHORT } })
+    fireEvent.click(applyBtn(M.sameConfirmLink))
+    expect(
+      store().getIssue(SUBJECT_ID)!.linkedIssueIds ?? [],
+      'a link persisted on a below-floor reason',
+    ).toEqual(before)
+  })
+
+  it('persists the link once the reason is accepted, with the reason audited', () => {
+    const { store } = mount()
+    const before = new Set(store().getIssue(SUBJECT_ID)!.linkedIssueIds ?? [])
+
+    fireEvent.click(linkBtns()[0] ?? groupBtns()[0])
+    fireEvent.change(justifyBox(), { target: { value: WHY } })
+    fireEvent.click(applyBtn(M.sameConfirmLink))
+
+    const after = store().getIssue(SUBJECT_ID)!.linkedIssueIds ?? []
+    const added = after.filter((id) => !before.has(id))
+    expect(added.length, 'nothing was linked').toBeGreaterThan(0)
+
+    // ⚠️ THE AUDIT IS THE POINT, not the array. A link with no audited reason is
+    // the failure this whole surface exists to prevent.
+    const rows = store().auditFor(SUBJECT_ID).filter((a) => a.action === 'Issue linked')
+    expect(rows.length, 'the link was not audited').toBeGreaterThan(0)
+    expect(rows[0].detail, 'the reason was not recorded').toContain(WHY)
+  })
+})
+
+describe('a group card stands for the whole cohort', () => {
+  it('renders ONE card for a multi-member group, with derived Parent and Child', () => {
+    const { store } = mount()
+    expect(groupBtns().length, 'no group card ranked').toBeGreaterThan(0)
+    expect(body()).toContain(M.linksModalParent)
+    expect(body()).toContain(M.linksModalChild)
+    // The parent is derived, never stored — earliest member of the cohort.
+    const parent = store().groupMembers('EE-260023')[0]
+    expect(body()).toContain(parent.id)
+  })
+
+  it('links EVERY member on one reason, each link audited', () => {
+    const { store } = mount()
+    const members = store().groupMembers('EE-260023').map((m) => m.id)
+    expect(members.length, 'fixture must be a multi-member group').toBeGreaterThan(2)
+
+    fireEvent.click(groupBtns()[0])
+    fireEvent.change(justifyBox(), { target: { value: WHY } })
+    fireEvent.click(applyBtn(M.sameConfirmLink))
+
+    const after = store().getIssue(SUBJECT_ID)!.linkedIssueIds ?? []
+    for (const id of members) {
+      expect(after, `${id} was not linked by the group action`).toContain(id)
+    }
+    // One reason, recorded against each link it justified — not once for the set.
+    const rows = store().auditFor(SUBJECT_ID).filter((a) => a.action === 'Issue linked')
+    expect(rows.length, 'audit rows do not match the links made').toBe(members.length)
+  })
+})
+
+describe('per-member removal mutates real group membership', () => {
+  it('is gated, then clears that member group', () => {
+    const { store } = mount()
+    const before = store().groupMembers('EE-260023').map((m) => m.id)
+    expect(before.length).toBeGreaterThan(2)
+
+    const target = before[before.length - 1]
+    fireEvent.click(screen.getAllByRole('button', { name: new RegExp(`^${M.sameRemoveMember}$`) })[before.length - 1])
+
+    // Nothing yet.
+    expect(store().getIssue(target)!.groupId, 'membership changed before a reason').toBeTruthy()
+
+    fireEvent.change(screen.getByRole('textbox', { name: new RegExp(M.sameJustifyUnlink, 'i') }), {
+      target: { value: WHY },
+    })
+    fireEvent.click(applyBtn(M.sameConfirmUnlink))
+
+    expect(store().getIssue(target)!.groupId, 'the member was not removed from the group').toBeUndefined()
+  })
+})
+
+describe('no duplicate unlink affordance', () => {
+  /*
+   * `LinkIssuesSection` owns the linked list and its gated unlink. If suggestions
+   * also listed already-linked issues, unlink would exist in two places — and two
+   * paths to one mutation drift apart. So linked issues are excluded here.
+   */
+  /*
+   * ⚠️ AN EARLIER VERSION OF THIS TEST WAS VACUOUS, and it is recorded because the
+   * shape is the one that keeps recurring. It ended in
+   * `expect(typeof stillOffered).toBe('boolean')` — true for every possible input,
+   * a green that cannot go red. The fix is not a stronger matcher, it is asserting
+   * against something addressable: the card's own testid.
+   */
+  /*
+   * ⚠️ THIS TEST USED TO EXIT WITHOUT ASSERTING, and a mutation caught it: every
+   * ranked suggestion in this fixture is a GROUP card, so an `if (!singleLinkBtn)
+   * return` guard fired every run and removing the exclusion filter entirely left
+   * the suite green. Same family as the fallback test that silently substituted a
+   * weaker scenario — a test whose primary case never runs.
+   *
+   * Rewritten around the case the fixture actually produces: linking the group
+   * links every member INCLUDING its parent, and the card is keyed on the group,
+   * so the whole card must leave the suggestions.
+   */
+  it('drops a group from the suggestions once its members are linked', () => {
+    const { store } = mount()
+    const groupKeys = suggestedKeys()
+    expect(groupBtns().length, 'no group card ranked — this test would assert nothing').toBeGreaterThan(0)
+    expect(groupKeys.length).toBeGreaterThan(0)
+
+    fireEvent.click(groupBtns()[0])
+    fireEvent.change(justifyBox(), { target: { value: WHY } })
+    fireEvent.click(applyBtn(M.sameConfirmLink))
+
+    const linked = store().getIssue(SUBJECT_ID)!.linkedIssueIds ?? []
+    expect(linked.length, 'nothing was linked').toBeGreaterThan(0)
+
+    // The group's own key must be gone, and no linked id may head a card.
+    const after = suggestedKeys()
+    expect(after, 'the linked group is still offered').not.toContain(groupKeys[0])
+    for (const id of linked) {
+      expect(after, `${id} is linked but still heads a suggestion card`).not.toContain(id)
+    }
+  })
+})
+
+describe('⚠️ THE RANKING IS LIVE — it follows the FORM, not the saved issue', () => {
+  /*
+   * The design's view-model computes its matches unconditionally from form state,
+   * and its edit mode repopulates that state from the issue — so changing the
+   * classification while editing re-ranks. That is evidence from the binding
+   * rather than a preference.
+   *
+   * Asserted as a DIFFERENCE between two subjects for the same issue. If this
+   * component ranked from `issue` instead of `subject`, both renders would
+   * produce identical suggestions and the claim in its header would be false
+   * while everything still looked right on screen.
+   */
+  const OWN = {
+    system: 'Powertrain',
+    subSystem: '6-Speed Automatic Transmission',
+    component: 'Valve Body',
+    symptom: 'Cold-start shift slip',
+    title: '6AT slip at cold start, intermittent',
+  }
+
+  it('ranks differently for the same issue under a different classification', () => {
+    mount(SUBJECT_ID, COHORT_SUBJECT)
+    const underCohort = suggestedKeys()
+    cleanup()
+
+    mount(SUBJECT_ID, OWN)
+    const underOwn = suggestedKeys()
+
+    expect(underCohort.length, 'the engine classification ranked nothing').toBeGreaterThan(0)
+    expect(underOwn.length, 'its own classification ranked nothing').toBeGreaterThan(0)
+    expect(
+      underCohort,
+      'the two classifications produced identical suggestions — ranking is not following the subject',
+    ).not.toEqual(underOwn)
+  })
+
+  it('ranks the engine cohort ONLY under the engine classification', () => {
+    // The specific, checkable half of the claim above.
+    mount(SUBJECT_ID, COHORT_SUBJECT)
+    expect(suggestedKeys(), 'the engine cohort did not rank under its own classification').toContain('EE-260023')
+    cleanup()
+
+    mount(SUBJECT_ID, OWN)
+    expect(suggestedKeys(), 'the engine cohort ranked under an unrelated classification').not.toContain('EE-260023')
+  })
+})
+

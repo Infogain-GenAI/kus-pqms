@@ -6,6 +6,7 @@ import { useStore } from '@/data/store'
 import type { SourceChannel } from '@/data/sourceChannels'
 import type { Issue } from '@/data/types'
 import { LinkIssuesSection } from '../../../LinkIssuesSection'
+import { SameExistingIssuesSection } from './SameExistingIssuesSection'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../../IssueDetail.i18n'
 import { ModelCodeYearPicker, type ModelCodeSelection } from '../../../ModelCodeYearPicker'
@@ -100,6 +101,17 @@ export function IssueEditForm({
   // until it clears the shared rule, so both callbacks below receive one.
   const linked = issue.linkedIssueIds ?? []
 
+  /*
+   * ⚠️ THE SAME PLACEHOLDER THIS FORM ALREADY USES, matched deliberately rather
+   * than improved. Both existing calls below pass { name: 'You', role: 'SE' }
+   * literally, so audit rows from this screen are attributed to "You" instead of
+   * the signed-in user. Using `useRole()` here would be correct AND would change
+   * what this screen writes to the audit trail — a behaviour change on a surface
+   * another developer owns. Reported instead of fixed; the ranked block matches
+   * the existing value so one screen does not attribute two ways.
+   */
+  const EDIT_ACTOR = { name: 'You', role: 'SE' }
+
   // ── 4 · Issue information ─────────────────────────────────────────────────
   const [title, setTitle] = useState(issue.title)
   const [description, setDescription] = useState(issue.description)
@@ -179,6 +191,41 @@ export function IssueEditForm({
       {/* 3 — Same existing issues */}
       <div className={styles.section} data-section="same-existing-issues">
         <h3 className={styles.sectionTitle}>{t('editFormSameExisting')}</h3>
+        {/*
+          TWO BLOCKS, AND THE SPLIT IS DELIBERATE. The heading has always said
+          "Same existing issues" while the body was the SEARCH block alone, so it
+          promised ranked suggestions the screen never made. The ranked half is
+          now its own component; `LinkIssuesSection` is unchanged and still owns
+          search and the linked list.
+
+          They do not overlap: suggestions exclude anything already linked, so
+          unlink is offered in exactly one place. Two ways to perform one
+          mutation is how two paths drift apart.
+        */}
+        <SameExistingIssuesSection
+          issue={issue}
+          /* LIVE — the form's current values, so editing the classification
+             re-ranks. The design's own view-model computes its matches from form
+             state unconditionally, and its edit mode repopulates that state. */
+          subject={{
+            system: classification.system,
+            subSystem: classification.subSystem,
+            component: classification.component,
+            symptom: classification.symptom,
+            title,
+            description,
+            dtcCodes: dtc.split(',').map((d) => d.trim()).filter(Boolean),
+            modelCode: vehicle.codes[0],
+          }}
+          linkedIds={linked}
+          disabled={disabled}
+          onLink={(ids, why) => {
+            // One reason, audited against each link it justified. A group card
+            // links every member, and each of those links is a real mutation.
+            for (const id of ids) store.linkIssue(issue.id, id, why, EDIT_ACTOR)
+          }}
+          onUnlink={(id, why) => store.removeRelated(issue.id, id, why, EDIT_ACTOR)}
+        />
         <LinkIssuesSection
           linkedIds={linked}
           excludeId={issue.id}
