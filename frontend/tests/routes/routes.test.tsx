@@ -23,14 +23,16 @@
 import { describe, it, expect } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import { routes } from '@/routes'
-import { bodyText, renderAt } from '../support/dataRouter'
+import { bodyText, FIRST_PAINT_TIMEOUT, renderAt, waitForBody } from '../support/dataRouter'
 
 const at = (url: string) => renderAt(routes, url)
 
 describe("INVARIANT — /issues/new is reachable and is NOT read as an id (07's named check)", () => {
   it('resolves to Issue Entry, not the Workspace with id="new"', async () => {
     at('/issues/new')
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toBeTruthy())
+    // A first render of a lazily-loaded route — same cold-load budget as
+    // `waitForBody` (see dataRouter.tsx), not the default 5000ms.
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toBeTruthy(), { timeout: FIRST_PAINT_TIMEOUT })
     // The Workspace's not-found branch is what a mis-ranked route would render,
     // since there is no issue with the id "new".
     expect(bodyText()).not.toContain('was not found')
@@ -40,7 +42,7 @@ describe("INVARIANT — /issues/new is reachable and is NOT read as an id (07's 
     // The other half of the ranking claim: making "new" static must not have
     // broken the dynamic segment.
     at('/issues/HV-260101')
-    await waitFor(() => expect(bodyText()).toContain('HV-260101'))
+    await waitForBody('HV-260101', 'the Workspace route')
   })
 })
 
@@ -50,7 +52,7 @@ describe('the root path redirects rather than rendering a screen', () => {
     // per 07's own Divergence table. Implemented as a loader, because loaders own
     // redirects while middleware owns auth and TanStack Query owns data.
     const { router } = at('/')
-    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'), { timeout: FIRST_PAINT_TIMEOUT })
   })
 })
 
@@ -62,7 +64,7 @@ describe('the catch-all renders a 404 instead of silently redirecting', () => {
   // the change being invisible.
   it('an unknown path renders the not-found screen and stays on that URL', async () => {
     const { router } = at('/no-such-screen')
-    await waitFor(() => expect(bodyText()).toContain('Page not found'))
+    await waitForBody('Page not found', 'the 404 route')
     expect(router.state.location.pathname).toBe('/no-such-screen')
   })
 })
@@ -74,14 +76,14 @@ describe('layout assignment is by tree position', () => {
     // is the concrete symptom 07 predicts if FixedHeightLayout is ever nested
     // inside DefaultLayout rather than kept its sibling.
     at('/dashboard')
-    await waitFor(() => expect(document.querySelectorAll('#main-content').length).toBe(1))
+    await waitFor(() => expect(document.querySelectorAll('#main-content').length).toBe(1), { timeout: FIRST_PAINT_TIMEOUT })
   })
 
   it('the 404 under BlankLayout renders no app chrome', async () => {
     // BlankLayout's contract is "no chrome". The header's role switcher is the
     // cheapest unambiguous marker of the chrome being present.
     at('/no-such-screen')
-    await waitFor(() => expect(bodyText()).toContain('Page not found'))
+    await waitForBody('Page not found', 'the 404 route')
     expect(screen.queryByRole('button', { name: /User menu/i })).toBeNull()
     // It still provides its own single main landmark, since BlankLayout
     // deliberately does not render one.
