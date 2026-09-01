@@ -1,3 +1,4 @@
+import type { SourceKey } from '@pqms/ui-library'
 import { NOW } from './types'
 
 /**
@@ -27,6 +28,14 @@ export function daysOpen(reportedDate: string, closedAt?: string): number {
 export function modelCodeLabel(i: { modelCode: string; modelCodes?: string[] }): string {
   const n = i.modelCodes?.length ?? 0
   return n > 1 ? `${n} Models` : i.modelCodes?.[0] ?? i.modelCode
+}
+
+/** Every distinct origin channel on an issue — the primary `source` plus any
+ * additional `sources` — deduped and in a stable order. Length > 1 is the signal
+ * the Source column uses to switch from a single SourceBadge to a "N Sources"
+ * count pill (matches the modelCode column's many-vs-one shape). */
+export function combinedSources(i: { source?: SourceKey; sources?: SourceKey[] }): SourceKey[] {
+  return Array.from(new Set([i.source, ...(i.sources ?? [])].filter(Boolean))) as SourceKey[]
 }
 
 export function newId(prefix: string): string {

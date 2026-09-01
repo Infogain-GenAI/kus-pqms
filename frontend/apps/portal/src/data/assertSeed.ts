@@ -1,5 +1,5 @@
-import { NOW, type ClassLevel, type ClassificationNode, type Issue } from './types'
-import { ACTIVITIES, CLASSIFICATION, ISSUES, NOTIFICATIONS } from './seed'
+import { NOW, type AuditEntry, type ClassLevel, type ClassificationNode, type Issue } from './types'
+import { ACTIVITIES, AUDIT, CLASSIFICATION, ISSUES, NOTIFICATIONS } from './seed'
 
 // Regression gate for the dataset's fixed "today" — the export's own _todayBase() is a
 // hardcoded new Date(2026,6,9) (Jul 9 2026), and every relative label in the UX resolves
@@ -245,11 +245,92 @@ function assertLinks(): void {
   if (resolvable.length === 0) failLink('no linkedIssueIds entry resolves; the linked-issue surfaces are unreachable')
 }
 
+/**
+ * Audit-trail invariants.
+ *
+ * WHY THIS EXISTS: `auditFor` does NOT sort -- it filters. So the ORDER rows sit
+ * in inside `AUDIT` is the order they render, and a trail assembled out of order
+ * renders out of order with nothing failing anywhere. That is invisible in a
+ * diff and invisible in a screenshot: a timeline reading newest-last still looks
+ * like a timeline.
+ *
+ * Most of these rows are now GENERATED from other fixture facts, which makes the
+ * generator worth checking rather than trusting. A row that predates the issue it
+ * belongs to, or a trail whose order drifts, would be a defect in the derivation
+ * rather than a typo in a literal.
+ */
+/**
+ * The audit invariants, over EXPLICIT inputs.
+ *
+ * ⚠️ PARAMETERISED SO ITS GUARDS CAN BE TESTED. Read straight off the module's
+ * `ISSUES` and `AUDIT`, every failure branch here is unreachable by construction:
+ * the seed is valid, so nothing ever takes them, and a guard nobody can reach is
+ * a guard nobody knows works. It would report the same "all clear" if its
+ * comparisons were inverted.
+ *
+ * Taking its inputs as arguments makes each branch exercisable with data crafted
+ * to violate exactly one rule -- see `tests/data/assertAudit.test.ts`. The
+ * module-level caller below is the only production entry point.
+ */
+export function checkAuditRows(issues: Issue[], rows: AuditEntry[]): void {
+  const failAudit = (msg: string) => fail(`seed audit invariant: ${msg}`)
+  const ids = new Set(issues.map((i) => i.id))
+
+  const seen = new Set<string>()
+  for (const row of rows) {
+    if (seen.has(row.id)) failAudit(`duplicate audit id "${row.id}"`)
+    seen.add(row.id)
+    if (!ids.has(row.issueId)) failAudit(`row "${row.id}" belongs to unseeded issue "${row.issueId}"`)
+    if (!row.actor.trim()) failAudit(`row "${row.id}" has no actor`)
+    if (!row.actorRole.trim()) failAudit(`row "${row.id}" has no actor role`)
+    if (!row.action.trim()) failAudit(`row "${row.id}" has no action`)
+  }
+
+  for (const issue of issues) {
+    const trail = rows.filter((a) => a.issueId === issue.id)
+    if (trail.length === 0) continue
+
+    /*
+     * NEWEST FIRST, because that is what `auditFor` hands to the renderer
+     * unchanged. Equal timestamps are allowed -- two rows can share a minute --
+     * so only a strict increase is a failure.
+     */
+    for (let i = 1; i < trail.length; i++) {
+      if (trail[i].timestamp > trail[i - 1].timestamp) {
+        failAudit(
+          `${issue.id} trail is not newest-first: "${trail[i].id}" (${trail[i].timestamp}) ` +
+            `follows "${trail[i - 1].id}" (${trail[i - 1].timestamp})`,
+        )
+      }
+    }
+
+    // No row may predate the issue it describes. HV-260101 is the one exception
+    // and it is explicit: its trail is the registration itself, hand-written
+    // against the NOW anchor rather than derived from `createdAt`.
+    if (issue.id !== 'HV-260101') {
+      for (const row of trail) {
+        if (row.timestamp < issue.createdAt) {
+          failAudit(`${row.id} (${row.timestamp}) predates ${issue.id}'s registration (${issue.createdAt})`)
+        }
+      }
+    }
+  }
+
+  /*
+   * The surface this seed exists to make non-empty. If the generator ever stops
+   * producing trails, View History goes back to being empty everywhere and the
+   * only symptom is a blank panel that looks like a design choice.
+   */
+  const withTrails = issues.filter((i) => rows.some((a) => a.issueId === i.id)).length
+  if (withTrails < 8) failAudit(`only ${withTrails} issues have audit trails; expected at least 8`)
+}
+
 export function assertSeedAnchors(): void {
   assertIssueGroups()
   assertIssueClassification()
   assertActivities()
   assertLinks()
+  checkAuditRows(ISSUES, AUDIT)
   if (NOW !== '2026-07-09T09:00:00Z') fail(`NOW is ${NOW}, expected 2026-07-09T09:00:00Z`)
 
   // The rows the prototype dates relative to the anchor ('Today' / 'Yesterday' / '2h ago').

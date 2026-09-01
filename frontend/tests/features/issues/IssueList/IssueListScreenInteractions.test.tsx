@@ -51,6 +51,58 @@ describe('KPI cards apply and clear the status filter', () => {
   })
 })
 
+describe('KPI cards show which filter is currently applied', () => {
+  it('highlights the status card that was clicked; the scope card never highlights, including right after clearing back to it', () => {
+    renderList()
+    const scopeCard = screen.getByRole('button', { name: /My Issues$/ })
+    const openCard = screen.getByRole('button', { name: /Open$/ })
+    // Resting state — no status filter applied — neither card is highlighted.
+    expect(scopeCard.style.border).toContain('var(--border-subtle)')
+    expect(openCard.style.border).toContain('var(--border-subtle)')
+
+    fireEvent.click(openCard)
+    expect(openCard.style.border).toContain('var(--accent-500)')
+    expect(scopeCard.style.border).toContain('var(--border-subtle)')
+
+    // The scope card is a CLEAR action, not a filter — it must never highlight,
+    // not even in the instant after it clears the status filter back to none.
+    fireEvent.click(scopeCard)
+    expect(scopeCard.style.border).toContain('var(--border-subtle)')
+    expect(openCard.style.border).toContain('var(--border-subtle)')
+  })
+})
+
+describe('the Filter button badge', () => {
+  it('shows no badge until a filter is applied, then the count of active fields', () => {
+    renderList()
+    const filterButton = () => screen.getByRole('button', { name: /^Filter/i })
+    expect(within(filterButton()).queryByText(/^\d+$/)).toBeNull()
+
+    fireEvent.click(filterButton())
+    const select = screen.getByRole('combobox', { name: 'Model Code' }) as HTMLSelectElement
+    fireEvent.change(select, { target: { value: select.options[1].value } })
+    fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }))
+
+    expect(within(filterButton()).getByText('1')).toBeTruthy()
+  })
+
+  it('drops the badge once the filter is cleared', () => {
+    renderList()
+    const filterButton = () => screen.getByRole('button', { name: /^Filter/i })
+    fireEvent.click(filterButton())
+    const select = screen.getByRole('combobox', { name: 'Model Code' }) as HTMLSelectElement
+    fireEvent.change(select, { target: { value: select.options[1].value } })
+    fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }))
+    expect(within(filterButton()).getByText('1')).toBeTruthy()
+
+    fireEvent.click(filterButton())
+    fireEvent.click(screen.getByRole('button', { name: /^Reset$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }))
+
+    expect(within(filterButton()).queryByText(/^\d+$/)).toBeNull()
+  })
+})
+
 describe('row and header navigation', () => {
   it('clicking an Issue ID cell navigates to its workspace', () => {
     renderList()
@@ -103,7 +155,7 @@ describe('the empty state', () => {
 describe('the Filters drawer', () => {
   it('a section header collapses its fields, Reset clears the draft, and Close dismisses it', () => {
     renderList()
-    fireEvent.click(screen.getByRole('button', { name: /^Filter$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/i }))
     expect(screen.getByRole('combobox', { name: 'Model Code' })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /^Vehicle$/i }))
@@ -125,13 +177,13 @@ describe('the Columns drawer', () => {
   it('Restore default resets the draft, and Close dismisses it without applying', () => {
     renderList()
     fireEvent.click(screen.getByRole('button', { name: /^Columns$/i }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Severity' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Source' }))
     fireEvent.click(screen.getByRole('button', { name: /Restore default/i }))
-    expect((screen.getByRole('checkbox', { name: 'Severity' }) as HTMLInputElement).checked).toBe(false)
+    expect((screen.getByRole('checkbox', { name: 'Source' }) as HTMLInputElement).checked).toBe(false)
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog', { name: 'Columns' })).toBeNull()
-    expect(screen.queryByText('Severity')).toBeNull()
+    expect(screen.queryByText('Source')).toBeNull()
   })
 })
 

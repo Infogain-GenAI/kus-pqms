@@ -418,6 +418,127 @@ export const ACTIVITIES: InvestigationActivity[] = ACT_SOURCE.flatMap((src, gi) 
 
 const HV = 'HV-260101'
 const T = (hm: string) => `2026-07-09T${hm}:00Z`
+/**
+ * Audit trails.
+ *
+ * -- EVERY ROW DESCRIBES SOMETHING THE FIXTURE ACTUALLY CONTAINS --------------
+ *
+ * The View History surfaces were empty for 34 of 35 issues, because only
+ * `HV-260101` had a trail. The prototype has no such problem: `lhEvents(p)`
+ * SYNTHESISES about nine events from a hash of the issue id -- invented users,
+ * statuses, transitions and reasons -- so its timeline is never empty.
+ *
+ * That was deliberately NOT ported. Fabricated demo copy is one thing;
+ * fabricated audit rows are another, in an app where the audit trail is the
+ * governance record every justification gate exists to feed. So these rows are
+ * DERIVED from facts the fixture already carries:
+ *
+ *   - registration   -- `createdAt`, `owner`, `ownerRole`, the classification;
+ *   - relationships  -- the real `linkedIssueIds` and `groupId` values;
+ *   - investigation  -- the seeded `ACTIVITIES`, which are the prototype's own
+ *                       `investigation` / `actions[]` text.
+ *
+ * AND THE SHAPES ARE THE STORE'S, NOT NEW ONES. Each action and detail string
+ * matches what the app itself writes, so a seeded trail and a trail produced by
+ * using the app are indistinguishable in kind. If a row here needed a detail
+ * string the store could never emit, that would mean the ACTION is wrong, not
+ * that the string should bend.
+ *
+ * FEWER ISSUES WITH REAL TRAILS, NOT ALL 35 WITH THIN ONES. Only the eight
+ * issues that have genuine ground truth get one: HV-260101, plus the seven that
+ * carry activities, group membership AND reciprocal links. The rest stay empty
+ * on purpose -- a newly registered issue with no history is the most common real
+ * case, and the surface has to handle it well regardless.
+ */
+
+/** ISO minute arithmetic, so a trail can be laid out relative to registration. */
+const plusMin = (iso: string, mins: number) =>
+  new Date(new Date(iso).getTime() + mins * 60000).toISOString().replace('.000Z', 'Z')
+
+/**
+ * The registration trail, mirroring HV-260101's row for row: the same eight
+ * actions, the same terse category details, and the same split between the
+ * owner's own actions and the system's.
+ */
+const REGISTRATION: { at: number; action: string; detail: string; system?: true }[] = [
+  { at: 0, action: 'Issue created', detail: 'Lifecycle' },
+  { at: 1, action: 'Issue record created', detail: 'Record created', system: true },
+  { at: 2, action: 'Issue ID generated', detail: 'Identifier', system: true },
+  { at: 5, action: 'Initial field values saved', detail: 'Field values' },
+  { at: 7, action: 'Classification selected', detail: 'Classification' },
+  { at: 9, action: 'Status initialized', detail: 'Status', system: true },
+  { at: 11, action: 'Owner assigned', detail: 'Assignment', system: true },
+  { at: 13, action: 'Initial owner assigned', detail: 'Lifecycle' },
+]
+
+const SEEDED_TRAIL_IDS = ACT_SOURCE.map((a) => a.issueId)
+
+/** Oldest-first per issue, reversed at the end because `auditFor` does not sort. */
+function trailFor(issueId: string): AuditEntry[] {
+  const issue = ISSUES.find((i) => i.id === issueId)
+  if (!issue) throw new Error(`seed: audit trail for unknown issue "${issueId}"`)
+  const src = ACT_SOURCE.find((a) => a.issueId === issueId)!
+  const owner = { actor: issue.owner, actorRole: issue.ownerRole ?? 'SE' }
+  const system = { actor: 'N-PQMS', actorRole: 'System' }
+  const rows: AuditEntry[] = []
+  let n = 0
+  const push = (who: { actor: string; actorRole: string }, action: string, detail: string, timestamp: string) =>
+    rows.push({ id: `au-${issueId}-${n++}`, issueId, ...who, action, detail, timestamp })
+
+  for (const r of REGISTRATION) {
+    push(r.system ? system : owner, r.action, r.detail, plusMin(issue.createdAt, r.at))
+  }
+
+  /*
+   * The links these issues were registered with, in the store's own registration
+   * wording: 'Issues linked' carries the id list and 'Linked issue(s) added'
+   * carries the reason. The reason is the prototype's investigation text for this
+   * issue -- the closest thing to a real justification the fixture holds.
+   */
+  const links = issue.linkedIssueIds ?? []
+  if (links.length) {
+    push(owner, 'Issues linked', links.join(', '), plusMin(issue.createdAt, 20))
+    push(owner, 'Linked issue(s) added', `${links.join(', ')} - ${src.investigation}`, plusMin(issue.createdAt, 22))
+  }
+
+  /*
+   * The group row. Membership is real, so the parent/child split is DERIVED the
+   * way everything else derives it -- earliest member is the parent -- rather
+   * than asserted here. Every member gets the SAME sentence, which is the fan-out
+   * `createIssue` performs.
+   */
+  if (issue.groupId) {
+    const members = ISSUES.filter((i) => i.groupId === issue.groupId)
+      .slice()
+      .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+    const parentId = members[0].id
+    const detail = `${members.map((m) => m.id).join(', ')}. Parent Issue: ${parentId}. Justification: "${src.investigation}".`
+    push(
+      owner,
+      issue.id === parentId ? 'Issue Group created' : 'Issue linked to Issue Group',
+      detail,
+      plusMin(issue.createdAt, 25),
+    )
+  }
+
+  /*
+   * ONLY FOR AN ISSUE THAT HAS ACTUALLY LEFT 'open'. Writing "Open ->
+   * Investigating" onto an issue the fixture still lists as open would be a row
+   * contradicting the record it belongs to -- the exact thing this seed refuses
+   * to do.
+   */
+  if (issue.status !== 'open') {
+    push(owner, 'Started investigation', 'Open -> Investigating', plusMin(issue.createdAt, 30))
+  }
+
+  // The seeded activities, in the store's `Logged activity` shape.
+  for (const a of ACTIVITIES.filter((x) => x.issueId === issueId)) {
+    push({ actor: a.author, actorRole: a.authorRole ?? 'SE' }, 'Logged activity', `${a.type}: ${a.summary}`, a.createdAt)
+  }
+
+  return rows.reverse()
+}
+
 export const AUDIT: AuditEntry[] = [
   { id: 'au-8', issueId: HV, actor: 'Arpita Chavda', actorRole: 'SE', action: 'Initial owner assigned', detail: 'Lifecycle', timestamp: T('08:58') },
   { id: 'au-7', issueId: HV, actor: 'N-PQMS', actorRole: 'System', action: 'Owner assigned', detail: 'Assignment', timestamp: T('08:56') },
@@ -427,6 +548,7 @@ export const AUDIT: AuditEntry[] = [
   { id: 'au-3', issueId: HV, actor: 'N-PQMS', actorRole: 'System', action: 'Issue ID generated', detail: 'Identifier', timestamp: T('08:47') },
   { id: 'au-2', issueId: HV, actor: 'N-PQMS', actorRole: 'System', action: 'Issue record created', detail: 'Record created', timestamp: T('08:46') },
   { id: 'au-1', issueId: HV, actor: 'Arpita Chavda', actorRole: 'SE', action: 'Issue created', detail: 'Lifecycle', timestamp: T('08:45') },
+  ...SEEDED_TRAIL_IDS.flatMap(trailFor),
 ]
 
 // The prototype's NOTIFS() entries verbatim — 6 unread, matching the bell badge. The source

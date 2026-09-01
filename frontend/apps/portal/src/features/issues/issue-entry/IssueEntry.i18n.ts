@@ -107,8 +107,37 @@ const messages: ComponentI18nMessages = {
     requestSymptomLabel: 'New symptom value *',
     requestSymptomNeedsComponent: '(select a component first)',
 
-    /* ─── HISTORY MODAL ─────────────────────────────────────────── */
+    /*
+     * ─── HISTORY MODALS ─────────────────────────────────────────
+     *
+     * TWO of them, chosen by CARD TYPE: a group card opens
+     * `groupHistory*`, a standalone card opens `issueHistory*`. The
+     * button labels differ by SURFACE instead — see `cardViewHistory`
+     * and the ternary in `GroupCard` — so the two axes cross.
+     */
+    groupHistoryTitle: 'Related Issues & History',
+    groupHistorySubtitle:
+      "{{count}} issues in this group · Parent and child issues in this group, with each issue's history",
+    issueHistoryTitle: 'View History',
+    issueHistorySubtitle: '{{count}} activities · read-only audit trail',
+    historyViewIssue: 'View Issue',
+    historyReason: 'Reason',
+    historyBy: 'by {{user}} · {{role}} · {{when}}',
+    historyShowAll: 'View complete history ({{count}} earlier)',
+    historyInfoModelCode: 'Model Code',
+    historyInfoClassification: 'Classification',
+    historyInfoSource: 'Issue Source',
+    historyInfoDtc: 'DTC / Trouble Code',
     historyEmpty: 'No history recorded for this issue yet.',
+    /*
+     * ⚠️ OUR COPY, NOT THE DESIGN'S. The prototype synthesises its
+     * timeline from a hash of the issue id, so it is never empty and
+     * offers no empty state to port. This one says why the panel is
+     * blank, because "no history" on an audit trail otherwise reads
+     * as a loading failure.
+     */
+    historyEmptyHint:
+      'Audit entries appear here as the issue is classified, assigned, investigated and linked.',
 
     /*
      * ─── LINK CONFIRMATION ───────────────────────────────────────

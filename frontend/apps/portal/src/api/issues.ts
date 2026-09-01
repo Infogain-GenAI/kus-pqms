@@ -53,7 +53,9 @@ export interface IssueListQuery {
   modelCode?: string[]
   owner?: string[]
   system?: string[]
-  /** `own` restricts to issues the named user owns or is assigned. */
+  /** `own` restricts to issues currently ASSIGNED to the named user — not
+   * issues they merely reported and have since handed off. Matches the
+   * Owner column's own display precedence (`assignee ?? owner`). */
   scope?: 'all' | 'own'
   /** Required when `scope` is `own`. */
   scopeUser?: string
@@ -136,7 +138,7 @@ export async function fetchIssues(query: IssueListQuery = {}): Promise<IssueList
      * "does it match what I typed". Folding it in with the rest would make an
      * empty `scopeUser` silently widen the result set.
      */
-    if (scope === 'own' && scopeUser && i.owner !== scopeUser && i.assignee !== scopeUser) return false
+    if (scope === 'own' && scopeUser && i.assignee !== scopeUser) return false
 
     if (!has(status, i.status)) return false
     if (!has(model, i.model)) return false
@@ -181,7 +183,7 @@ export async function fetchIssueById(id: string): Promise<Issue | null> {
 export async function fetchIssueScopeCounts(user: string): Promise<{ own: number; all: number }> {
   await simulateLatency()
   return {
-    own: ISSUES.filter((i) => i.owner === user || i.assignee === user).length,
+    own: ISSUES.filter((i) => i.assignee === user).length,
     all: ISSUES.length,
   }
 }

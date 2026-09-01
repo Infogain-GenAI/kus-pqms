@@ -75,14 +75,29 @@ describe('joining an existing group', () => {
   it('still audits EVERY member, because the group changed for them too', () => {
     const { result } = setup()
     const groupId = result.current.getIssue(GROUP_A_MEMBER)!.groupId!
+
+    /*
+     * COUNTED AS A DELTA, NOT AS AN ABSOLUTE. This asserted `toBe(1)` and passed
+     * only while the fixture seeded no group rows of its own. Once the seed grew
+     * real audit trails, the pre-existing seeded row made it 2 and the test
+     * failed without anything being wrong. What it means to assert is "this
+     * registration wrote exactly one row per member", so that is what it counts.
+     */
+    const before = new Map(
+      result.current.issues.map((i) => [
+        i.id,
+        result.current.auditFor(i.id).filter((a) => a.action === 'Issue linked to Issue Group').length,
+      ]),
+    )
     const { id } = register(result, [GROUP_A_MEMBER])
 
     const members = result.current.groupMembers(id).map((i) => i.id)
     expect(members.length, 'expected a multi-member group').toBeGreaterThan(2)
 
     for (const m of members) {
-      const rows = result.current.auditFor(m).filter((a) => a.action === 'Issue linked to Issue Group')
-      expect(rows.length, `${m} has no group audit row`).toBe(1)
+      const all = result.current.auditFor(m).filter((a) => a.action === 'Issue linked to Issue Group')
+      const rows = all.slice(0, all.length - (before.get(m) ?? 0))
+      expect(rows.length, `${m} gained no group audit row`).toBe(1)
       // The reason travels to every member, not just the new issue.
       expect(rows[0].detail, `${m} detail`).toContain(WHY)
       expect(rows[0].detail, `${m} parent`).toContain(`Parent Issue: ${groupId}`)

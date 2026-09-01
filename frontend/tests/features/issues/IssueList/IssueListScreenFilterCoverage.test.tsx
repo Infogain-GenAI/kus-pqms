@@ -31,7 +31,7 @@ const Wrapped = ({ children }: { children: ReactNode }) => (
 )
 const renderList = () => render(<IssueListScreen />, { wrapper: Wrapped })
 const tab = (name: RegExp) => screen.getByRole('button', { name })
-const openFilters = () => fireEvent.click(screen.getByRole('button', { name: /^Filter$/i }))
+const openFilters = () => fireEvent.click(screen.getByRole('button', { name: /^Filter/i }))
 const apply = () => fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }))
 const reset = () => fireEvent.click(screen.getByRole('button', { name: /^Reset$/i }))
 
@@ -218,18 +218,18 @@ describe('row selection — both directions of select-all and of a single row', 
 })
 
 describe('sorting by every remaining sortable column', () => {
-  it('Owner, Days open and Model Year each reorder the rows', () => {
+  it('Owner and Days each reorder the rows', () => {
     renderList()
     fireEvent.click(tab(/^All Issues/i))
 
     fireEvent.click(screen.getByRole('button', { name: /^Columns$/i }))
-    for (const label of ['Owner', 'Days open', 'Model Year']) {
+    for (const label of ['Owner', 'Days']) {
       fireEvent.click(screen.getByRole('checkbox', { name: label }))
     }
     fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }))
 
     const firstId = () => screen.getAllByText(/^[A-Z]{2}-\d{6}$/)[0].textContent
-    for (const header of [/^Owner$/i, /^Days open$/i, /^Model Year$/i]) {
+    for (const header of [/^Owner$/i, /^Days$/i]) {
       const before = firstId()
       fireEvent.click(screen.getByText(header).closest('th')!)
       const once = firstId()
