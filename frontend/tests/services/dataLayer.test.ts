@@ -102,11 +102,17 @@ describe('the fixture list endpoint behaves like a server, not like an array', (
     expect(out.rows.map((r) => r.id)).toContain(target.id)
   })
 
-  it('scope=own needs a user, and narrows to their issues', async () => {
-    const user = ISSUES[0].owner
+  it('scope=own needs a user, and narrows to issues currently assigned to them — not merely owned', async () => {
+    const user = 'Arpita Chavda'
     const out = await fetchIssues({ scope: 'own', scopeUser: user, pageSize: 100 })
-    expect(out.rows.every((r) => r.owner === user || r.assignee === user)).toBe(true)
-    expect(out.total).toBeLessThanOrEqual(ISSUES.length)
+    expect(out.rows.length).toBeGreaterThan(0)
+    expect(out.rows.every((r) => r.assignee === user)).toBe(true)
+
+    // An issue Arpita owns but has never been assigned must NOT appear — the
+    // scope tracks who is working it now, not who reported it.
+    const ownedNotAssigned = ISSUES.find((i) => i.owner === user && i.assignee !== user)
+    expect(ownedNotAssigned).toBeTruthy()
+    expect(out.rows.map((r) => r.id)).not.toContain(ownedNotAssigned!.id)
   })
 
   it('scope=own with NO user does not silently narrow', async () => {
@@ -150,10 +156,10 @@ describe('fetchIssueById', () => {
 
 describe('counts', () => {
   it('scope counts match the seed', async () => {
-    const user = ISSUES[0].owner
+    const user = 'Arpita Chavda'
     const out = await fetchIssueScopeCounts(user)
     expect(out.all).toBe(ISSUES.length)
-    expect(out.own).toBe(ISSUES.filter((i) => i.owner === user || i.assignee === user).length)
+    expect(out.own).toBe(ISSUES.filter((i) => i.assignee === user).length)
   })
 
   it('kpi counts sum to the total', async () => {
