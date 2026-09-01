@@ -14,7 +14,7 @@ import { Icon } from '@pqms/ui-library'
 // which a stylesheet cannot override — so they are local `<h2>`s instead.
 import { Modal, PageContainer, PageCrumb, ULabel } from '@/app/chrome'
 import { modelNameFor, modelYearsFor } from '@/data/modelCodes'
-import { fmtDate, fmtDateTime } from '@/data/util'
+import { fmtDate } from '@/data/util'
 import type { Issue } from '@/data/types'
 import { ModelCodeYearPicker, type ModelCodeSelection } from './ModelCodeYearPicker'
 import { SystemClassificationPicker, type ClassificationValue } from './SystemClassificationPicker'
@@ -32,6 +32,7 @@ import {
   justificationError,
 } from '@/data/linkJustification'
 import { DtcChipInput } from './issue-entry/DtcChipInput'
+import { GroupHistoryModal, IssueHistoryModal, useHistoryTarget } from './issue-entry/HistoryModals'
 import { useTranslation } from 'react-i18next'
 import { NS } from './issue-entry/IssueEntry.i18n'
 import entryStyles from './issue-entry/issue-entry.module.css'
@@ -64,7 +65,13 @@ export function CreateIssueScreen() {
   // The in-place "Search & link" panel inside Same Existing Issues.
   const [sameSearchOpen, setSameSearchOpen] = useState(false)
   const [sameSearchQ, setSameSearchQ] = useState('')
-  const [historyFor, setHistoryFor] = useState<string | null>(null)
+  /*
+   * ⚠️ CARRIES THE KIND, NOT JUST THE ID. Which history modal opens is decided
+   * by what the CARD is — group or standalone — exactly as the canonical's
+   * `_buildEntry` decides it. Deriving it from the issue instead would reroute a
+   * standalone card the moment its issue joined a group.
+   */
+  const history = useHistoryTarget()
   /**
    * The issue open in the existing-issue popup, by id.
    *
@@ -740,7 +747,7 @@ export function CreateIssueScreen() {
                             linked={[e.group.parent, ...e.group.children].every((m) => linkedIds.includes(m.id))}
                             onLink={() => askToLink([e.group!.parent.id, ...e.group!.children.map((c) => c.id)], `${e.group!.parent.id} + ${e.group!.children.length} child issue(s)`)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.group!.parent.id && !e.group!.children.some((c) => c.id === x)))}
-                            onViewHistory={() => setHistoryFor(e.group!.parent.id)}
+                            onViewHistory={() => history.openGroup(e.group!.parent.id)}
                             /*
                               Removes ONE member from the group, immediately.
                               `removeRelated` picks group removal or symmetric
@@ -760,7 +767,7 @@ export function CreateIssueScreen() {
                             linked={linkedIds.includes(e.issue!.id)}
                             onLink={() => askToLink([e.issue!.id], e.issue!.id)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.issue!.id))}
-                            onViewHistory={() => setHistoryFor(e.issue!.id)}
+                            onViewHistory={() => history.openIssue(e.issue!.id)}
                             onInspect={() => setInspecting(e.issue!.id)}
                           />
                         ),
@@ -811,7 +818,7 @@ export function CreateIssueScreen() {
                             linked={[e.group.parent, ...e.group.children].every((m) => linkedIds.includes(m.id))}
                             onLink={() => askToLink([e.group!.parent.id, ...e.group!.children.map((c) => c.id)], `${e.group!.parent.id} + ${e.group!.children.length} child issue(s)`)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.group!.parent.id && !e.group!.children.some((c) => c.id === x)))}
-                            onViewHistory={() => setHistoryFor(e.group!.parent.id)}
+                            onViewHistory={() => history.openGroup(e.group!.parent.id)}
                             /*
                               Removes ONE member from the group, immediately.
                               `removeRelated` picks group removal or symmetric
@@ -831,7 +838,7 @@ export function CreateIssueScreen() {
                             linked={linkedIds.includes(e.issue!.id)}
                             onLink={() => askToLink([e.issue!.id], e.issue!.id)}
                             onUnlink={() => setLinkedIds((l) => l.filter((x) => x !== e.issue!.id))}
-                            onViewHistory={() => setHistoryFor(e.issue!.id)}
+                            onViewHistory={() => history.openIssue(e.issue!.id)}
                           />
                         ),
                       )}
@@ -907,33 +914,32 @@ export function CreateIssueScreen() {
       </Modal>
 
       {/*
-        View History. `workspace/HistorySection.tsx` could NOT be reused: it takes
-        no props and reads its issue id from `useWorkspace()`, so it only renders
-        inside the workspace provider. The audit data is not coupled that way, so
-        this reads `store.auditFor(id)` directly rather than dragging a provider
-        onto Issue Entry.
+        View History — TWO modals, chosen by card type.
+
+        ⚠️ THE OLD COMMENT HERE WAS LOAD-BEARING IN THE WRONG DIRECTION. It said
+        `workspace/HistorySection.tsx` "could NOT be reused" because it takes no
+        props and reads its issue id from `useWorkspace()`. That is still true of
+        the COMPONENT — and it was read as though it applied to the whole history
+        vocabulary, which is why this surface rendered raw internal action
+        strings ("Initial field values saved", "Issue Unlinked") at users while
+        the workspace rendered proper labels.
+
+        `history/history.ts` is pure and provider-free, so `historyLabelFor` and
+        `historyIconFor` DO work here. `HistoryModals` uses them.
       */}
-      <Modal open={!!historyFor} onClose={() => setHistoryFor(null)} title={`History — ${historyFor ?? ''}`}>
-        {(() => {
-          const entries = historyFor ? store.auditFor(historyFor) : []
-          if (entries.length === 0) {
-            return <p style={{ margin: 0, color: 'var(--text-muted)', font: 'var(--fw-regular) var(--fs-body-sm)/1.5 var(--font-body)' }}>{t('historyEmpty')}</p>
-          }
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              {entries.map((e) => (
-                <div key={e.id} className={entryStyles.historyEntry}>
-                  <div style={{ font: 'var(--fw-semibold) var(--fs-body-sm)/1.3 var(--font-body)', color: 'var(--text-primary)' }}>{e.action}</div>
-                  {e.detail && <div style={{ font: 'var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body)', color: 'var(--text-secondary)' }}>{e.detail}</div>}
-                  <div style={{ font: 'var(--fw-regular) var(--fs-caption)/1.4 var(--font-body)', color: 'var(--text-disabled)' }}>
-                    {e.actor} · {e.actorRole} · {fmtDateTime(e.timestamp)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        })()}
-      </Modal>
+      <GroupHistoryModal
+        key={`g${history.nonce}`}
+        members={history.target?.kind === 'group' ? store.groupMembers(history.target.id) : []}
+        entriesFor={(id) => store.auditFor(id)}
+        onOpenIssue={(id) => nav(`/issues/${id}`)}
+        onClose={history.close}
+      />
+      <IssueHistoryModal
+        key={`i${history.nonce}`}
+        issue={history.target?.kind === 'issue' ? (store.getIssue(history.target.id) ?? null) : null}
+        entries={history.target?.kind === 'issue' ? store.auditFor(history.target.id) : []}
+        onClose={history.close}
+      />
 
       {/*
         Link confirmation. Gates every LINK; unlink is deliberately not gated —

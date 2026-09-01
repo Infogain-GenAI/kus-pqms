@@ -1,0 +1,266 @@
+/*
+ * View History — the two modals behind Issue Entry's history controls.
+ *
+ * Styling lives here rather than inline because `lint:ds:numeric` counts numeric
+ * literals in `apps/*​/src/**` against a ceiling that only ever ratchets DOWN.
+ * A timeline built from inline px would spend that budget for nothing; CSS is
+ * not linted, and every value below is a design token.
+ */
+
+/* ── shared timeline ─────────────────────────────────────────────────────── */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.event {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* The rail: icon plus the connector that joins it to the next event. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+}
+
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  flex: none;
+  background: var(--accent-50);
+  color: var(--accent-700);
+}
+
+/* Drawn only between events, never after the last — see `isLast` in the TSX. */
+.connector {
+  flex: 1;
+  width: var(--border-width);
+  min-height: 12px;
+  background: var(--border-subtle);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: var(--space-4);
+}
+
+.eventHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.eventName {
+  font: var(--fw-semibold) var(--fs-body-sm) / 1.3 var(--font-body);
+  color: var(--text-primary);
+}
+
+.eventMeta {
+  font: var(--fw-regular) var(--fs-caption) / 1.4 var(--font-body);
+  color: var(--text-disabled);
+  white-space: nowrap;
+}
+
+.reasonLabel {
+  margin-top: var(--space-1);
+  font: var(--fw-semibold) var(--fs-caption) / 1.4 var(--font-body);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reasonText {
+  font: var(--fw-regular) var(--fs-body-sm) / 1.5 var(--font-body);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* ── the empty state ─────────────────────────────────────────────────────── */
+
+/*
+ * ⚠️ THIS STATE IS OURS, NOT THE DESIGN'S. The prototype's timeline is
+ * synthesised from a hash of the issue id, so it is never empty and it offers no
+ * empty treatment to port. Ours reads real audit rows, which most issues do not
+ * have yet — so this is a designed state rather than an accident.
+ */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+  border: var(--border-width) dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+}
+
+.emptyIcon {
+  color: var(--text-disabled);
+}
+
+.emptyTitle {
+  font: var(--fw-semibold) var(--fs-body-sm) / 1.4 var(--font-body);
+  color: var(--text-secondary);
+}
+
+.emptyHint {
+  font: var(--fw-regular) var(--fs-caption) / 1.5 var(--font-body);
+  color: var(--text-muted);
+  max-width: 42ch;
+}
+
+/* ── single-issue modal ──────────────────────────────────────────────────── */
+
+.issueIdRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.issueId {
+  font: var(--fw-semibold) var(--fs-body-sm) / 1 var(--font-mono);
+  color: var(--accent-700);
+  white-space: nowrap;
+}
+
+.issueTitle {
+  margin: var(--space-2) 0 var(--space-4);
+  font: var(--fw-semibold) var(--fs-body-md) / 1.35 var(--font-body);
+  color: var(--text-primary);
+}
+
+/* ── group modal: one collapsible card per member ────────────────────────── */
+
+.memberList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.member {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  overflow: hidden;
+}
+
+.memberOpen {
+  border-color: var(--accent-500);
+}
+
+.memberHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.memberTopRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.memberActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.linkAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 0;
+  background: none;
+  padding: 0;
+  font: var(--fw-semibold) var(--fs-caption) / 1.4 var(--font-body);
+  color: var(--accent-600);
+  cursor: pointer;
+}
+
+.linkAction:hover {
+  text-decoration: underline;
+}
+
+.memberTitle {
+  font: var(--fw-semibold) var(--fs-body-sm) / 1.35 var(--font-body);
+  color: var(--text-primary);
+}
+
+/* The info summary — present on the GROUP modal only. Its absence on the
+   single-issue modal is specified, not an omission. */
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  padding-top: var(--space-2);
+}
+
+.infoCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.infoLabel {
+  font: var(--fw-semibold) var(--fs-caption) / 1.3 var(--font-body);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.infoValue {
+  font: var(--fw-regular) var(--fs-body-sm) / 1.4 var(--font-body);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.infoMono {
+  font-family: var(--font-mono);
+}
+
+.memberTimeline {
+  padding: var(--space-3);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.showAll {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: none;
+  padding: var(--space-2) var(--space-3);
+  font: var(--fw-semibold) var(--fs-caption) / 1.4 var(--font-body);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.showAll:hover {
+  border-color: var(--accent-500);
+  color: var(--accent-700);
+}
