@@ -237,7 +237,6 @@ const messages: ComponentI18nMessages = {
     editFormIssueTitle: 'Issue title *',
     editFormDescription: 'Description *',
     editFormDtc: 'DTC / trouble codes',
-    editFormDtcHint: 'Comma-separated. P·Powertrain B·Body C·Chassis U·Network.',
     editFormIssueSource: 'Issue Source',
   },
 }

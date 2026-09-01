@@ -14,7 +14,7 @@
 // harness so the component sees its own output, as it does in the form.
 import { describe, it, expect } from 'vitest'
 import { useState } from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { DtcChipInput } from '@/features/issues/issue-entry/DtcChipInput'
 
 const LABEL = 'DTC codes'
@@ -297,63 +297,187 @@ describe('the help text', () => {
   })
 })
 
-describe('⚠️ A PASTED COMMA LIST BECOMES ONE MALFORMED CHIP — pinned, not blessed', () => {
+describe('a pasted comma list SPLITS into one chip per code', () => {
   /*
-   * ─── THIS IS A DEFECT, RECORDED AT ITS CURRENT BEHAVIOUR ───────────────────
+   * ─── THIS BLOCK USED TO PIN THE DEFECT. IT NOW SPECIFIES THE FIX ───────────
    *
-   * The comma COMMIT is a keydown handler, so it only fires for a comma the user
-   * TYPES. A paste arrives as a single change event carrying the whole string, no
-   * comma keydown happens, and the next Enter or blur commits the lot as ONE
-   * token: `["P0301,P0302,P0420"]`.
+   * These four tests were deliberately written to assert the BROKEN behaviour: a
+   * paste committed `"P0301,P0302,P0420"` as a single code, because the comma
+   * commit is a keydown handler and a paste fires no keydown. The pin existed so
+   * that fixing it would fail a test and find this note rather than look like a
+   * regression.
    *
-   * ⚠️ AND IT LOOKS RIGHT. `dtcCategory` infers the category from the first
-   * character, so the junk value renders as a confident "Powertrain" chip. There
-   * is no validation to catch it, and the malformed string goes on to become the
-   * issue's `dtcCodes` entry.
+   * It was worth fixing rather than documenting because it FUSED tokens instead
+   * of dropping them: `dtcCategory` reads the first character, so the junk value
+   * rendered as a confident "Powertrain" chip and became the issue's `dtcCodes`
+   * entry, with nothing on screen suggesting it was wrong.
    *
-   * ⚠️ THE COMPONENT'S OWN HELP TEXT INVITES THE INPUT IT MISHANDLES: "enter your
-   * own separated by commas". Typing that works; pasting it does not. That is the
-   * gap, and it is why this is a defect rather than a missing nicety.
-   *
-   * Left AS-IS deliberately. Fixing it means deciding what a commit does with a
-   * separator — split on commas in `commit`, or add an `onPaste` — and that is a
-   * product behaviour change, not coverage work, which is what this file is. So
-   * the behaviour is pinned exactly as it stands: if someone fixes it, this test
-   * fails and tells them the pin was deliberate rather than an assertion that the
-   * bug is correct.
+   * The fix splits inside `commit` rather than adding an `onPaste`, because every
+   * addition route — paste, autofill, a programmatic set, a suggestion press —
+   * passes through commit, whereas onPaste would have covered one of them.
    */
   const pasteInto = (value: string) => fireEvent.change(input(), { target: { value } })
 
-  it('fuses a pasted list into a single invalid code on blur', () => {
+  it('splits on blur', () => {
     const { codes } = setup()
     pasteInto('P0301,P0302,P0420')
     fireEvent.blur(input())
-    expect(codes()).toEqual(['P0301,P0302,P0420'])
+    expect(codes()).toEqual(['P0301', 'P0302', 'P0420'])
   })
 
-  it('does the same on Enter', () => {
+  it('splits on Enter', () => {
     const { codes } = setup()
     pasteInto('P0301,P0302')
     fireEvent.keyDown(input(), { key: 'Enter' })
-    expect(codes()).toEqual(['P0301,P0302'])
+    expect(codes()).toEqual(['P0301', 'P0302'])
   })
 
-  it('and the malformed chip renders as a plausible Powertrain code', () => {
-    // The reason this is worth reporting rather than shrugging at: nothing on
-    // screen suggests the value is wrong.
-    setup(['P0301,P0302'])
-    expect(document.body.textContent).toContain('Powertrain')
-    expect(document.querySelector('[data-cat="P"]')).toBeTruthy()
-  })
-
-  it('whereas TYPING the same list separates it correctly', () => {
-    // The control the paste path lacks. Typed commas commit one code each.
+  it('produces no chip containing a separator', () => {
+    // The shape of the old defect, asserted directly: a fused value is exactly a
+    // code with a comma in it.
     const { codes } = setup()
+    pasteInto('P0301,P0302,P0420')
+    fireEvent.blur(input())
+    for (const c of codes()) expect(c, `"${c}" still contains a separator`).not.toContain(',')
+  })
+
+  it('matches what TYPING the same list produces', () => {
+    // The two routes disagreeing was the whole bug, so equivalence is the fix.
+    const typed = setup()
     type('P0301')
     fireEvent.keyDown(input(), { key: ',' })
     type('P0302')
     fireEvent.keyDown(input(), { key: ',' })
+    const byTyping = [...typed.codes()]
+
+    cleanup()
+
+    const pasted = setup()
+    pasteInto('P0301,P0302')
+    fireEvent.blur(input())
+    expect(pasted.codes()).toEqual(byTyping)
+  })
+})
+
+describe('the separator shapes a pasted list actually arrives in', () => {
+  const pasteInto = (value: string) => fireEvent.change(input(), { target: { value } })
+  const commitByBlur = (value: string) => {
+    pasteInto(value)
+    fireEvent.blur(input())
+  }
+
+  it('absorbs a trailing comma rather than adding an empty chip', () => {
+    const { codes } = setup()
+    commitByBlur('P0301,P0302,')
     expect(codes()).toEqual(['P0301', 'P0302'])
+  })
+
+  it('absorbs doubled and spaced separators', () => {
+    const { codes } = setup()
+    commitByBlur('P0301,,  ,P0302')
+    expect(codes()).toEqual(['P0301', 'P0302'])
+  })
+
+  it('trims whitespace around every token, not just the ends', () => {
+    const { codes } = setup()
+    commitByBlur('  P0301 ,  P0302  ')
+    expect(codes()).toEqual(['P0301', 'P0302'])
+  })
+
+  it('uppercases every token, not just the first', () => {
+    const { codes } = setup()
+    commitByBlur('p0301,b1020')
+    expect(codes()).toEqual(['P0301', 'B1020'])
+  })
+
+  it('commits nothing for a string of only separators', () => {
+    const { codes } = setup()
+    commitByBlur(' , ,, ')
+    expect(codes()).toEqual([])
+  })
+
+  it('de-duplicates WITHIN the pasted list', () => {
+    const { codes } = setup()
+    commitByBlur('P0301,P0301,P0302')
+    expect(codes()).toEqual(['P0301', 'P0302'])
+  })
+
+  it('de-duplicates against chips that already exist', () => {
+    const { codes } = setup(['P0301'])
+    commitByBlur('P0301,P0302')
+    expect(codes()).toEqual(['P0301', 'P0302'])
+  })
+
+  it('adds nothing at all when every pasted code is already present', () => {
+    const { codes } = setup(['P0301', 'P0302'])
+    commitByBlur('P0302,P0301')
+    expect(codes()).toEqual(['P0301', 'P0302'])
+  })
+})
+
+describe('⚠️ A COMMIT THAT CHANGES NOTHING MUST NOT REPORT A CHANGE', () => {
+  /*
+   * `commit` guards its `onChange` on the list actually growing. That guard was
+   * untested until a mutation removed it and all 38 tests still passed — the
+   * committed VALUE is identical either way, so no value assertion can see it.
+   *
+   * It is not cosmetic. Issue Edit derives `dirty` from its form state and
+   * `canSave` from `dirty`, so an `onChange` carrying an identical list would
+   * enable Save on a form nobody edited. What has to be observed is the CALL,
+   * which is why this is the one place the callback is watched rather than the
+   * value — and the positive control below keeps that from being an excuse.
+   */
+  function countingSetup(initial: string[]) {
+    let calls = 0
+    const Harness = () => {
+      const [codes, setCodes] = useState<string[]>(initial)
+      return (
+        <DtcChipInput
+          codes={codes}
+          onChange={(next) => { calls += 1; setCodes(next) }}
+          aria-label={LABEL}
+        />
+      )
+    }
+    render(<Harness />)
+    return { calls: () => calls }
+  }
+
+  const commitByBlur = (value: string) => {
+    fireEvent.change(input(), { target: { value } })
+    fireEvent.blur(input())
+  }
+
+  it('does not fire onChange for an exact duplicate', () => {
+    const { calls } = countingSetup(['P0301'])
+    commitByBlur('P0301')
+    expect(calls(), 'a duplicate reported a change').toBe(0)
+  })
+
+  it('does not fire onChange when every pasted code is already present', () => {
+    const { calls } = countingSetup(['P0301', 'P0302'])
+    commitByBlur('P0302,P0301')
+    expect(calls(), 'a no-op paste reported a change').toBe(0)
+  })
+
+  it('does not fire onChange for a whitespace-only commit', () => {
+    const { calls } = countingSetup(['P0301'])
+    commitByBlur('   ')
+    expect(calls()).toBe(0)
+  })
+
+  it('DOES fire once when something genuinely new arrives', () => {
+    // The positive control. Without it, a component that never called onChange
+    // at all would satisfy every assertion above.
+    const { calls } = countingSetup(['P0301'])
+    commitByBlur('P0302')
+    expect(calls(), 'a real addition did not report a change').toBe(1)
+  })
+
+  it('fires ONCE for a multi-code paste, not once per code', () => {
+    const { calls } = countingSetup([])
+    commitByBlur('P0301,P0302,P0420')
+    expect(calls(), 'a paste reported one change per token').toBe(1)
   })
 })
 

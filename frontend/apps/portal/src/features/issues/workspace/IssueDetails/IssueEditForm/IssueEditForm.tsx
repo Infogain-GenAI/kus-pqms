@@ -7,6 +7,7 @@ import type { SourceChannel } from '@/data/sourceChannels'
 import type { Issue } from '@/data/types'
 import { LinkIssuesSection } from '../../../LinkIssuesSection'
 import { SameExistingIssuesSection } from './SameExistingIssuesSection'
+import { DtcChipInput } from '@/features/issues/issue-entry/DtcChipInput'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../../IssueDetail.i18n'
 import { ModelCodeYearPicker, type ModelCodeSelection } from '../../../ModelCodeYearPicker'
@@ -102,26 +103,53 @@ export function IssueEditForm({
   const linked = issue.linkedIssueIds ?? []
 
   /*
-   * ⚠️ THE SAME PLACEHOLDER THIS FORM ALREADY USES, matched deliberately rather
-   * than improved. Both existing calls below pass { name: 'You', role: 'SE' }
-   * literally, so audit rows from this screen are attributed to "You" instead of
-   * the signed-in user. Using `useRole()` here would be correct AND would change
-   * what this screen writes to the audit trail — a behaviour change on a surface
-   * another developer owns. Reported instead of fixed; the ranked block matches
-   * the existing value so one screen does not attribute two ways.
+   * ─── ⚠️ THE LITERAL ACTOR IS DELIBERATE, AND IT EXPIRES ─────────────────────
+   *
+   * Every store call on this screen — the two `LinkIssuesSection` callbacks below
+   * and the ranked block's — passes this literal rather than reading the session.
+   * That is CORRECT today: RBAC is not implemented and SE is the only role in
+   * use, so a hardcoded SE reports reality instead of inventing an attribution.
+   *
+   * ⚠️ IT BECOMES WRONG THE DAY RBAC LANDS, and it is close to unfindable then:
+   * it compiles, nothing tests it, and the symptom — every audit row on this
+   * screen attributed to "You" — reads as a UI copy choice rather than a bug. So
+   * the note lives at the call site, where someone changing the auth model has to
+   * pass through it, rather than in a document nobody re-reads.
+   *
+   * WHEN RBAC ARRIVES: replace this with `useRole()` and pass the real actor.
+   *
+   * ⚠️ THERE ARE THREE CALL SITES AND ONLY ONE READS THIS CONSTANT. The two
+   * `LinkIssuesSection` callbacks below still pass the literal inline — they
+   * predate this note, and rewriting them would have been an edit to behaviour
+   * this change had no business touching. Consolidating all three onto this
+   * constant is the first step of the RBAC change, not a tidy-up to do now; said
+   * plainly here so the next person finds an explanation rather than two
+   * unexplained literals.
    */
   const EDIT_ACTOR = { name: 'You', role: 'SE' }
 
   // ── 4 · Issue information ─────────────────────────────────────────────────
   const [title, setTitle] = useState(issue.title)
   const [description, setDescription] = useState(issue.description)
-  const [dtc, setDtc] = useState((issue.dtcCodes ?? []).join(', '))
+  /*
+   * ─── TOKENS, NOT A COMMA-SEPARATED STRING ───────────────────────────────────
+   *
+   * This was a `string` holding `dtcCodes.join(', ')`, edited through a plain
+   * `<Input>`. It is now the same `DtcChipInput` Issue Entry uses, so the state
+   * is the array the rest of the form already wanted: `onSave` has always taken
+   * `dtcCodes: string[]`, and the string existed only as an input representation.
+   *
+   * The change is confined to the field. The save payload's shape is unchanged,
+   * DTC has no validation to adjust, and stored values round-trip — an array
+   * arrives as chips and leaves as the same array.
+   */
+  const [dtcCodes, setDtcCodes] = useState<string[]>(issue.dtcCodes ?? [])
 
   // ── Dirty tracking ────────────────────────────────────────────────────────
   const dirty =
     title !== issue.title ||
     description !== issue.description ||
-    dtc !== (issue.dtcCodes ?? []).join(', ') ||
+    dtcCodes.join(', ') !== (issue.dtcCodes ?? []).join(', ') ||
     JSON.stringify(vehicle) !== JSON.stringify(initialVehicle) ||
     JSON.stringify(classification) !== JSON.stringify(initialClass)
 
@@ -136,7 +164,9 @@ export function IssueEditForm({
     onSave({
       title: title.trim(),
       description: description.trim(),
-      dtcCodes: dtc.trim() ? dtc.split(',').map((d) => d.trim()).filter(Boolean) : [],
+      // No parsing left to do: the control hands over tokens already trimmed,
+      // uppercased and de-duplicated.
+      dtcCodes,
       modelCodes: vehicle.codes,
       modelYear: years.length ? Math.max(...years) : issue.modelYear,
       system: classification.system,
@@ -214,7 +244,7 @@ export function IssueEditForm({
             symptom: classification.symptom,
             title,
             description,
-            dtcCodes: dtc.split(',').map((d) => d.trim()).filter(Boolean),
+            dtcCodes,
             modelCode: vehicle.codes[0],
           }}
           linkedIds={linked}
@@ -259,15 +289,18 @@ export function IssueEditForm({
         </div>
         <div>
           <ULabel>{t('editFormDtc')}</ULabel>
-          <Input
-            value={dtc}
+          {/*
+            The hint that used to sit here is gone with the plain input, not
+            lost: `DtcChipInput` renders its own help text, which carries the
+            same P/B/C/U legend PLUS the fact that free entry is allowed
+            alongside search. Keeping both printed the legend twice on one field.
+          */}
+          <DtcChipInput
+            codes={dtcCodes}
+            onChange={setDtcCodes}
             disabled={disabled}
-            placeholder="e.g. P0A0F, C1234, B1020"
-            onChange={(e) => setDtc(e.target.value)}
+            aria-label={t('editFormDtc')}
           />
-          <p className={styles.hint}>
-            {t('editFormDtcHint')}
-          </p>
         </div>
       </div>
 
