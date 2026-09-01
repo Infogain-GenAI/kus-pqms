@@ -38,10 +38,13 @@ import { SOURCE, SOURCE_KEYS } from '@pqms/ui-library'
  * be sourced from that sentence, and now applies to the edit path.
  *
  * ─── ONE OPEN QUESTION, CARRIED NOT RESOLVED ────────────────────────────────
- * `INVENTORY.md`'s `SourceEvidencePanel` row cites EIGHT variants against BRD
- * Appendix C, against the seven here. Unresolved — see
- * `PQMS_docs/component-specs/RECONCILIATION-workspace-and-create.md`. If that is
- * ever settled at eight, this test is the thing that should fail.
+ * A component inventory's `SourceEvidencePanel` row cited EIGHT variants against
+ * the seven asserted here. STILL UNRESOLVED. The reconciliation note that carried
+ * the discrepancy lived in a docs corpus no longer in this repo, so the facts are
+ * inlined: the canonical prototype has SEVEN, the discrepancy is to be settled
+ * against BRD Appendix C, and the owner is the Frontend Lead. If it is ever
+ * settled at eight, this test is the thing that should fail — which is precisely
+ * why it is pinned rather than left loose.
  */
 describe('the issue-source vocabulary is a domain fact', () => {
   it('is exactly the seven known channels', () => {

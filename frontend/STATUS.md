@@ -43,10 +43,25 @@ make.**
 
 ## What is blocked, on whom, since when
 
-| Blocked | On | Since | Document |
+> ⚠️ THE SOURCE DOCUMENTS FOR BOTH ROWS ARE GONE. The `PQMS_docs/` corpus that
+> held the design-token decision request and the application-defect log was
+> removed when this frontend moved repos. **The blockages did not move with the
+> documents — they are still open.** What survived is inlined in the code that is
+> affected, deliberately, so a reader hits it where it matters:
+>
+> - the token question — `apps/portal/src/features/issues/ModelCodeYearPicker.module.css`
+>   (the disputed "Category B" values, and why snapping them needs product sign-off)
+> - the pinned pagination defect — `tests/features/issues/IssueList/IssueListScreen.test.tsx`
+> - the seven-vs-eight source-variant discrepancy — `tests/data/sourceVocabulary.test.ts`
+>
+> The remaining defects from that log have **no surviving record in this repo**.
+> If the old corpus still exists anywhere, recover those entries before relying
+> on this table.
+
+| Blocked | On | Since | Record |
 |---|---|---|---|
-| **~353 token conversions** | **designer + architect** | 2026-08-26 | `PQMS_docs/DECISION-REQUEST-design-tokens.md` |
-| **4 application defects** | **architect + domain owner** | 2026-08-26 | `PQMS_docs/APPLICATION-DEFECTS.md` |
+| **~353 token conversions** | **designer + architect** | 2026-08-26 | inlined in `ModelCodeYearPicker.module.css` (was `DECISION-REQUEST-design-tokens.md`) |
+| **4 application defects** | **architect + domain owner** | 2026-08-26 | 1 of 4 inlined in `IssueListScreen.test.tsx`; **the other 3 are unrecorded** (was `APPLICATION-DEFECTS.md`) |
 
 **The token decision has one question under it that everything else depends on:
 does a channel to change the design system exist at all?** Nobody inside the

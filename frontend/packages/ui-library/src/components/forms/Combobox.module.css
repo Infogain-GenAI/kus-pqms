@@ -95,8 +95,10 @@
  * Note the direction before "correcting" it: 0.30 is MORE visible than 0.14, so
  * matching the prototype would REDUCE focus contrast. That is a fidelity change
  * with an accessibility cost, not an improvement — which is a reason to route it
- * through the design system rather than around it. Tracked with the upstream
- * question in `PQMS_docs/DECISION-REQUEST-design-tokens.md`. */
+ * through the design system rather than around it. This was tracked against an
+ * upstream design-token decision request that lived in a docs corpus no longer in
+ * this repo. The question is still OPEN; its substance is restated where it
+ * actually bites, in `apps/portal/src/features/issues/ModelCodeYearPicker.module.css`. */
 .trigger:focus {
   box-shadow: var(--shadow-focus);
 }

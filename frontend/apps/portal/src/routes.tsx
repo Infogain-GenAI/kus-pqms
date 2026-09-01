@@ -67,10 +67,20 @@ import { FixedHeightLayout } from '@/layouts/FixedHeightLayout'
  *   · A Sharing route — `frontend/README.md` lists it out of scope, which
  *     contradicts the Vue predecessor having a working capability-gated Sharing
  *     tab. That contradiction is a BRD-side decision, not a routing one.
- *   · A `pages/` host layer. 07's tree names `*Page` wrappers, but
- *     PQMS_docs/decisions/0005-no-page-host-layer-in-this-application.md defers
- *     that layer for this app and 07:619-651 endorses the deferral at this scale.
- *     So `lazy` points at the feature screens directly.
+ *   · A `pages/` host layer. 07's tree names `*Page` wrappers; that layer is
+ *     DEFERRED for this app. The ADR holding that decision (0005, accepted
+ *     2026-08-25) lived in a docs corpus that is no longer in this repo, so its
+ *     reasoning is inlined here rather than cited. 07's own justification for
+ *     `pages/` is that it keeps route concerns out of feature components.
+ *     Measured against THIS app, that premise does not hold: there is ONE
+ *     `useParams` (`IssueWorkspaceScreen`); ZERO redirects live in feature
+ *     components (they are all in this file, which is where 07 wants them); six
+ *     of seven screens call `useNavigate` for in-screen actions, so they could
+ *     not render router-free even with a wrapper; and there is no second consumer
+ *     (no Storybook) to collect the benefit. Scale: seven routes, no nested
+ *     sub-routes, one layout route — where 07's provenance is a 124-SFC Vue app.
+ *     07:619-651 endorses the deferral at this scale. So `lazy` points at the
+ *     feature screens directly.
  *
  * ── Divergence from 07's literal tree, already recorded by 07 itself ───────────
  * 07's Divergence table governs: paths here are `/dashboard`, `/issues`,
