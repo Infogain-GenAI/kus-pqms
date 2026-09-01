@@ -1,4 +1,4 @@
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router'
 import type { IssueLock } from '@/data/issueLock'
 import type { Comment, Issue } from '@/data/types'
 

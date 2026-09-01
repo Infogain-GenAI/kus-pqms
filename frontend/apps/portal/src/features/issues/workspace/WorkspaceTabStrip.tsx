@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router'
 import { Gauge, GitBranch, History as HistoryIcon, LayoutPanelLeft, MessagesSquare, Microscope, Share2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { TogglePillContent, toggleGroupStyle, togglePillStyle } from '@/app/chrome'

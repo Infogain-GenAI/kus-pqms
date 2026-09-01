@@ -1,5 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Icon } from '@pqms/ui-library'

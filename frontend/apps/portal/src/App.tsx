@@ -1,4 +1,4 @@
-import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { RouterProvider, createBrowserRouter } from 'react-router'
 import { routes } from './routes'
 
 /**
@@ -18,6 +18,11 @@ import { routes } from './routes'
  * `BrowserRouter`. Both cannot coexist: `RouterProvider` brings its own history,
  * so leaving a `BrowserRouter` above it would nest two routers.
  */
+// NO `future` FLAGS, DELIBERATELY. Every v7_* flag this file briefly carried
+// describes behaviour that is unconditional in v8, so passing them would be dead
+// configuration that reads like a live switch. They were enabled on 6.30.6 first,
+// as a probe, to prove the behaviour change independently of the API change — the
+// suite passed under them before the package was swapped. See routes.tsx.
 const router = createBrowserRouter(routes)
 
 export default function App() {

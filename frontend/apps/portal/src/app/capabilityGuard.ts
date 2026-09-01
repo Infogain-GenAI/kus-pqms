@@ -1,4 +1,4 @@
-import { redirect } from 'react-router-dom'
+import { redirect } from 'react-router'
 import { currentCapability, hasCapability, type Capability } from '@/data/capabilities'
 
 /**

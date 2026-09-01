@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { Link } from 'lucide-react'
 import { Button, Icon, Spinner, StatusBadge } from '@pqms/ui-library'
 import { SectionCard, ULabel } from '@/app/chrome'

@@ -6,7 +6,7 @@ import {
   type IssueListView,
 } from '@/data/issueListView'
 import { useDebouncedValue } from '@/shared/useDebouncedCallback'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { CircleCheck, Columns3, Download, FileOutput, Flame, FolderOpen, Layers, Plus, RefreshCw, Search, SlidersHorizontal, TriangleAlert, UserRoundCog } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {

@@ -31,7 +31,14 @@ export function useDebouncedCallback<A extends unknown[]>(
   callback: (...args: A) => void,
   wait: number = DEFAULT_WAIT,
 ): (...args: A) => void {
-  const timer = useRef<ReturnType<typeof setTimeout>>()
+  // `useRef` IS CALLED WITH AN EXPLICIT `undefined`, AND @types/react 19 REQUIRES
+  // IT. The overload that took no argument at all was removed in 19: a ref whose
+  // initial value is omitted is now indistinguishable, to the type checker, from
+  // one the caller forgot to initialise. Passing `undefined` into the widened
+  // `| undefined` type states the same thing the old call meant. Behaviour is
+  // identical — `timer.current` began as `undefined` before, and
+  // `clearTimeout(undefined)` is a documented no-op.
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const latest = useRef(callback)
 
   // Every render, so the timer never invokes a stale closure.
